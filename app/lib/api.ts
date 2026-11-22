@@ -47,6 +47,7 @@ export type CircleSummary = {
   name: string | null;
   description: string | null;
   visibility: string;
+  discoverable: boolean;
   isSurprise: boolean;
   revealed: boolean;
   kind: string;
@@ -54,16 +55,37 @@ export type CircleSummary = {
   role: string;
   memberCount: number;
 };
+export type CircleJoinRequest = {
+  id: string;
+  userId: string;
+  name: string;
+  status: string;
+  createdAt: string;
+};
+export type CircleDetail = {
+  id: string;
+  name: string | null;
+  description: string | null;
+  visibility: string;
+  discoverable: boolean;
+  ownerUserId: string | null;
+  members: { userId: string; name: string; role: string }[];
+  posts: { id: string; body: string; createdAt: string }[];
+  log: { id: string; action: string; detail: string; createdAt: string; actorUserId: string | null }[];
+  joinRequests: CircleJoinRequest[];
+};
 export type ReminderItem = {
   id: string;
   title: string;
   kind: string;
+  circleId: string | null;
   nextFireAt: string;
   isPaused: boolean;
   personName: string | null;
   advanceDays: number;
   giftIdeas: string[];
   endingSoon: boolean;
+  recurrence: { frequency: string; interval: number };
 };
 export type ShortcutItem = {
   id: string;
@@ -71,6 +93,53 @@ export type ShortcutItem = {
   color: string;
   sortOrder: number;
   isActive: boolean;
+  reminderId: string | null;
+};
+export type SearchHit = { type: string; id: string; title: string; detail: string | null };
+export type SearchResponse = {
+  hits: SearchHit[];
+  history: { recent: string[]; frequent: string[] };
+};
+export type SharedListSummary = {
+  id: string;
+  name: string;
+  kind: string;
+  circleId: string | null;
+  memberAccess: string;
+  itemCount: number;
+  doneCount: number;
+};
+export type SharedListItem = {
+  id: string;
+  text: string;
+  quantity: string | null;
+  note: string | null;
+  isDone: boolean;
+  sortOrder: number;
+  addedByUserId: string | null;
+  addedByName: string | null;
+  doneByUserId: string | null;
+  doneByName: string | null;
+};
+export type SharedListMemberAccess = {
+  userId: string;
+  name: string;
+  access: string;
+  overridden: boolean;
+};
+export type SharedListDetail = {
+  id: string;
+  name: string;
+  kind: string;
+  circleId: string | null;
+  memberAccess: string;
+  myAccess: string;
+  canAdd: boolean;
+  canComplete: boolean;
+  canManageItems: boolean;
+  canChangeAccess: boolean;
+  members: SharedListMemberAccess[];
+  items: SharedListItem[];
 };
 export type PlanInfo = {
   plan: string;

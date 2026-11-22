@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, Text } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
@@ -10,10 +11,12 @@ import { screenStyles } from '@/lib/screenStyles';
 
 export default function SettingsScreen() {
   const { token, logout } = useAuth();
+  const router = useRouter();
   const { preference, setPreference, resolved, colors } = useTheme();
   const styles = screenStyles(colors);
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [password, setPassword] = useState('');
+  const [vacationDays, setVacationDays] = useState('7');
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
@@ -30,9 +33,10 @@ export default function SettingsScreen() {
     if (!token) {
       return;
     }
-    const until = new Date(Date.now() + 7 * 24 * 3600_000).toISOString();
+    const days = Math.max(1, Number(vacationDays.replace(',', '.')) || 7);
+    const until = new Date(Date.now() + days * 24 * 3600_000).toISOString();
     await api('/api/reminders/vacation', { method: 'PUT', token, body: JSON.stringify({ until }) });
-    setOk('Modo ferias ligado por 7 dias. Lembretes ficam guardados.');
+    setOk(`Modo ferias ligado por ${days} dia(s). Lembretes ficam guardados.`);
   }
 
   async function requestDeletion() {
@@ -75,7 +79,13 @@ export default function SettingsScreen() {
       <Text style={styles.lead}>{plan?.checkout}</Text>
 
       <Text style={styles.section}>Ferias</Text>
-      <Button label="Silenciar 7 dias" onPress={() => void vacation()} />
+      <Text style={styles.lead}>Escolha por quantos dias as notificacoes ficam suspensas.</Text>
+      <TextField label="Dias de ferias" value={vacationDays} onChangeText={setVacationDays} keyboardType="number-pad" />
+      <Button label="Silenciar ferias" onPress={() => void vacation()} />
+
+      <Text style={styles.section}>Documentos legais</Text>
+      <Button label="Termos de uso" variant="ghost" onPress={() => router.push('/termos' as Href)} />
+      <Button label="Politica de privacidade" variant="ghost" onPress={() => router.push('/privacidade' as Href)} />
 
       <Text style={styles.section}>Excluir conta</Text>
       <Text style={styles.lead}>Pede senha e confirmacao por e-mail. O rastro do circulo fica anonimo.</Text>

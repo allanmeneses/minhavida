@@ -75,6 +75,18 @@ Comecar pelo perfil solo, nao pelo circulo. (95)
 - Pergunta 229 primeira formula (quando a lista de ideias e compartilhada, a outra pessoa pode adicionar ideias ou so [cortado]): sem resposta. Nao inventar se quem recebe a lista pode incluir ideias.
 - Templates de rotina: opcao aceita, gratuitos, editaveis por quem copiou, curadoria inicial do dono do produto, ranqueamento e contagem de uso, criador anonimo. Sem nota obrigatoria no comeco; depois o dono aceitou ranqueamento. (47 a 52)
 
+## Listas compartilhadas
+
+Pedido do dono em 22/11/2026, fora da transcricao original.
+
+- Listas fazem parte da vida das pessoas: compras, desejos, materiais e outras livres.
+- Criar lista com nome e tipo, no perfil solo (privada) ou dentro de um circulo (compartilhada com os membros).
+- Itens com texto, quantidade opcional, observacao/link opcional; marcar como feito/comprado; quem adicionou e quem marcou; reordenar; excluir.
+- Varios membros editam a mesma lista e veem as mudancas ao atualizar.
+- Criar lista no circulo exige papel de editor ou acima. O plano gratuito continua limitado a 3 circulos e 100 MB; nao ha teto extra de listas.
+- Lista de desejos fica escondida de quem e o homenageado no circulo surpresa, com o mesmo mecanismo ja existente.
+- Preenchimento colaborativo depende de permissao configuravel por lista. O criador escolhe quem pode o que, por exemplo: so o dono edita e os outros so veem; membros podem adicionar itens; membros podem marcar como feito/comprado; membros podem editar e excluir itens. A permissao vale para os membros do circulo, pode ser definida por membro especifico, e pode ser alterada depois. A API valida no servidor (nao so esconde botao); acao sem permissao responde 403.
+
 ## Papeis e convites
 
 - Niveis citados na abertura: convite por link com so ver, ver e comentar, ou editar junto.

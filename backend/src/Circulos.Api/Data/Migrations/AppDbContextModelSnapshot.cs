@@ -560,6 +560,34 @@ namespace Circulos.Api.Data.Migrations
                     b.ToTable("reminders", (string)null);
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.SearchQuery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Term")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("TimesUsed")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Term")
+                        .IsUnique();
+
+                    b.ToTable("search_queries", (string)null);
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.SentEmail", b =>
                 {
                     b.Property<Guid>("Id")
@@ -589,6 +617,111 @@ namespace Circulos.Api.Data.Migrations
                     b.ToTable("sent_emails", (string)null);
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.SharedList", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CircleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MemberAccess")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CircleId");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.ToTable("shared_lists", (string)null);
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.SharedListGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Access")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ListId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ListId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("shared_list_grants", (string)null);
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.SharedListItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AddedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DoneAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DoneByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsDone")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("ListId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Quantity")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ListId");
+
+                    b.ToTable("shared_list_items", (string)null);
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.Shortcut", b =>
                 {
                     b.Property<Guid>("Id")
@@ -614,6 +747,9 @@ namespace Circulos.Api.Data.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
 
+                    b.Property<Guid?>("ReminderId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 
@@ -621,6 +757,8 @@ namespace Circulos.Api.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ReminderId");
 
                     b.HasIndex("UserId");
 
@@ -839,8 +977,56 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.SearchQuery", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.SharedList", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.Circle", "Circle")
+                        .WithMany()
+                        .HasForeignKey("CircleId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Circle");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.SharedListGrant", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.SharedList", "List")
+                        .WithMany("Grants")
+                        .HasForeignKey("ListId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("List");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.SharedListItem", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.SharedList", "List")
+                        .WithMany("Items")
+                        .HasForeignKey("ListId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("List");
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.Shortcut", b =>
                 {
+                    b.HasOne("Circulos.Api.Domain.Reminder", null)
+                        .WithMany()
+                        .HasForeignKey("ReminderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Circulos.Api.Domain.User", "User")
                         .WithMany("Shortcuts")
                         .HasForeignKey("UserId")
@@ -864,6 +1050,13 @@ namespace Circulos.Api.Data.Migrations
             modelBuilder.Entity("Circulos.Api.Domain.LifeArea", b =>
                 {
                     b.Navigation("Entries");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.SharedList", b =>
+                {
+                    b.Navigation("Grants");
+
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("Circulos.Api.Domain.User", b =>

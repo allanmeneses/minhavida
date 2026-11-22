@@ -169,6 +169,12 @@ public sealed class InviteCircleRequest
     public string Role { get; set; } = "viewer";
 }
 
+public sealed class TransferCircleRequest
+{
+    [Required]
+    public Guid MemberUserId { get; set; }
+}
+
 public sealed class CirclePostRequest
 {
     [MaxLength(8000)]
@@ -189,6 +195,8 @@ public sealed record CircleSummaryResponse(
     string Role,
     int MemberCount);
 
+public sealed record CircleJoinRequestDto(Guid Id, Guid UserId, string Name, string Status, DateTime CreatedAt);
+
 public sealed record CircleDetailResponse(
     Guid Id,
     string? Name,
@@ -202,7 +210,8 @@ public sealed record CircleDetailResponse(
     Guid? OwnerUserId,
     IReadOnlyList<CircleMemberDto> Members,
     IReadOnlyList<CirclePostResponse> Posts,
-    IReadOnlyList<CircleLogResponse> Log);
+    IReadOnlyList<CircleLogResponse> Log,
+    IReadOnlyList<CircleJoinRequestDto> JoinRequests);
 
 public sealed record CirclePostResponse(Guid Id, Guid? AuthorUserId, string Body, bool HasPhoto, DateTime CreatedAt);
 public sealed record CircleLogResponse(Guid Id, Guid? ActorUserId, string Action, string Detail, DateTime CreatedAt);
@@ -216,6 +225,7 @@ public sealed class ReminderRequest
     public string Title { get; set; } = string.Empty;
 
     public string Kind { get; set; } = "general";
+    public Guid? CircleId { get; set; }
     public RecurrenceRule Recurrence { get; set; } = new();
     public DateTime StartAt { get; set; }
     public string? PersonName { get; set; }
@@ -227,6 +237,7 @@ public sealed record ReminderResponse(
     Guid Id,
     string Title,
     string Kind,
+    Guid? CircleId,
     RecurrenceRule Recurrence,
     DateTime StartAt,
     DateTime NextFireAt,
@@ -253,9 +264,110 @@ public sealed class ShortcutRequest
     public string Color { get; set; } = "#1F6F66";
 
     public int SortOrder { get; set; }
+    public Guid? ReminderId { get; set; }
 }
 
-public sealed record ShortcutResponse(Guid Id, string Label, string Color, int SortOrder, bool IsActive);
+public sealed class ReorderShortcutsRequest
+{
+    public Guid[] Ids { get; set; } = [];
+}
+
+public sealed record ShortcutResponse(Guid Id, string Label, string Color, int SortOrder, bool IsActive, Guid? ReminderId);
+
+public sealed record SearchHit(string Type, Guid Id, string Title, string? Detail);
+public sealed record SearchHistoryResponse(IReadOnlyList<string> Recent, IReadOnlyList<string> Frequent);
+public sealed record SearchResponse(
+    IReadOnlyList<SearchHit> Hits,
+    SearchHistoryResponse History);
+
+public sealed class SharedListRequest
+{
+    [Required]
+    [MinLength(1)]
+    [MaxLength(120)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(20)]
+    public string Kind { get; set; } = "other";
+
+    public Guid? CircleId { get; set; }
+
+    [MaxLength(20)]
+    public string MemberAccess { get; set; } = "view";
+}
+
+public sealed class SharedListAccessRequest
+{
+    [Required]
+    [MaxLength(20)]
+    public string MemberAccess { get; set; } = "view";
+}
+
+public sealed class SharedListGrantRequest
+{
+    [Required]
+    public Guid UserId { get; set; }
+
+    [Required]
+    [MaxLength(20)]
+    public string Access { get; set; } = "view";
+}
+
+public sealed class SharedListItemRequest
+{
+    [Required]
+    [MinLength(1)]
+    [MaxLength(200)]
+    public string Text { get; set; } = string.Empty;
+
+    [MaxLength(80)]
+    public string? Quantity { get; set; }
+
+    [MaxLength(500)]
+    public string? Note { get; set; }
+}
+
+public sealed class ReorderListItemsRequest
+{
+    public Guid[] Ids { get; set; } = [];
+}
+
+public sealed record SharedListSummaryResponse(
+    Guid Id,
+    string Name,
+    string Kind,
+    Guid? CircleId,
+    string MemberAccess,
+    int ItemCount,
+    int DoneCount);
+
+public sealed record SharedListMemberAccessResponse(Guid UserId, string Name, string Access, bool Overridden);
+
+public sealed record SharedListItemResponse(
+    Guid Id,
+    string Text,
+    string? Quantity,
+    string? Note,
+    bool IsDone,
+    int SortOrder,
+    Guid? AddedByUserId,
+    string? AddedByName,
+    Guid? DoneByUserId,
+    string? DoneByName);
+
+public sealed record SharedListDetailResponse(
+    Guid Id,
+    string Name,
+    string Kind,
+    Guid? CircleId,
+    string MemberAccess,
+    string MyAccess,
+    bool CanAdd,
+    bool CanComplete,
+    bool CanManageItems,
+    bool CanChangeAccess,
+    IReadOnlyList<SharedListMemberAccessResponse> Members,
+    IReadOnlyList<SharedListItemResponse> Items);
 
 public sealed record PlanResponse(
     string Plan,
@@ -328,4 +440,36 @@ public static class EnumText
     public static string ReminderKind(ReminderKind value) => value == Domain.ReminderKind.Birthday ? "birthday" : "general";
     public static ReminderKind ParseReminderKind(string? value) =>
         string.Equals(value, "birthday", StringComparison.OrdinalIgnoreCase) ? Domain.ReminderKind.Birthday : Domain.ReminderKind.General;
+
+    public static string ListKind(SharedListKind value) => value switch
+    {
+        SharedListKind.Shopping => "shopping",
+        SharedListKind.Wishes => "wishes",
+        SharedListKind.Materials => "materials",
+        _ => "other",
+    };
+
+    public static SharedListKind ParseListKind(string? value) => value?.ToLowerInvariant() switch
+    {
+        "shopping" or "compras" => SharedListKind.Shopping,
+        "wishes" or "desejos" => SharedListKind.Wishes,
+        "materials" or "materiais" => SharedListKind.Materials,
+        _ => SharedListKind.Other,
+    };
+
+    public static string ListAccess(SharedListAccess value) => value switch
+    {
+        SharedListAccess.Add => "add",
+        SharedListAccess.Complete => "complete",
+        SharedListAccess.Manage => "manage",
+        _ => "view",
+    };
+
+    public static SharedListAccess ParseListAccess(string? value) => value?.ToLowerInvariant() switch
+    {
+        "add" => SharedListAccess.Add,
+        "complete" => SharedListAccess.Complete,
+        "manage" => SharedListAccess.Manage,
+        _ => SharedListAccess.View,
+    };
 }

@@ -67,6 +67,10 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="search"
+        options={{ title: 'Busca', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Meu perfil',
@@ -100,6 +104,14 @@ export default function AppLayout() {
       <Tabs.Screen
         name="circle/[id]"
         options={{ title: 'Circulo', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
+        name="lists"
+        options={{ title: 'Listas', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
+        name="list/[id]"
+        options={{ title: 'Lista', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
     </Tabs>
   );

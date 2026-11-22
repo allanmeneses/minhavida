@@ -95,6 +95,135 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task PedidoDeEntrada_DonoAceitaEVisitanteEntra()
+    {
+        var dono = _factory.CreateClient();
+        var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
+        dono.WithToken(donoAuth.Token);
+        var visitante = _factory.CreateClient();
+        var visitanteAuth = await AuthHelper.RegisterAsync(visitante, name: "Visitante");
+        visitante.WithToken(visitanteAuth.Token);
+
+        var created = await dono.PostAsJsonAsync("/api/circles", new
+        {
+            name = "Grupo fechado",
+            description = "So com pedido",
+            visibility = "private",
+            discoverable = true,
+        });
+        var circle = await created.Content.ReadFromJsonAsync<SummaryDto>(Json);
+
+        var discover = await visitante.GetFromJsonAsync<List<JsonElement>>("/api/circles/discover?q=fechado", Json);
+        Assert.Contains(discover!, x => x.GetProperty("id").GetGuid() == circle!.Id);
+
+        var preview = await visitante.GetFromJsonAsync<JsonElement>($"/api/circles/{circle!.Id}", Json);
+        Assert.Equal("Grupo fechado", preview.GetProperty("name").GetString());
+        Assert.Empty(preview.GetProperty("posts").EnumerateArray());
+        Assert.Empty(preview.GetProperty("members").EnumerateArray());
+
+        var ask = await visitante.PostAsync($"/api/circles/{circle.Id}/join", null);
+        Assert.Equal(HttpStatusCode.Accepted, ask.StatusCode);
+
+        var detail = await dono.GetFromJsonAsync<JsonElement>($"/api/circles/{circle.Id}", Json);
+        var request = detail.GetProperty("joinRequests").EnumerateArray().Single();
+        Assert.Equal(visitanteAuth.UserId, request.GetProperty("userId").GetGuid());
+
+        var accept = await dono.PostAsync(
+            $"/api/circles/{circle.Id}/join-requests/{request.GetProperty("id").GetGuid()}/accept",
+            null);
+        Assert.Equal(HttpStatusCode.NoContent, accept.StatusCode);
+
+        var inside = await visitante.GetFromJsonAsync<JsonElement>($"/api/circles/{circle.Id}", Json);
+        Assert.Contains(inside.GetProperty("members").EnumerateArray(), x => x.GetProperty("userId").GetGuid() == visitanteAuth.UserId);
+    }
+
+    [Fact]
+    public async Task Dono_TransfereEmVida_HistoricoEPermissoesFicam()
+    {
+        var dono = _factory.CreateClient();
+        var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
+        dono.WithToken(donoAuth.Token);
+        var membro = _factory.CreateClient();
+        var membroAuth = await AuthHelper.RegisterAsync(membro, name: "Membro");
+        membro.WithToken(membroAuth.Token);
+
+        var created = await dono.PostAsJsonAsync("/api/circles", new { name = "Cuidado", visibility = "private" });
+        var circle = await created.Content.ReadFromJsonAsync<SummaryDto>(Json);
+        var invite = await dono.PostAsJsonAsync($"/api/circles/{circle!.Id}/invites", new { email = membroAuth.Email, role = "editor" });
+        var token = (await invite.Content.ReadFromJsonAsync<InviteDto>(Json))!.Token;
+        (await membro.PostAsJsonAsync($"/api/circles/invites/{token}/accept", new { })).EnsureSuccessStatusCode();
+        (await dono.PostAsJsonAsync($"/api/circles/{circle.Id}/posts", new { body = "Nota antiga" })).EnsureSuccessStatusCode();
+
+        var transfer = await dono.PostAsJsonAsync($"/api/circles/{circle.Id}/transfer", new { memberUserId = membroAuth.UserId });
+        Assert.Equal(HttpStatusCode.OK, transfer.StatusCode);
+
+        var detail = await membro.GetFromJsonAsync<JsonElement>($"/api/circles/{circle.Id}", Json);
+        Assert.Equal(membroAuth.UserId, detail.GetProperty("ownerUserId").GetGuid());
+        Assert.Contains(detail.GetProperty("members").EnumerateArray(), x => x.GetProperty("userId").GetGuid() == donoAuth.UserId && x.GetProperty("role").GetString() == "admin");
+        Assert.Contains(detail.GetProperty("members").EnumerateArray(), x => x.GetProperty("userId").GetGuid() == membroAuth.UserId && x.GetProperty("role").GetString() == "owner");
+        Assert.Contains(detail.GetProperty("posts").EnumerateArray(), x => x.GetProperty("body").GetString() == "Nota antiga");
+        Assert.Contains(detail.GetProperty("log").EnumerateArray(), x => x.GetProperty("action").GetString() == "transferred");
+        Assert.Contains(detail.GetProperty("log").EnumerateArray(), x => x.GetProperty("action").GetString() == "posted");
+    }
+
+    [Fact]
+    public async Task TransferenciaSobreposta_SoUmaVence()
+    {
+        var dono = _factory.CreateClient();
+        var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
+        dono.WithToken(donoAuth.Token);
+        var um = _factory.CreateClient();
+        var umAuth = await AuthHelper.RegisterAsync(um, name: "Um");
+        um.WithToken(umAuth.Token);
+        var dois = _factory.CreateClient();
+        var doisAuth = await AuthHelper.RegisterAsync(dois, name: "Dois");
+        dois.WithToken(doisAuth.Token);
+
+        var created = await dono.PostAsJsonAsync("/api/circles", new { name = "Grupo" });
+        var circle = await created.Content.ReadFromJsonAsync<SummaryDto>(Json);
+        foreach (var (client, auth) in new[] { (um, umAuth), (dois, doisAuth) })
+        {
+            var invite = await dono.PostAsJsonAsync($"/api/circles/{circle!.Id}/invites", new { email = auth.Email, role = "admin" });
+            var token = (await invite.Content.ReadFromJsonAsync<InviteDto>(Json))!.Token;
+            (await client.PostAsJsonAsync($"/api/circles/invites/{token}/accept", new { })).EnsureSuccessStatusCode();
+        }
+
+        var outro = _factory.CreateClient();
+        outro.WithToken(donoAuth.Token);
+        var t1 = dono.PostAsJsonAsync($"/api/circles/{circle!.Id}/transfer", new { memberUserId = umAuth.UserId });
+        var t2 = outro.PostAsJsonAsync($"/api/circles/{circle.Id}/transfer", new { memberUserId = doisAuth.UserId });
+        var responses = await Task.WhenAll(t1, t2);
+        var codes = responses.Select(x => x.StatusCode).ToArray();
+        Assert.Contains(HttpStatusCode.OK, codes);
+        Assert.Contains(HttpStatusCode.BadRequest, codes);
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var stored = await db.Circles.Include(x => x.Members).SingleAsync(x => x.Id == circle.Id);
+        Assert.True(stored.OwnerUserId == umAuth.UserId || stored.OwnerUserId == doisAuth.UserId);
+        Assert.Equal(1, stored.Members.Count(x => x.Role == CircleRole.Owner));
+    }
+
+    [Fact]
+    public async Task Discover_NaoListaCirculoQueNaoQuerSerEncontrado()
+    {
+        var dono = _factory.CreateClient();
+        dono.WithToken((await AuthHelper.RegisterAsync(dono)).Token);
+        var created = await dono.PostAsJsonAsync("/api/circles", new
+        {
+            name = "Invisivel",
+            visibility = "public",
+            discoverable = false,
+        });
+        var circle = await created.Content.ReadFromJsonAsync<SummaryDto>(Json);
+
+        var visitante = _factory.CreateClient();
+        visitante.WithToken((await AuthHelper.RegisterAsync(visitante, name: "Outro")).Token);
+        var discover = await visitante.GetFromJsonAsync<List<JsonElement>>("/api/circles/discover", Json);
+        Assert.DoesNotContain(discover!, x => x.GetProperty("id").GetGuid() == circle!.Id);
+    }
+
+    [Fact]
     public async Task EntradaApagada_DeixaRastroNoLog()
     {
         var client = _factory.CreateClient();
@@ -108,7 +237,7 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
 
         var log = await client.GetFromJsonAsync<List<LogDto>>($"/api/circles/{circle.Id}/log", Json);
-        Assert.Contains(log!, x => x.Action == "deleted" && x.ActorUserId == auth.UserId);
+        Assert.Contains(log!, x => x.Action == "deleted" && x.ActorUserId == auth.UserId && x.CreatedAt != default);
         Assert.DoesNotContain(log!, x => x.Detail.Contains("Nota", StringComparison.Ordinal));
     }
 
@@ -167,5 +296,5 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
     private sealed record SummaryDto(Guid Id, string? Name);
     private sealed record InviteDto(string Token);
     private sealed record PostDto(Guid Id);
-    private sealed record LogDto(Guid Id, Guid? ActorUserId, string Action, string Detail);
+    private sealed record LogDto(Guid Id, Guid? ActorUserId, string Action, string Detail, DateTime CreatedAt);
 }

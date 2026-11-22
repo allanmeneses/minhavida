@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { api, ApiError, type DayPanel, type ShortcutItem } from '@/lib/api';
+import { api, ApiError, type DayPanel, type ReminderItem, type ShortcutItem } from '@/lib/api';
+import { playShortcutFeedback } from '@/lib/shortcutFeedback';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function HomeScreen() {
@@ -15,9 +16,12 @@ export default function HomeScreen() {
   const styles = screenStyles(colors);
   const router = useRouter();
   const [panel, setPanel] = useState<DayPanel | null>(null);
+  const [allShortcuts, setAllShortcuts] = useState<ShortcutItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [label, setLabel] = useState('');
+  const [reminders, setReminders] = useState<ReminderItem[]>([]);
+  const [reminderId, setReminderId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) {
@@ -25,6 +29,8 @@ export default function HomeScreen() {
     }
     try {
       setPanel(await api<DayPanel>('/api/home', { token }));
+      setAllShortcuts(await api<ShortcutItem[]>('/api/shortcuts', { token }));
+      setReminders(await api<ReminderItem[]>('/api/reminders', { token }));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Nao foi possivel abrir o dia.');
     }
@@ -32,6 +38,23 @@ export default function HomeScreen() {
 
   useEffect(() => {
     void load();
+    const timer = setInterval(() => {
+      void load();
+    }, 5000);
+    const onFocus = () => {
+      if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+        void load();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onFocus);
+    }
+    return () => {
+      clearInterval(timer);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onFocus);
+      }
+    };
   }, [load]);
 
   async function runShortcut(item: ShortcutItem) {
@@ -44,6 +67,7 @@ export default function HomeScreen() {
         method: 'POST',
         token,
       });
+      playShortcutFeedback();
       setFlash(result.label);
       await load();
     } catch (err) {
@@ -58,9 +82,58 @@ export default function HomeScreen() {
     await api('/api/shortcuts', {
       method: 'POST',
       token,
-      body: JSON.stringify({ label: label.trim(), color: '#C45C26' }),
+      body: JSON.stringify({ label: label.trim(), color: '#C45C26', reminderId }),
     });
     setLabel('');
+    setReminderId(null);
+    await load();
+  }
+
+  async function deactivateShortcut(item: ShortcutItem) {
+    if (!token) {
+      return;
+    }
+    await api(`/api/shortcuts/${item.id}/deactivate`, { method: 'POST', token });
+    await load();
+  }
+
+  async function activateShortcut(item: ShortcutItem) {
+    if (!token) {
+      return;
+    }
+    await api(`/api/shortcuts/${item.id}/activate`, { method: 'POST', token });
+    await load();
+  }
+
+  async function deleteShortcut(item: ShortcutItem) {
+    if (!token) {
+      return;
+    }
+    await api(`/api/shortcuts/${item.id}`, { method: 'DELETE', token });
+    await load();
+  }
+
+  const inactiveShortcuts = allShortcuts.filter((item) => !item.isActive);
+  const circleReminders = reminders.filter((item) => item.circleId);
+
+  async function moveShortcut(item: ShortcutItem, direction: -1 | 1) {
+    if (!token || !panel) {
+      return;
+    }
+    const active = [...panel.shortcuts];
+    const index = active.findIndex((entry) => entry.id === item.id);
+    const next = index + direction;
+    if (index < 0 || next < 0 || next >= active.length) {
+      return;
+    }
+    const swap = active[index];
+    active[index] = active[next];
+    active[next] = swap;
+    await api('/api/shortcuts/order', {
+      method: 'PUT',
+      token,
+      body: JSON.stringify({ ids: [...active.map((entry) => entry.id), ...inactiveShortcuts.map((entry) => entry.id)] }),
+    });
     await load();
   }
 
@@ -80,19 +153,51 @@ export default function HomeScreen() {
 
       <View style={extra.row}>
         {panel?.shortcuts.map((item) => (
-          <Pressable
-            key={item.id}
-            accessibilityRole="button"
-            accessibilityLabel={item.label}
-            onPress={() => void runShortcut(item)}
-            style={[extra.shortcut, { backgroundColor: item.color }]}>
-            <Text style={extra.shortcutText}>{item.label}</Text>
-          </Pressable>
+          <View key={item.id} style={extra.shortcutWrap}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              onPress={() => void runShortcut(item)}
+              style={[extra.shortcut, { backgroundColor: item.color }]}>
+              <Text style={extra.shortcutText}>{item.label}</Text>
+            </Pressable>
+            <Button label={`Subir ${item.label}`} variant="ghost" onPress={() => void moveShortcut(item, -1)} />
+            <Button label={`Descer ${item.label}`} variant="ghost" onPress={() => void moveShortcut(item, 1)} />
+            <Button label={`Desativar ${item.label}`} variant="ghost" onPress={() => void deactivateShortcut(item)} />
+            <Button label={`Excluir ${item.label}`} variant="danger" onPress={() => void deleteShortcut(item)} />
+          </View>
         ))}
       </View>
 
+      {inactiveShortcuts.length > 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.section}>Atalhos desativados</Text>
+          <Text style={styles.lead}>Somem da tela principal ate reativar.</Text>
+          {inactiveShortcuts.map((item) => (
+            <View key={item.id}>
+              <Text style={styles.item}>{item.label}</Text>
+              <Button label={`Reativar ${item.label}`} variant="ghost" onPress={() => void activateShortcut(item)} />
+              <Button label={`Excluir ${item.label}`} variant="danger" onPress={() => void deleteShortcut(item)} />
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       <View style={styles.card}>
         <TextField label="Nome do atalho" value={label} onChangeText={setLabel} placeholder="Ex.: Tomei o remedio" />
+        <Button
+          label={reminderId ? `Lembrete: ${circleReminders.find((item) => item.id === reminderId)?.title}` : 'Sem lembrete de circulo'}
+          variant="ghost"
+          onPress={() => {
+            if (circleReminders.length === 0) {
+              setReminderId(null);
+              return;
+            }
+            const index = circleReminders.findIndex((item) => item.id === reminderId);
+            const next = circleReminders[(index + 1) % (circleReminders.length + 1)];
+            setReminderId(next?.id ?? null);
+          }}
+        />
         <Button label="Adicionar atalho" onPress={() => void addShortcut()} disabled={!label.trim()} />
       </View>
 
@@ -108,6 +213,7 @@ export default function HomeScreen() {
       ) : null}
 
       <Button label="Lembretes" variant="ghost" onPress={() => router.push('/(app)/reminders')} />
+      <Button label="Busca" variant="ghost" onPress={() => router.push('/(app)/search' as Href)} />
       <Button label="Ajustes" variant="ghost" onPress={() => router.push('/(app)/settings')} />
     </ScrollView>
   );
@@ -140,6 +246,10 @@ const extra = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  shortcutWrap: {
+    gap: 8,
+    minWidth: 140,
   },
   shortcut: {
     paddingVertical: 16,

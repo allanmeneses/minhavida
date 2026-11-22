@@ -39,10 +39,25 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock) : C
             return BadRequest(new ErrorResponse("Esta recorrencia nao gera ocorrencias."));
         }
 
+        Guid? circleId = null;
+        if (request.CircleId is Guid requestedCircle)
+        {
+            var member = await db.CircleMembers.AnyAsync(
+                x => x.CircleId == requestedCircle && x.UserId == User.GetUserId(),
+                cancellationToken);
+            if (!member)
+            {
+                return BadRequest(new ErrorResponse("Voce precisa participar do circulo."));
+            }
+
+            circleId = requestedCircle;
+        }
+
         var reminder = new Reminder
         {
             Id = Guid.NewGuid(),
             UserId = User.GetUserId(),
+            CircleId = circleId,
             Title = request.Title.Trim(),
             Kind = EnumText.ParseReminderKind(request.Kind),
             RecurrenceJson = rule.ToJson(),
@@ -153,6 +168,7 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock) : C
             reminder.Id,
             reminder.Title,
             EnumText.ReminderKind(reminder.Kind),
+            reminder.CircleId,
             rule,
             reminder.StartAt,
             reminder.NextFireAt,

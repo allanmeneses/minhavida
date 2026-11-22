@@ -1,51 +1,87 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { api, ApiError } from '@/lib/api';
+import { api, ApiError, type CircleDetail, type SharedListSummary } from '@/lib/api';
+import { formatPersonTime } from '@/lib/formatPersonTime';
+import {
+  LIST_ACCESS,
+  LIST_ACCESS_LABEL,
+  LIST_KIND_LABEL,
+  LIST_KINDS,
+  nextOf,
+  type ListAccess,
+  type ListKind,
+} from '@/lib/listKinds';
 import { screenStyles } from '@/lib/screenStyles';
 
-type Detail = {
-  id: string;
-  name: string | null;
-  description: string | null;
-  visibility: string;
-  members: { userId: string; name: string; role: string }[];
-  posts: { id: string; body: string; createdAt: string }[];
-  log: { id: string; action: string; detail: string; createdAt: string; actorUserId: string | null }[];
-};
-
 export default function CircleDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string | string[] }>();
+  const circleId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { token, user } = useAuth();
   const { colors } = useTheme();
   const styles = screenStyles(colors);
-  const [detail, setDetail] = useState<Detail | null>(null);
+  const router = useRouter();
+  const [detail, setDetail] = useState<CircleDetail | null>(null);
+  const [lists, setLists] = useState<SharedListSummary[]>([]);
   const [inviteEmail, setInviteEmail] = useState('');
   const [post, setPost] = useState('');
+  const [listName, setListName] = useState('');
+  const [listKind, setListKind] = useState<ListKind>('shopping');
+  const [listAccess, setListAccess] = useState<ListAccess>('view');
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    if (!token || !id) {
+    if (!token || !circleId) {
       return;
     }
-    setDetail(await api<Detail>(`/api/circles/${id}`, { token }));
-  }, [token, id]);
+    setDetail(await api<CircleDetail>(`/api/circles/${circleId}`, { token }));
+    try {
+      setLists(await api<SharedListSummary[]>(`/api/lists?circleId=${circleId}`, { token }));
+    } catch {
+      setLists([]);
+    }
+  }, [token, circleId]);
 
   useEffect(() => {
     void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Circulo nao encontrado.'));
   }, [load]);
 
-  async function invite() {
-    if (!token || !id || !inviteEmail.trim()) {
+  const isMember = Boolean(detail?.members.some((member) => member.userId === user?.id));
+  const isOwner = Boolean(detail?.members.some((member) => member.userId === user?.id && member.role === 'owner'));
+  const isAdmin = Boolean(
+    detail?.members.some((member) => member.userId === user?.id && (member.role === 'admin' || member.role === 'owner')),
+  );
+  const canCreateList = Boolean(
+    detail?.members.some(
+      (member) =>
+        member.userId === user?.id && (member.role === 'editor' || member.role === 'admin' || member.role === 'owner'),
+    ),
+  );
+
+  async function createList() {
+    if (!token || !circleId || !listName.trim()) {
       return;
     }
-    const result = await api<{ token: string }>(`/api/circles/${id}/invites`, {
+    await api('/api/lists', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ name: listName.trim(), kind: listKind, circleId, memberAccess: listAccess }),
+    });
+    setListName('');
+    await load();
+  }
+
+  async function invite() {
+    if (!token || !circleId || !inviteEmail.trim()) {
+      return;
+    }
+    const result = await api<{ token: string }>(`/api/circles/${circleId}/invites`, {
       method: 'POST',
       token,
       body: JSON.stringify({ email: inviteEmail.trim(), role: 'viewer' }),
@@ -56,10 +92,10 @@ export default function CircleDetailScreen() {
   }
 
   async function publish() {
-    if (!token || !id || !post.trim()) {
+    if (!token || !circleId || !post.trim()) {
       return;
     }
-    await api(`/api/circles/${id}/posts`, {
+    await api(`/api/circles/${circleId}/posts`, {
       method: 'POST',
       token,
       body: JSON.stringify({ body: post.trim() }),
@@ -69,19 +105,54 @@ export default function CircleDetailScreen() {
   }
 
   async function removePost(postId: string) {
-    if (!token || !id) {
+    if (!token || !circleId) {
       return;
     }
-    await api(`/api/circles/${id}/posts/${postId}`, { method: 'DELETE', token });
+    await api(`/api/circles/${circleId}/posts/${postId}`, { method: 'DELETE', token });
     await load();
   }
 
   async function leave() {
-    if (!token || !id) {
+    if (!token || !circleId) {
       return;
     }
-    await api(`/api/circles/${id}/membership`, { method: 'DELETE', token });
+    await api(`/api/circles/${circleId}/membership`, { method: 'DELETE', token });
     setOk('Voce saiu. Sem rastro para os outros.');
+  }
+
+  async function join() {
+    if (!token || !circleId) {
+      return;
+    }
+    try {
+      await api(`/api/circles/${circleId}/join`, { method: 'POST', token, body: JSON.stringify({}) });
+      setOk(detail?.visibility === 'public' ? 'Voce entrou no circulo.' : 'Pedido de entrada enviado.');
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Nao foi possivel pedir entrada.');
+    }
+  }
+
+  async function transferTo(memberUserId: string) {
+    if (!token || !circleId) {
+      return;
+    }
+    await api(`/api/circles/${circleId}/transfer`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ memberUserId }),
+    });
+    setOk('Dono transferido. Historico e permissoes ficam com o circulo.');
+    await load();
+  }
+
+  async function acceptJoin(requestId: string) {
+    if (!token || !circleId) {
+      return;
+    }
+    await api(`/api/circles/${circleId}/join-requests/${requestId}/accept`, { method: 'POST', token });
+    setOk('Pedido aceito.');
+    await load();
   }
 
   return (
@@ -91,29 +162,91 @@ export default function CircleDetailScreen() {
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />
 
+      {!isMember ? (
+        <Button
+          label={detail?.visibility === 'public' ? 'Entrar' : 'Pedir para entrar'}
+          onPress={() => void join()}
+        />
+      ) : null}
+
       <Text style={styles.section}>Quem esta aqui</Text>
       {detail?.members.map((member) => (
-        <Text key={member.userId} style={styles.item}>
-          {member.name} · {member.role}
-        </Text>
+        <View key={member.userId} style={styles.card}>
+          <Text style={styles.item}>
+            {member.name} · {member.role}
+          </Text>
+          {isOwner && member.userId !== user?.id ? (
+            <Button label={`Transferir dono para ${member.name}`} onPress={() => void transferTo(member.userId)} />
+          ) : null}
+        </View>
       ))}
 
-      <TextField label="Convidar por e-mail" value={inviteEmail} onChangeText={setInviteEmail} />
-      <Button label="Enviar convite" onPress={() => void invite()} disabled={!inviteEmail.trim()} />
-      <TextField label="Nova entrada" value={post} onChangeText={setPost} />
-      <Button label="Publicar" onPress={() => void publish()} disabled={!post.trim()} />
+      {isAdmin && (detail?.joinRequests?.length ?? 0) > 0 ? (
+        <>
+          <Text style={styles.section}>Pedidos de entrada</Text>
+          {detail?.joinRequests.map((request) => (
+            <View key={request.id} style={styles.card}>
+              <Text style={styles.item}>{request.name}</Text>
+              <Button label={`Aceitar ${request.name}`} onPress={() => void acceptJoin(request.id)} />
+            </View>
+          ))}
+        </>
+      ) : null}
+
+      {isMember ? (
+        <>
+          <TextField label="Convidar por e-mail" value={inviteEmail} onChangeText={setInviteEmail} />
+          <Button label="Enviar convite" onPress={() => void invite()} disabled={!inviteEmail.trim()} />
+          <TextField label="Nova entrada" value={post} onChangeText={setPost} />
+          <Button label="Publicar" onPress={() => void publish()} disabled={!post.trim()} />
+        </>
+      ) : null}
 
       {detail?.posts.map((item) => (
         <View key={item.id} style={styles.card}>
           <Text style={styles.item}>{item.body}</Text>
-          <Button label="Apagar" variant="danger" onPress={() => void removePost(item.id)} />
+          {isMember ? <Button label="Apagar" variant="danger" onPress={() => void removePost(item.id)} /> : null}
         </View>
       ))}
+
+      {isMember ? (
+        <>
+          <Text style={styles.section}>Listas do circulo</Text>
+          {lists.map((item) => (
+            <Pressable
+              key={item.id}
+              accessibilityRole="button"
+              accessibilityLabel={item.name}
+              onPress={() => router.push(`/(app)/list/${item.id}` as Href)}>
+              <Text style={styles.item}>{item.name}</Text>
+              <Text style={styles.lead}>
+                {LIST_KIND_LABEL[item.kind as ListKind] ?? item.kind} · {LIST_ACCESS_LABEL[item.memberAccess as ListAccess] ?? item.memberAccess}
+              </Text>
+            </Pressable>
+          ))}
+          {canCreateList ? (
+            <>
+              <TextField label="Nome da lista" value={listName} onChangeText={setListName} placeholder="Compras da casa" />
+              <Button
+                label={`Tipo: ${LIST_KIND_LABEL[listKind]}`}
+                variant="ghost"
+                onPress={() => setListKind(nextOf(LIST_KINDS, listKind))}
+              />
+              <Button
+                label={`Permissao: ${LIST_ACCESS_LABEL[listAccess]}`}
+                variant="ghost"
+                onPress={() => setListAccess(nextOf(LIST_ACCESS, listAccess))}
+              />
+              <Button label="Criar lista" onPress={() => void createList()} disabled={!listName.trim()} />
+            </>
+          ) : null}
+        </>
+      ) : null}
 
       <Text style={styles.section}>Log</Text>
       {detail?.log.map((item) => (
         <Text key={item.id} style={styles.lead}>
-          {item.action}: {item.detail}
+          {formatPersonTime(item.createdAt)} · {item.action}: {item.detail}
         </Text>
       ))}
 
@@ -123,4 +256,3 @@ export default function CircleDetailScreen() {
     </ScrollView>
   );
 }
-

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using SkiaSharp;
 
 namespace Circulos.Api.Tests;
 
@@ -80,6 +81,37 @@ public sealed class LifeAreaTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Entrada_GuardaNumeroEFoto()
+    {
+        var client = _factory.CreateClient();
+        var auth = await AuthHelper.RegisterAsync(client);
+        client.WithToken(auth.Token);
+        var areas = await client.GetFromJsonAsync<List<AreaDto>>("/api/life-areas", Json);
+        var diario = areas!.Single(x => x.Kind == "diary");
+        var created = await client.PostAsJsonAsync($"/api/life-areas/{diario.Id}/entries", new
+        {
+            title = "Corrida",
+            numberValue = 200,
+            body = "200 metros",
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        using var doc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Assert.Equal(200, doc.RootElement.GetProperty("numberValue").GetDecimal());
+        var entryId = doc.RootElement.GetProperty("id").GetGuid();
+
+        using (var form = CreatePngFile("corrida.png"))
+        {
+            var upload = await client.PostAsync($"/api/life-areas/{diario.Id}/entries/{entryId}/photo", form);
+            Assert.Equal(HttpStatusCode.OK, upload.StatusCode);
+        }
+
+        var photo = await client.GetAsync($"/api/life-areas/{diario.Id}/entries/{entryId}/photo");
+        Assert.Equal(HttpStatusCode.OK, photo.StatusCode);
+        var bytes = await photo.Content.ReadAsByteArrayAsync();
+        Assert.True(bytes.AsSpan().StartsWith(new byte[] { 0xFF, 0xD8 }));
+    }
+
+    [Fact]
     public async Task Perfil_PodeVirarPublico()
     {
         var client = _factory.CreateClient();
@@ -93,6 +125,38 @@ public sealed class LifeAreaTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.True(doc.RootElement.GetProperty("isPublic").GetBoolean());
+    }
+
+    [Fact]
+    public async Task FotoDoPerfil_SomeQuandoAPessoaApaga()
+    {
+        var client = _factory.CreateClient();
+        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        using (var form = CreatePngFile("foto.png"))
+        {
+            var upload = await client.PostAsync("/api/profile/photo", form);
+            Assert.Equal(HttpStatusCode.OK, upload.StatusCode);
+        }
+
+        var deleted = await client.DeleteAsync("/api/profile/photo");
+        Assert.Equal(HttpStatusCode.OK, deleted.StatusCode);
+        using var doc = JsonDocument.Parse(await deleted.Content.ReadAsStringAsync());
+        Assert.False(doc.RootElement.GetProperty("hasPhoto").GetBoolean());
+        var get = await client.GetAsync("/api/profile/photo");
+        Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
+    }
+
+    private static MultipartFormDataContent CreatePngFile(string name)
+    {
+        using var image = new SKBitmap(8, 8, SKColorType.Rgba8888, SKAlphaType.Opaque);
+        image.Erase(SKColors.SteelBlue);
+        using var encoded = SKImage.FromBitmap(image).Encode(SKEncodedImageFormat.Png, 100)
+            ?? throw new InvalidOperationException("Falha ao gerar o PNG de teste.");
+        var file = new ByteArrayContent(encoded.ToArray());
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
+        var form = new MultipartFormDataContent();
+        form.Add(file, "file", name);
+        return form;
     }
 
     private sealed record AreaDto(Guid Id, string Name, string Kind, int SortOrder, bool Suggested);

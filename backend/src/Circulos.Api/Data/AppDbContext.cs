@@ -18,6 +18,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<CircleLog> CircleLogs => Set<CircleLog>();
     public DbSet<Reminder> Reminders => Set<Reminder>();
     public DbSet<Shortcut> Shortcuts => Set<Shortcut>();
+    public DbSet<SearchQuery> SearchQueries => Set<SearchQuery>();
+    public DbSet<SharedList> SharedLists => Set<SharedList>();
+    public DbSet<SharedListItem> SharedListItems => Set<SharedListItem>();
+    public DbSet<SharedListGrant> SharedListGrants => Set<SharedListGrant>();
     public DbSet<PasswordReset> PasswordResets => Set<PasswordReset>();
     public DbSet<AccountDeletionRequest> AccountDeletionRequests => Set<AccountDeletionRequest>();
     public DbSet<SentEmail> SentEmails => Set<SentEmail>();
@@ -54,6 +58,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(x => x.Shortcuts)
+                .WithOne(x => x.User)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany<SearchQuery>()
                 .WithOne(x => x.User)
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -136,6 +144,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 .HasForeignKey(x => x.CircleId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(x => x.Logs)
+                .WithOne(x => x.Circle)
+                .HasForeignKey(x => x.CircleId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany<SharedList>()
                 .WithOne(x => x.Circle)
                 .HasForeignKey(x => x.CircleId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -230,6 +242,56 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Label).HasMaxLength(80).IsRequired();
             entity.Property(x => x.Color).HasMaxLength(20).IsRequired();
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne<Reminder>()
+                .WithMany()
+                .HasForeignKey(x => x.ReminderId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SearchQuery>(entity =>
+        {
+            entity.ToTable("search_queries");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.UserId, x.Term }).IsUnique();
+            entity.Property(x => x.Term).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.LastUsedAt).HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<SharedList>(entity =>
+        {
+            entity.ToTable("shared_lists");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.OwnerUserId);
+            entity.HasIndex(x => x.CircleId);
+            entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasMany(x => x.Items)
+                .WithOne(x => x.List)
+                .HasForeignKey(x => x.ListId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(x => x.Grants)
+                .WithOne(x => x.List)
+                .HasForeignKey(x => x.ListId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SharedListGrant>(entity =>
+        {
+            entity.ToTable("shared_list_grants");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.ListId, x.UserId }).IsUnique();
+        });
+
+        modelBuilder.Entity<SharedListItem>(entity =>
+        {
+            entity.ToTable("shared_list_items");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.ListId);
+            entity.Property(x => x.Text).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Quantity).HasMaxLength(80);
+            entity.Property(x => x.Note).HasMaxLength(500);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.DoneAt).HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<PasswordReset>(entity =>
