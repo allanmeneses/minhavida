@@ -101,3 +101,47 @@ jobs:
             app/test-results
             app/playwright-report
           if-no-files-found: ignore
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Instalar Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Pacotes do SDK
+        run: |
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-36" \
+            "platforms;android-37" \
+            "platforms;android-37.0" \
+            "build-tools;36.0.0" \
+            "build-tools;37.0.0" \
+            "ndk;27.1.12297006" \
+            "cmake;3.22.1"
+      - name: Instalar o app
+        working-directory: app
+        run: npm ci
+      - name: Prebuild Android
+        working-directory: app
+        env:
+          CI: '1'
+        run: npx expo prebuild --platform android
+      - name: Gerar APK
+        working-directory: app/android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64 --no-daemon
+      - name: Publicar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: circulos-android
+          path: app/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
