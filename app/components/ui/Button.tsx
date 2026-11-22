@@ -1,5 +1,5 @@
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text } from 'react-native';
-import { colors } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 
 type Props = {
   label: string;
@@ -10,17 +10,19 @@ type Props = {
 };
 
 export function Button({ label, onPress, disabled, loading, variant = 'primary' }: Props) {
+  const { colors } = useTheme();
   const isDisabled = disabled || loading;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={label}
       onPress={onPress}
       disabled={isDisabled}
       style={({ pressed, hovered }) => [
         styles.base,
-        variant === 'primary' && styles.primary,
-        variant === 'ghost' && styles.ghost,
-        variant === 'danger' && styles.danger,
+        variant === 'primary' && { backgroundColor: colors.primary },
+        variant === 'ghost' && { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.line },
+        variant === 'danger' && { backgroundColor: colors.dangerSoft },
         pressed && styles.pressed,
         hovered && !isDisabled && styles.hovered,
         isDisabled && styles.disabled,
@@ -31,8 +33,9 @@ export function Button({ label, onPress, disabled, loading, variant = 'primary' 
         <Text
           style={[
             styles.label,
-            variant === 'ghost' && styles.ghostLabel,
-            variant === 'danger' && styles.dangerLabel,
+            { color: colors.white },
+            variant === 'ghost' && { color: colors.ink },
+            variant === 'danger' && { color: colors.danger },
           ]}>
           {label}
         </Text>
@@ -49,17 +52,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 18,
   },
-  primary: {
-    backgroundColor: colors.primary,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  danger: {
-    backgroundColor: colors.dangerSoft,
-  },
   pressed: {
     opacity: 0.86,
   },
@@ -70,14 +62,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   label: {
-    color: colors.white,
     fontWeight: '700',
     fontSize: Platform.OS === 'web' ? 14 : 16,
-  },
-  ghostLabel: {
-    color: colors.ink,
-  },
-  dangerLabel: {
-    color: colors.danger,
   },
 });

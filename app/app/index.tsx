@@ -7,5 +7,5 @@ export default function Index() {
   if (loading) {
     return <LoadingScreen label="Abrindo o Circulos..." />;
   }
-  return <Redirect href={user ? '/(app)/profile' : '/(auth)/login'} />;
+  return <Redirect href={user ? '/(app)/home' : '/(auth)/login'} />;
 }

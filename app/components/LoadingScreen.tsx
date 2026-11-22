@@ -1,11 +1,12 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { colors } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 
 export function LoadingScreen({ label = 'Carregando...' }: { label?: string }) {
+  const { colors } = useTheme();
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
       <ActivityIndicator color={colors.primary} size="large" />
-      <Text style={styles.label}>{label}</Text>
+      <Text style={{ color: colors.muted }}>{label}</Text>
     </View>
   );
 }
@@ -15,10 +16,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.bg,
     gap: 12,
-  },
-  label: {
-    color: colors.muted,
   },
 });

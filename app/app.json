@@ -6,12 +6,13 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "circulos",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "dev.circulos.app",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "O Circulos usa sua galeria para a foto do perfil."
+        "NSPhotoLibraryUsageDescription": "O Circulos usa sua galeria para fotos do perfil e das entradas.",
+        "NSCameraUsageDescription": "O Circulos usa a camera para fotos do perfil e das entradas."
       }
     },
     "android": {
@@ -43,7 +44,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "O Circulos usa sua galeria para a foto do perfil."
+          "photosPermission": "O Circulos usa sua galeria para fotos do perfil e das entradas.",
+          "cameraPermission": "O Circulos usa a camera para fotos do perfil e das entradas."
         }
       ],
       "expo-sharing"

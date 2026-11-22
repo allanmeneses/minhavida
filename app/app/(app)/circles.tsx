@@ -1,0 +1,88 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, ScrollView, Text } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Button } from '@/components/ui/Button';
+import { Feedback } from '@/components/ui/Feedback';
+import { TextField } from '@/components/ui/TextField';
+import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import { api, ApiError, type CircleSummary } from '@/lib/api';
+import { screenStyles } from '@/lib/screenStyles';
+
+export default function CirclesScreen() {
+  const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = screenStyles(colors);
+  const router = useRouter();
+  const [items, setItems] = useState<CircleSummary[]>([]);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [visibility, setVisibility] = useState<'private' | 'public'>('private');
+  const [surprise, setSurprise] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!token) {
+      return;
+    }
+    setItems(await api<CircleSummary[]>('/api/circles', { token }));
+  }, [token]);
+
+  useEffect(() => {
+    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel listar.'));
+  }, [load]);
+
+  async function create() {
+    if (!token || !name.trim()) {
+      return;
+    }
+    setError(null);
+    try {
+      const created = await api<CircleSummary>('/api/circles', {
+        method: 'POST',
+        token,
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim(),
+          visibility,
+          isSurprise: surprise,
+        }),
+      });
+      setName('');
+      setDescription('');
+      router.push(`/(app)/circle/${created.id}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Nao foi possivel criar o circulo.');
+    }
+  }
+
+  return (
+    <ScrollView contentContainerStyle={styles.page}>
+      <Text style={styles.title}>Circulos</Text>
+      <Text style={styles.lead}>Crie o da sua vida. Entrar no de outra pessoa pede convite ou pedido.</Text>
+      <Feedback message={error} />
+      <TextField label="Nome" value={name} onChangeText={setName} />
+      <TextField label="Descricao" value={description} onChangeText={setDescription} />
+      <Button
+        label={visibility === 'private' ? 'Privado' : 'Publico'}
+        variant="ghost"
+        onPress={() => setVisibility(visibility === 'private' ? 'public' : 'private')}
+      />
+      <Button
+        label={surprise ? 'Surpresa ligada' : 'Surpresa desligada'}
+        variant="ghost"
+        onPress={() => setSurprise(!surprise)}
+      />
+      <Button label="Criar circulo" onPress={() => void create()} disabled={!name.trim()} />
+      {items.map((item) => (
+        <Pressable key={item.id} onPress={() => router.push(`/(app)/circle/${item.id}`)} style={styles.card}>
+          <Text style={styles.item}>{item.name ?? 'Circulo oculto'}</Text>
+          <Text style={styles.lead}>
+            {item.visibility} · {item.memberCount} pessoa(s)
+          </Text>
+        </Pressable>
+      ))}
+    </ScrollView>
+  );
+}
+

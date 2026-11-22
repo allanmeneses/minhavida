@@ -2,11 +2,12 @@ import { Redirect, Tabs } from 'expo-router';
 import { Platform, Pressable, Text } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { LoadingScreen } from '@/components/LoadingScreen';
-import { colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function AppLayout() {
   const { loading, user, logout } = useAuth();
+  const { colors } = useTheme();
   if (loading) {
     return <LoadingScreen />;
   }
@@ -38,6 +39,34 @@ export default function AppLayout() {
         ),
       }}>
       <Tabs.Screen
+        name="home"
+        options={{
+          title: 'Hoje',
+          tabBarLabel: 'Hoje',
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: 'sun.max', android: 'wb_sunny', web: 'sunny' }}
+              tintColor={color}
+              size={26}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="circles"
+        options={{
+          title: 'Circulos',
+          tabBarLabel: 'Circulos',
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: 'circle.grid.3x3', android: 'group', web: 'group' }}
+              tintColor={color}
+              size={26}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Meu perfil',
@@ -51,20 +80,12 @@ export default function AppLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="documents"
-        options={{
-          title: 'Documentos',
-          tabBarLabel: 'Documentos',
-          tabBarIcon: ({ color }) => (
-            <SymbolView
-              name={{ ios: 'folder', android: 'folder', web: 'folder' }}
-              tintColor={color}
-              size={26}
-            />
-          ),
-        }}
-      />
+      <Tabs.Screen name="index" options={{ href: null }} />
+      <Tabs.Screen name="documents" options={{ href: null, title: 'Documentos' }} />
+      <Tabs.Screen name="reminders" options={{ href: null, title: 'Lembretes' }} />
+      <Tabs.Screen name="settings" options={{ href: null, title: 'Ajustes' }} />
+      <Tabs.Screen name="life/[id]" options={{ href: null, title: 'Area' }} />
+      <Tabs.Screen name="circle/[id]" options={{ href: null, title: 'Circulo' }} />
     </Tabs>
   );
 }
