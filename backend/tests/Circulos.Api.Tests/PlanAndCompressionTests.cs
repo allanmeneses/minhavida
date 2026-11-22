@@ -121,6 +121,35 @@ public sealed class PlanAndCompressionTests : IClassFixture<ApiFactory>
         Assert.Equal(0, home.ActiveCircleCount);
     }
 
+    [Fact]
+    public async Task Atalho_DesativarSomeDaPrincipalEExcluirMantemHistorico()
+    {
+        var client = _factory.CreateClient();
+        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        var created = await client.PostAsJsonAsync("/api/shortcuts", new { label = "Tomei o remedio" });
+        var shortcut = await created.Content.ReadFromJsonAsync<ShortcutDto>();
+        (await client.PostAsync($"/api/shortcuts/{shortcut!.Id}/run", null)).EnsureSuccessStatusCode();
+
+        var deactivate = await client.PostAsync($"/api/shortcuts/{shortcut.Id}/deactivate", null);
+        Assert.Equal(HttpStatusCode.NoContent, deactivate.StatusCode);
+        var home = await client.GetFromJsonAsync<JsonHome>("/api/home");
+        Assert.DoesNotContain(home!.Shortcuts, x => x.Id == shortcut.Id);
+        var listed = await client.GetFromJsonAsync<List<ShortcutDto>>("/api/shortcuts");
+        Assert.Contains(listed!, x => x.Id == shortcut.Id);
+
+        var activate = await client.PostAsync($"/api/shortcuts/{shortcut.Id}/activate", null);
+        Assert.Equal(HttpStatusCode.NoContent, activate.StatusCode);
+        var homeOn = await client.GetFromJsonAsync<JsonHome>("/api/home");
+        Assert.Contains(homeOn!.Shortcuts, x => x.Id == shortcut.Id);
+
+        var delete = await client.DeleteAsync($"/api/shortcuts/{shortcut.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
+        var areas = await client.GetFromJsonAsync<List<JsonArea>>("/api/life-areas");
+        var diary = areas!.Single(x => x.Kind == "diary");
+        var entries = await client.GetFromJsonAsync<List<JsonEntry>>($"/api/life-areas/{diary.Id}/entries");
+        Assert.Contains(entries!, x => x.Title == "Tomei o remedio");
+    }
+
     private static MultipartFormDataContent TextFile(string name, string content)
     {
         var file = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(content));
@@ -133,4 +162,6 @@ public sealed class PlanAndCompressionTests : IClassFixture<ApiFactory>
     private sealed record JsonPlan(string Plan, int? CircleLimit, long StorageLimitBytes, string Checkout);
     private sealed record ShortcutDto(Guid Id, string Label);
     private sealed record JsonHome(int ActiveCircleCount, List<ShortcutDto> Shortcuts);
+    private sealed record JsonArea(Guid Id, string Kind);
+    private sealed record JsonEntry(string Title);
 }

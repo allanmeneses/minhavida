@@ -189,6 +189,8 @@ public sealed record CircleSummaryResponse(
     string Role,
     int MemberCount);
 
+public sealed record CircleJoinRequestDto(Guid Id, Guid UserId, string Name, string Status, DateTime CreatedAt);
+
 public sealed record CircleDetailResponse(
     Guid Id,
     string? Name,
@@ -202,7 +204,8 @@ public sealed record CircleDetailResponse(
     Guid? OwnerUserId,
     IReadOnlyList<CircleMemberDto> Members,
     IReadOnlyList<CirclePostResponse> Posts,
-    IReadOnlyList<CircleLogResponse> Log);
+    IReadOnlyList<CircleLogResponse> Log,
+    IReadOnlyList<CircleJoinRequestDto> JoinRequests);
 
 public sealed record CirclePostResponse(Guid Id, Guid? AuthorUserId, string Body, bool HasPhoto, DateTime CreatedAt);
 public sealed record CircleLogResponse(Guid Id, Guid? ActorUserId, string Action, string Detail, DateTime CreatedAt);

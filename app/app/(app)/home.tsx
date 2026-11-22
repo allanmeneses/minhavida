@@ -15,6 +15,7 @@ export default function HomeScreen() {
   const styles = screenStyles(colors);
   const router = useRouter();
   const [panel, setPanel] = useState<DayPanel | null>(null);
+  const [allShortcuts, setAllShortcuts] = useState<ShortcutItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [label, setLabel] = useState('');
@@ -25,6 +26,7 @@ export default function HomeScreen() {
     }
     try {
       setPanel(await api<DayPanel>('/api/home', { token }));
+      setAllShortcuts(await api<ShortcutItem[]>('/api/shortcuts', { token }));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Nao foi possivel abrir o dia.');
     }
@@ -64,6 +66,32 @@ export default function HomeScreen() {
     await load();
   }
 
+  async function deactivateShortcut(item: ShortcutItem) {
+    if (!token) {
+      return;
+    }
+    await api(`/api/shortcuts/${item.id}/deactivate`, { method: 'POST', token });
+    await load();
+  }
+
+  async function activateShortcut(item: ShortcutItem) {
+    if (!token) {
+      return;
+    }
+    await api(`/api/shortcuts/${item.id}/activate`, { method: 'POST', token });
+    await load();
+  }
+
+  async function deleteShortcut(item: ShortcutItem) {
+    if (!token) {
+      return;
+    }
+    await api(`/api/shortcuts/${item.id}`, { method: 'DELETE', token });
+    await load();
+  }
+
+  const inactiveShortcuts = allShortcuts.filter((item) => !item.isActive);
+
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.kicker}>Painel do dia</Text>
@@ -80,16 +108,33 @@ export default function HomeScreen() {
 
       <View style={extra.row}>
         {panel?.shortcuts.map((item) => (
-          <Pressable
-            key={item.id}
-            accessibilityRole="button"
-            accessibilityLabel={item.label}
-            onPress={() => void runShortcut(item)}
-            style={[extra.shortcut, { backgroundColor: item.color }]}>
-            <Text style={extra.shortcutText}>{item.label}</Text>
-          </Pressable>
+          <View key={item.id} style={extra.shortcutWrap}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              onPress={() => void runShortcut(item)}
+              style={[extra.shortcut, { backgroundColor: item.color }]}>
+              <Text style={extra.shortcutText}>{item.label}</Text>
+            </Pressable>
+            <Button label={`Desativar ${item.label}`} variant="ghost" onPress={() => void deactivateShortcut(item)} />
+            <Button label={`Excluir ${item.label}`} variant="danger" onPress={() => void deleteShortcut(item)} />
+          </View>
         ))}
       </View>
+
+      {inactiveShortcuts.length > 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.section}>Atalhos desativados</Text>
+          <Text style={styles.lead}>Somem da tela principal ate reativar.</Text>
+          {inactiveShortcuts.map((item) => (
+            <View key={item.id}>
+              <Text style={styles.item}>{item.label}</Text>
+              <Button label={`Reativar ${item.label}`} variant="ghost" onPress={() => void activateShortcut(item)} />
+              <Button label={`Excluir ${item.label}`} variant="danger" onPress={() => void deleteShortcut(item)} />
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       <View style={styles.card}>
         <TextField label="Nome do atalho" value={label} onChangeText={setLabel} placeholder="Ex.: Tomei o remedio" />
@@ -140,6 +185,10 @@ const extra = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  shortcutWrap: {
+    gap: 8,
+    minWidth: 140,
   },
   shortcut: {
     paddingVertical: 16,

@@ -63,6 +63,14 @@ export default function RemindersScreen() {
     await load();
   }
 
+  async function skip(id: string) {
+    if (!token) {
+      return;
+    }
+    await api(`/api/reminders/${id}/skip`, { method: 'POST', token });
+    await load();
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Lembretes</Text>
@@ -92,12 +100,14 @@ export default function RemindersScreen() {
         <View key={item.id} style={styles.card}>
           <Text style={styles.item}>{item.title}</Text>
           <Text style={styles.lead}>{new Date(item.nextFireAt).toLocaleString('pt-BR')}</Text>
+          {item.endingSoon ? <Text style={styles.lead}>Recorrencia acabando</Text> : null}
           {item.giftIdeas?.length ? <Text style={styles.lead}>{item.giftIdeas.join(', ')}</Text> : null}
           <Button
             label={item.isPaused ? 'Retomar' : 'Pausar'}
             variant="ghost"
             onPress={() => void pause(item.id, item.isPaused)}
           />
+          <Button label={`Pular ${item.title}`} variant="ghost" onPress={() => void skip(item.id)} />
         </View>
       ))}
     </ScrollView>

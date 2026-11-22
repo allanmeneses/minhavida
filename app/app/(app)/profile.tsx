@@ -98,6 +98,24 @@ export default function ProfileScreen() {
     }
   }
 
+  async function removePhoto() {
+    if (!token) {
+      return;
+    }
+    setPhotoBusy(true);
+    setError(null);
+    try {
+      const next = await api<Profile>('/api/profile/photo', { method: 'DELETE', token });
+      setProfile(next);
+      bumpPhoto();
+      setOk('Foto removida.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel remover a foto.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
   async function pickFromLibrary() {
     const picked = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -153,6 +171,9 @@ export default function ProfileScreen() {
           <View style={styles.photoActions}>
             <Button label={photoBusy ? 'Enviando...' : 'Galeria'} onPress={() => void pickFromLibrary()} loading={photoBusy} />
             <Button label="Camera" variant="ghost" onPress={() => void pickFromCamera()} loading={photoBusy} />
+            {profile?.hasPhoto ? (
+              <Button label="Remover foto" variant="danger" onPress={() => void removePhoto()} loading={photoBusy} />
+            ) : null}
           </View>
         </View>
 

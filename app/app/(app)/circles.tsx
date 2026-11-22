@@ -15,9 +15,12 @@ export default function CirclesScreen() {
   const styles = screenStyles(colors);
   const router = useRouter();
   const [items, setItems] = useState<CircleSummary[]>([]);
+  const [found, setFound] = useState<CircleSummary[]>([]);
+  const [query, setQuery] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<'private' | 'public'>('private');
+  const [discoverable, setDiscoverable] = useState(false);
   const [surprise, setSurprise] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +29,7 @@ export default function CirclesScreen() {
       return;
     }
     setItems(await api<CircleSummary[]>('/api/circles', { token }));
+    setFound(await api<CircleSummary[]>('/api/circles/discover', { token }));
   }, [token]);
 
   useEffect(() => {
@@ -45,6 +49,7 @@ export default function CirclesScreen() {
           name: name.trim(),
           description: description.trim(),
           visibility,
+          discoverable,
           isSurprise: surprise,
         }),
       });
@@ -54,6 +59,14 @@ export default function CirclesScreen() {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Nao foi possivel criar o circulo.');
     }
+  }
+
+  async function search() {
+    if (!token) {
+      return;
+    }
+    const q = encodeURIComponent(query.trim());
+    setFound(await api<CircleSummary[]>(`/api/circles/discover${q ? `?q=${q}` : ''}`, { token }));
   }
 
   return (
@@ -69,11 +82,31 @@ export default function CirclesScreen() {
         onPress={() => setVisibility(visibility === 'private' ? 'public' : 'private')}
       />
       <Button
+        label={discoverable ? 'Aparece na busca' : 'Oculto na busca'}
+        variant="ghost"
+        onPress={() => setDiscoverable(!discoverable)}
+      />
+      <Button
         label={surprise ? 'Surpresa ligada' : 'Surpresa desligada'}
         variant="ghost"
         onPress={() => setSurprise(!surprise)}
       />
       <Button label="Criar circulo" onPress={() => void create()} disabled={!name.trim()} />
+
+      <Text style={styles.section}>Descobrir circulos</Text>
+      <Text style={styles.lead}>Busca por interesse em comum. So aparece quem marcou aceitar ser encontrado.</Text>
+      <TextField label="Buscar circulos" value={query} onChangeText={setQuery} placeholder="corrida, familia" />
+      <Button label="Buscar" variant="ghost" onPress={() => void search()} />
+      {found.map((item) => (
+        <Pressable key={item.id} onPress={() => router.push(`/(app)/circle/${item.id}`)} style={styles.card}>
+          <Text style={styles.item}>{item.name ?? 'Circulo'}</Text>
+          <Text style={styles.lead}>
+            {item.description || 'Sem descricao'} · {item.visibility}
+          </Text>
+        </Pressable>
+      ))}
+
+      <Text style={styles.section}>Os seus</Text>
       {items.map((item) => (
         <Pressable key={item.id} onPress={() => router.push(`/(app)/circle/${item.id}`)} style={styles.card}>
           <Text style={styles.item}>{item.name ?? 'Circulo oculto'}</Text>
@@ -85,4 +118,3 @@ export default function CirclesScreen() {
     </ScrollView>
   );
 }
-

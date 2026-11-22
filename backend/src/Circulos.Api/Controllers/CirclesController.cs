@@ -42,15 +42,23 @@ public sealed class CirclesController(
     }
 
     [HttpGet("discover")]
-    public async Task<ActionResult<IReadOnlyList<CircleSummaryResponse>>> Discover(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<CircleSummaryResponse>>> Discover(
+        [FromQuery] string? q,
+        CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
-        var items = await db.Circles
+        var query = db.Circles
             .AsNoTracking()
             .Include(x => x.Members)
-            .Where(x => x.Discoverable && x.Visibility == CircleVisibility.Public && x.Status == CircleStatus.Active)
-            .Where(x => !x.IsSurprise || x.RevealedAt != null || x.SurpriseSubjectUserId != userId)
-            .ToListAsync(cancellationToken);
+            .Where(x => x.Discoverable && x.Status == CircleStatus.Active)
+            .Where(x => !x.IsSurprise || x.RevealedAt != null || x.SurpriseSubjectUserId != userId);
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var term = q.Trim().ToLowerInvariant();
+            query = query.Where(x => x.Name.ToLower().Contains(term) || x.Description.ToLower().Contains(term));
+        }
+
+        var items = await query.ToListAsync(cancellationToken);
         return Ok(items.Select(circle => ToSummary(circle, RoleOf(circle, userId), userId)).ToList());
     }
 
@@ -128,7 +136,7 @@ public sealed class CirclesController(
         var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
         if (member is null)
         {
-            if (circle.Visibility == CircleVisibility.Public)
+            if (circle.Visibility == CircleVisibility.Public || circle.Discoverable)
             {
                 return Ok(PublicPreview(circle));
             }
@@ -139,6 +147,9 @@ public sealed class CirclesController(
         var names = await MemberNames(circle, cancellationToken);
         var posts = circle.Posts.OrderByDescending(x => x.CreatedAt).Select(ToPost).ToList();
         var log = circle.Logs.OrderByDescending(x => x.CreatedAt).Select(ToLog).ToList();
+        var joinRequests = member.Role >= CircleRole.Admin
+            ? await PendingJoinRequests(circle.Id, cancellationToken)
+            : [];
         return Ok(new CircleDetailResponse(
             circle.Id,
             circle.Name,
@@ -152,7 +163,8 @@ public sealed class CirclesController(
             circle.OwnerUserId,
             names,
             posts,
-            log));
+            log,
+            joinRequests));
     }
 
     [HttpPost("{id:guid}/invites")]
@@ -490,6 +502,26 @@ public sealed class CirclesController(
             circle.Members.Count);
     }
 
+    private async Task<List<CircleJoinRequestDto>> PendingJoinRequests(Guid circleId, CancellationToken cancellationToken)
+    {
+        var pending = await db.CircleJoinRequests.AsNoTracking()
+            .Where(x => x.CircleId == circleId && x.Status == "pending")
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+        var ids = pending.Select(x => x.UserId).ToList();
+        var profiles = await db.Profiles.AsNoTracking()
+            .Where(x => ids.Contains(x.UserId))
+            .ToDictionaryAsync(x => x.UserId, cancellationToken);
+        return pending
+            .Select(request => new CircleJoinRequestDto(
+                request.Id,
+                request.UserId,
+                profiles.TryGetValue(request.UserId, out var profile) ? profile.DisplayName : "Pessoa",
+                request.Status,
+                request.CreatedAt))
+            .ToList();
+    }
+
     private static CircleDetailResponse PublicPreview(Circle circle) =>
         new(
             circle.Id,
@@ -502,6 +534,7 @@ public sealed class CirclesController(
             EnumText.Kind(circle.Kind),
             EnumText.Status(circle.Status),
             null,
+            [],
             [],
             [],
             []);

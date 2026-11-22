@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Image, Platform, ScrollView, Text, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { api, ApiError, downloadDocument, type DocumentItem, type LifeArea, type LifeEntry } from '@/lib/api';
+import {
+  api,
+  apiBlob,
+  ApiError,
+  downloadDocument,
+  uploadNativeFile,
+  type DocumentItem,
+  type LifeArea,
+  type LifeEntry,
+} from '@/lib/api';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function LifeAreaScreen() {
@@ -21,6 +31,9 @@ export default function LifeAreaScreen() {
   const [body, setBody] = useState('');
   const [location, setLocation] = useState('');
   const [occurredOn, setOccurredOn] = useState('');
+  const [numberValue, setNumberValue] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [nativePhoto, setNativePhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -39,11 +52,39 @@ export default function LifeAreaScreen() {
     void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Falha ao abrir a area.'));
   }, [load]);
 
+  async function sendBrowserFile(entryId: string, file: File) {
+    if (!token || !id) {
+      return;
+    }
+    const form = new FormData();
+    form.append('file', file, file.name);
+    await api(`/api/life-areas/${id}/entries/${entryId}/photo`, { method: 'POST', token, body: form });
+  }
+
+  async function sendNativePhoto(entryId: string, asset: ImagePicker.ImagePickerAsset) {
+    if (!token || !id) {
+      return;
+    }
+    if (Platform.OS === 'web' && asset.file) {
+      const form = new FormData();
+      form.append('file', asset.file, asset.fileName ?? 'entrada.jpg');
+      await api(`/api/life-areas/${id}/entries/${entryId}/photo`, { method: 'POST', token, body: form });
+      return;
+    }
+    await uploadNativeFile(
+      `/api/life-areas/${id}/entries/${entryId}/photo`,
+      token,
+      { uri: asset.uri, name: asset.fileName, mimeType: asset.mimeType ?? 'image/jpeg' },
+      'entrada.jpg',
+    );
+  }
+
   async function addEntry() {
     if (!token || !id || !title.trim()) {
       return;
     }
-    await api(`/api/life-areas/${id}/entries`, {
+    const parsedNumber = numberValue.trim() ? Number(numberValue.replace(',', '.')) : null;
+    const created = await api<LifeEntry>(`/api/life-areas/${id}/entries`, {
       method: 'POST',
       token,
       body: JSON.stringify({
@@ -51,13 +92,41 @@ export default function LifeAreaScreen() {
         body: body.trim() || null,
         location: location.trim() || null,
         occurredOn: occurredOn.trim() || null,
+        numberValue: parsedNumber !== null && Number.isFinite(parsedNumber) ? parsedNumber : null,
       }),
     });
+    if (photoFile) {
+      await sendBrowserFile(created.id, photoFile);
+    } else if (nativePhoto) {
+      await sendNativePhoto(created.id, nativePhoto);
+    }
     setTitle('');
     setBody('');
     setLocation('');
     setOccurredOn('');
+    setNumberValue('');
+    setPhotoFile(null);
+    setNativePhoto(null);
     await load();
+  }
+
+  async function pickLibrary() {
+    const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.85 });
+    if (!picked.canceled && picked.assets[0]) {
+      setNativePhoto(picked.assets[0]);
+    }
+  }
+
+  async function pickCamera() {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      setError('Precisamos da camera para tirar a foto.');
+      return;
+    }
+    const picked = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.85 });
+    if (!picked.canceled && picked.assets[0]) {
+      setNativePhoto(picked.assets[0]);
+    }
   }
 
   async function exportDiary() {
@@ -83,7 +152,7 @@ export default function LifeAreaScreen() {
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>{area?.name ?? 'Area'}</Text>
       <Text style={styles.lead}>
-        {area?.kind === 'vaccine' ? 'Exemplo: vacina, quando e onde.' : 'Texto, numero ou data. Sem video.'}
+        {area?.kind === 'vaccine' ? 'Exemplo: vacina, quando e onde.' : 'Texto, numero ou foto. Sem video.'}
       </Text>
       <Feedback message={error} />
       <TextField label="Titulo" value={title} onChangeText={setTitle} placeholder="Hepatite B" />
@@ -93,16 +162,41 @@ export default function LifeAreaScreen() {
           <TextField label="Onde" value={location} onChangeText={setLocation} placeholder="UBS Centro" />
         </>
       ) : null}
+      <TextField label="Numero" value={numberValue} onChangeText={setNumberValue} placeholder="200" keyboardType="decimal-pad" />
       <TextField label="Texto" value={body} onChangeText={setBody} placeholder="Opcional" />
+      {Platform.OS === 'web' ? (
+        <View>
+          <Text nativeID="foto-entrada-label" style={styles.lead}>
+            Foto da entrada
+          </Text>
+          <input
+            aria-labelledby="foto-entrada-label"
+            aria-label="Foto da entrada"
+            type="file"
+            accept="image/*"
+            onChange={(event) => setPhotoFile(event.currentTarget.files?.[0] ?? null)}
+          />
+        </View>
+      ) : (
+        <>
+          <Button label="Galeria" variant="ghost" onPress={() => void pickLibrary()} />
+          <Button label="Camera" variant="ghost" onPress={() => void pickCamera()} />
+        </>
+      )}
+      {photoFile || nativePhoto ? <Text style={styles.lead}>Foto pronta para enviar com a entrada.</Text> : null}
       <Button label="Guardar entrada" onPress={() => void addEntry()} disabled={!title.trim()} />
       {area?.kind === 'diary' ? <Button label="Exportar texto" variant="ghost" onPress={() => void exportDiary()} /> : null}
 
       {entries.map((entry) => (
         <View key={entry.id} style={styles.card}>
           <Text style={styles.item}>{entry.title}</Text>
+          {entry.numberValue !== null && entry.numberValue !== undefined ? (
+            <Text style={styles.lead}>Numero: {entry.numberValue}</Text>
+          ) : null}
           {entry.occurredOn ? <Text style={styles.lead}>{entry.occurredOn}</Text> : null}
           {entry.location ? <Text style={styles.lead}>{entry.location}</Text> : null}
           {entry.body ? <Text style={styles.lead}>{entry.body}</Text> : null}
+          {entry.hasPhoto && token && id ? <EntryPhoto areaId={id} entryId={entry.id} token={token} /> : null}
         </View>
       ))}
 
@@ -116,3 +210,35 @@ export default function LifeAreaScreen() {
   );
 }
 
+function EntryPhoto({ areaId, entryId, token }: { areaId: string; entryId: string; token: string }) {
+  const [uri, setUri] = useState<string | null>(null);
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const blob = await apiBlob(`/api/life-areas/${areaId}/entries/${entryId}/photo`, token);
+        objectUrl = URL.createObjectURL(blob);
+        if (!cancelled) {
+          setUri(objectUrl);
+        } else {
+          URL.revokeObjectURL(objectUrl);
+        }
+      } catch {
+        if (!cancelled) {
+          setUri(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [areaId, entryId, token]);
+  if (!uri) {
+    return <Text>Foto</Text>;
+  }
+  return <Image source={{ uri }} style={{ width: 160, height: 160, borderRadius: 8 }} accessibilityLabel="Foto da entrada salva" />;
+}

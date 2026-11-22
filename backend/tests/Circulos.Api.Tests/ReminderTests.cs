@@ -66,6 +66,42 @@ public sealed class ReminderTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Skip_AvancaParaAProximaOcorrencia()
+    {
+        var client = _factory.CreateClient();
+        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        var start = DateTime.UtcNow.Date.AddDays(1).AddHours(9);
+        var created = await client.PostAsJsonAsync("/api/reminders", new
+        {
+            title = "Remedio",
+            startAt = start,
+            recurrence = new { frequency = "daily", interval = 1 },
+        });
+        var reminder = await created.Content.ReadFromJsonAsync<ReminderDto>(Json);
+        var skipped = await client.PostAsync($"/api/reminders/{reminder!.Id}/skip", null);
+        Assert.Equal(HttpStatusCode.OK, skipped.StatusCode);
+        var body = await skipped.Content.ReadFromJsonAsync<ReminderDto>(Json);
+        Assert.True(body!.NextFireAt > reminder.NextFireAt);
+    }
+
+    [Fact]
+    public async Task RecorrenciaComPoucoRestante_MarcaEndingSoon()
+    {
+        var client = _factory.CreateClient();
+        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        var start = DateTime.UtcNow.AddHours(2);
+        var created = await client.PostAsJsonAsync("/api/reminders", new
+        {
+            title = "Ultimas doses",
+            startAt = start,
+            recurrence = new { frequency = "daily", interval = 1, maxOccurrences = 2 },
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        using var doc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        Assert.True(doc.RootElement.GetProperty("endingSoon").GetBoolean());
+    }
+
+    [Fact]
     public async Task ModoFerias_EscondeLembretesDoPainelEGuardaORegistro()
     {
         var client = _factory.CreateClient();

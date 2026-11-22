@@ -47,12 +47,32 @@ export type CircleSummary = {
   name: string | null;
   description: string | null;
   visibility: string;
+  discoverable: boolean;
   isSurprise: boolean;
   revealed: boolean;
   kind: string;
   status: string;
   role: string;
   memberCount: number;
+};
+export type CircleJoinRequest = {
+  id: string;
+  userId: string;
+  name: string;
+  status: string;
+  createdAt: string;
+};
+export type CircleDetail = {
+  id: string;
+  name: string | null;
+  description: string | null;
+  visibility: string;
+  discoverable: boolean;
+  ownerUserId: string | null;
+  members: { userId: string; name: string; role: string }[];
+  posts: { id: string; body: string; createdAt: string }[];
+  log: { id: string; action: string; detail: string; createdAt: string; actorUserId: string | null }[];
+  joinRequests: CircleJoinRequest[];
 };
 export type ReminderItem = {
   id: string;

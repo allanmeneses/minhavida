@@ -192,6 +192,20 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         return Ok(ToEntry(entry));
     }
 
+    [HttpGet("{id:guid}/entries/{entryId:guid}/photo")]
+    public async Task<IActionResult> DownloadPhoto(Guid id, Guid entryId, CancellationToken cancellationToken)
+    {
+        var entry = await OwnedEntry(id, entryId, cancellationToken);
+        if (entry is null || entry.PhotoStorageKey is null || entry.PhotoContentType is null)
+        {
+            return NotFound(new ErrorResponse("Esta entrada ainda nao tem foto."));
+        }
+
+        var stream = await storage.OpenReadAsync(entry.PhotoStorageKey, cancellationToken);
+        Response.Headers.CacheControl = "private, no-store";
+        return File(stream, entry.PhotoContentType, "entrada.jpg");
+    }
+
     [HttpGet("{id:guid}/export")]
     public async Task<IActionResult> ExportDiary(Guid id, CancellationToken cancellationToken)
     {
