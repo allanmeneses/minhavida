@@ -27,7 +27,7 @@ Pedido desta rodada, com o que a especificacao/lacunas sustentam. O que nao esta
 | Backup JSON + arquivos, so com permissao | feito e testado | 7, 58, 59 | `GET /api/export/me` e `/api/export/circles/{id}` zip `dados.json` + `files/`. Membro exporta o circulo; visitante 404. Teste `Perfil_ExportaJsonEArquivo`, `Circulo_MembroExporta_VisitanteNao`. Playwright `backup do perfil e grafico de armazenamento`. Dump cifrado para a pessoa abrir continua fora (58, 59). |
 | Grafico de armazenamento sem separar tipo | feito e testado | 279, 280, 275 | Barra em Ajustes, `Uso de armazenamento`, texto "Sem separar por tipo". 100 MB / 1 GB ja em `PlanLimits`. Playwright no teste de backup. |
 | Dependabot nuget, npm, github-actions | feito e testado | 82 | `.github/dependabot.yml`. `npm test` `Dependabot cobre nuget, npm e github-actions`. |
-| CodeQL no GitHub Actions | feito e testado | 82 | `.github/workflows/codeql.yml` csharp e javascript. `npm test` `CodeQL analisa csharp e javascript`. Resultado das queries do CodeQL no GitHub: nao verificado daqui. |
+| CodeQL no GitHub Actions | parcial | 82 | `.github/workflows/codeql.yml` csharp e javascript. Analise rodou no run [45054514009](https://github.com/allanmeneses/minhavida/actions/runs/45054514009): 56 TS + 11 JS, 90 C#. Upload para code scanning falhou com "Code scanning is not enabled for this repository". Nao da para ligar o recurso daqui. O workflow grava o SARIF como artefato (`upload: false`). `npm test` `CodeQL analisa csharp e javascript`. |
 | Billing, SMTP real, Azure, iOS, votacao, WebSocket | nao feito | pedido desta rodada | Fora do escopo. |
 
 CI do main no squash `38ae79f` (run [45052962465](https://github.com/allanmeneses/minhavida/actions/runs/45052962465)): job `backend` conclusion `success`; job `app` conclusion `success`. Job `android` ainda estava em `Gerar APK` (status `in_progress`) na leitura desta rodada; nao falhou.
@@ -115,7 +115,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Estatisticas anonimas so internas, nunca vendidas | nao feito | 43, 44 | Sem coleta. |
 | Repositorio privado | feito sem teste | 83 | API GitHub desta rodada: `private: true` em `allanmeneses/minhavida`. |
 | GitHub Actions: build, unit, integracao | feito e testado | 79, 80, 81, 84 | `.github/workflows/ci.yml`: `dotnet test`, `npm test`, `tsc --noEmit`, Playwright. Jobs `backend` e `app` verdes no run desta branch. |
-| Checagem de seguranca / Dependabot | feito e testado | 82 | `.github/dependabot.yml` nuget/npm/github-actions. CodeQL csharp+javascript. `npm test` `pipeline de seguranca`. `dotnet list --vulnerable` nao entra no CI. |
+| Checagem de seguranca / Dependabot | parcial | 82 | `.github/dependabot.yml` nuget/npm/github-actions. CodeQL analisa; upload de code scanning nao ligado no repo. Ver secao Rodada 5. `dotnet list --vulnerable` nao entra no CI. |
 | Testes desde o inicio; nada sobe sem teste | parcial | 79, 80 | xUnit 86 `[Fact]`, `npm test` 18 casos, Playwright 26. Nao ha gate de deploy. Deploy nao foi feito. |
 | Edicao substitui de vez, sem versao | feito sem teste | 68, 67 | PUT da entrada sobrescreve (`LifeAreasController.UpdateEntry`). Sem tabela de versoes. Sem teste do PUT. |
 | Tags opcionais nas entradas | nao feito | abertura | |

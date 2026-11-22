@@ -21,5 +21,7 @@ describe('pipeline de seguranca', () => {
     assert.match(text, /github\/codeql-action\/init@v3/);
     assert.match(text, /language:\s*\[csharp, javascript\]/);
     assert.match(text, /github\/codeql-action\/analyze@v3/);
+    assert.match(text, /upload:\s*false/);
+    assert.match(text, /codeql-\$\{\{ matrix\.language \}\}/);
   });
 });

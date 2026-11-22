@@ -29,3 +29,10 @@ jobs:
       - uses: github/codeql-action/analyze@v3
         with:
           category: '/language:${{ matrix.language }}'
+          upload: false
+          output: ${{ runner.temp }}/codeql-sarif
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codeql-${{ matrix.language }}
+          path: ${{ runner.temp }}/codeql-sarif
+          if-no-files-found: error
