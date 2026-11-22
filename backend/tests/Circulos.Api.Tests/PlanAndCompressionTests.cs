@@ -25,10 +25,10 @@ public sealed class PlanAndCompressionTests : IClassFixture<ApiFactory>
         Assert.Equal("free", plan!.Plan);
         Assert.Equal(3, plan.CircleLimit);
         Assert.Equal(PlanLimits.FreeStorageBytes, plan.StorageLimitBytes);
-        Assert.Contains("gateway", plan.Checkout, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Mercado Pago", plan.Checkout, StringComparison.OrdinalIgnoreCase);
 
-        var checkout = await client.PostAsync("/api/plan/checkout", null);
-        Assert.Equal(HttpStatusCode.NotImplemented, checkout.StatusCode);
+        var checkout = await client.PostAsJsonAsync("/api/plan/checkout", new { cardToken = "fake-cartao-aprovado" });
+        Assert.Equal(HttpStatusCode.OK, checkout.StatusCode);
     }
 
     [Fact]

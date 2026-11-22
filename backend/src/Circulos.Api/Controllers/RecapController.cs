@@ -43,6 +43,12 @@ public sealed class RecapController(AppDbContext db, RecapService recap) : Contr
             return NotFound(new ErrorResponse("Circulo nao encontrado."));
         }
 
+        var user = await db.Users.FirstAsync(item => item.Id == userId, cancellationToken);
+        if (user.Plan == PlanKind.Paid && !PlanLimits.BenefitsActive(user, DateTime.UtcNow))
+        {
+            return StatusCode(StatusCodes.Status402PaymentRequired, new ErrorResponse("Assinatura suspensa. Compartilhar retrospectiva fica bloqueado ate voltar a pagar."));
+        }
+
         var share = new RecapShare
         {
             Id = Guid.NewGuid(),

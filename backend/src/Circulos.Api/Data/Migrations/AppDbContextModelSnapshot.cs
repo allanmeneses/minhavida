@@ -55,6 +55,48 @@ namespace Circulos.Api.Data.Migrations
                     b.ToTable("account_deletion_requests", (string)null);
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.BillingEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ResourceId")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider", "EventKey")
+                        .IsUnique();
+
+                    b.ToTable("billing_events", (string)null);
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.Circle", b =>
                 {
                     b.Property<Guid>("Id")
@@ -72,11 +114,20 @@ namespace Circulos.Api.Data.Migrations
                     b.Property<bool>("Discoverable")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("FindableByLocation")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsSurprise")
                         .HasColumnType("boolean");
 
                     b.Property<int>("Kind")
                         .HasColumnType("integer");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -424,6 +475,29 @@ namespace Circulos.Api.Data.Migrations
                     b.ToTable("living_profiles", (string)null);
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.LivingProfileGrant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Access")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("LivingProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LivingProfileId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("living_profile_grants", (string)null);
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.Memory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -557,6 +631,10 @@ namespace Circulos.Api.Data.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Bio")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateOnly?>("BirthDate")
                         .HasColumnType("date");
 
@@ -565,8 +643,17 @@ namespace Circulos.Api.Data.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<bool>("FindableByLocation")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsPublic")
                         .HasColumnType("boolean");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision");
 
                     b.Property<string>("Phone")
                         .HasMaxLength(40)
@@ -944,6 +1031,9 @@ namespace Circulos.Api.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ListId");
@@ -968,7 +1058,13 @@ namespace Circulos.Api.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Label")
@@ -992,6 +1088,63 @@ namespace Circulos.Api.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("shortcuts", (string)null);
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.SuccessionBallot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CandidateUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CastAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("VoteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VoterUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VoteId", "VoterUserId")
+                        .IsUnique();
+
+                    b.ToTable("succession_ballots", (string)null);
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.SuccessionVote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CircleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("DeadlineAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("OpenedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("WinnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CircleId");
+
+                    b.ToTable("succession_votes", (string)null);
                 });
 
             modelBuilder.Entity("Circulos.Api.Domain.TwoFactorChallenge", b =>
@@ -1058,6 +1211,9 @@ namespace Circulos.Api.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("BillingPeriod")
+                        .HasColumnType("integer");
+
                     b.Property<string>("CalendarFeedToken")
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
@@ -1073,6 +1229,9 @@ namespace Circulos.Api.Data.Migrations
                     b.Property<int>("OwnedCircleCount")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("PaidUntil")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(512)
@@ -1083,6 +1242,13 @@ namespace Circulos.Api.Data.Migrations
 
                     b.Property<long>("StorageUsedBytes")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("SubscriptionProviderId")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("SubscriptionStatus")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
@@ -1253,6 +1419,17 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.LivingProfileGrant", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.LivingProfile", "LivingProfile")
+                        .WithMany("Grants")
+                        .HasForeignKey("LivingProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("LivingProfile");
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.Memory", b =>
                 {
                     b.HasOne("Circulos.Api.Domain.User", "Author")
@@ -1404,6 +1581,28 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.SuccessionBallot", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.SuccessionVote", "Vote")
+                        .WithMany("Ballots")
+                        .HasForeignKey("VoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Vote");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.SuccessionVote", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.Circle", "Circle")
+                        .WithMany()
+                        .HasForeignKey("CircleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Circle");
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.TwoFactorChallenge", b =>
                 {
                     b.HasOne("Circulos.Api.Domain.User", "User")
@@ -1442,11 +1641,21 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("Entries");
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.LivingProfile", b =>
+                {
+                    b.Navigation("Grants");
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.SharedList", b =>
                 {
                     b.Navigation("Grants");
 
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.SuccessionVote", b =>
+                {
+                    b.Navigation("Ballots");
                 });
 
             modelBuilder.Entity("Circulos.Api.Domain.User", b =>

@@ -3,6 +3,7 @@ using Circulos.Api.Auth;
 using Circulos.Api.Data;
 using Circulos.Api.Domain;
 using Circulos.Api.Observability;
+using Circulos.Api.Payments;
 using Circulos.Api.Services;
 using Circulos.Api.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -30,6 +31,34 @@ builder.Services.AddScoped<IEmailSender, OutboxEmailSender>();
 builder.Services.AddScoped<AccountDeletionService>();
 builder.Services.AddScoped<StatusPage>();
 builder.Services.AddScoped<RecapService>();
+builder.Services.Configure<BillingOptions>(builder.Configuration.GetSection("Billing"));
+builder.Services.Configure<PlanPriceOptions>(builder.Configuration.GetSection("Plans"));
+builder.Services.Configure<MercadoPagoOptions>(builder.Configuration.GetSection("MercadoPago"));
+builder.Services.PostConfigure<MercadoPagoOptions>(options =>
+{
+    if (string.IsNullOrWhiteSpace(options.AccessToken))
+    {
+        options.AccessToken = builder.Configuration["MP_ACCESS_TOKEN"];
+    }
+
+    if (string.IsNullOrWhiteSpace(options.WebhookSecret))
+    {
+        options.WebhookSecret = builder.Configuration["MP_WEBHOOK_SECRET"];
+    }
+});
+builder.Services.AddScoped<BillingService>();
+builder.Services.AddScoped<SuccessionService>();
+if (PaymentsConfig.IsMercadoPago(builder.Configuration))
+{
+    builder.Services.AddHttpClient<IPaymentGateway, MercadoPagoGateway>(client =>
+        client.Timeout = TimeSpan.FromSeconds(20));
+}
+else
+{
+    builder.Services.AddSingleton<FakePaymentGateway>();
+    builder.Services.AddSingleton<IPaymentGateway>(sp => sp.GetRequiredService<FakePaymentGateway>());
+}
+
 builder.Services.AddCirculosObservability(builder.Configuration);
 
 builder.Services.Configure<FormOptions>(options =>
@@ -118,6 +147,10 @@ app.UseAuthorization();
 
 app.MapGet("/", () => Results.Json(new { name = "Circulos", version = "2.0.0" }));
 app.MapControllers();
+if (PaymentsConfig.IsSimulated(app.Configuration))
+{
+    app.MapMethods("/dev/rotina", new[] { "GET", "POST" }, () => Results.Ok(new { ok = true, provider = PaymentsConfig.Simulated }));
+}
 
 app.Run();
 

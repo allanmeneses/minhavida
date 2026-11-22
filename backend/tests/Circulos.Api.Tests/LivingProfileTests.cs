@@ -56,6 +56,35 @@ public sealed class LivingProfileTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task GrantEditar_MembroEdita_VisualizarNaoEdita()
+    {
+        var dono = _factory.CreateClient();
+        dono.WithToken((await AuthHelper.RegisterAsync(dono, name: "Dono")).Token);
+        var editor = _factory.CreateClient();
+        var editorAuth = await AuthHelper.RegisterAsync(editor, name: "Editora");
+        editor.WithToken(editorAuth.Token);
+        var viewer = _factory.CreateClient();
+        var viewerAuth = await AuthHelper.RegisterAsync(viewer, name: "Viewer");
+        viewer.WithToken(viewerAuth.Token);
+        var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Casa" })).Content.ReadFromJsonAsync<CircleDto>(Json);
+        var inviteE = await (await dono.PostAsJsonAsync($"/api/circles/{circle!.Id}/invites", new { email = editorAuth.Email, role = "editor" })).Content.ReadFromJsonAsync<InviteDto>(Json);
+        var inviteV = await (await dono.PostAsJsonAsync($"/api/circles/{circle.Id}/invites", new { email = viewerAuth.Email, role = "viewer" })).Content.ReadFromJsonAsync<InviteDto>(Json);
+        (await editor.PostAsJsonAsync($"/api/circles/invites/{inviteE!.Token}/accept", new { })).EnsureSuccessStatusCode();
+        (await viewer.PostAsJsonAsync($"/api/circles/invites/{inviteV!.Token}/accept", new { })).EnsureSuccessStatusCode();
+
+        var pet = await (await dono.PostAsJsonAsync("/api/living-profiles", new { name = "Luna", kind = "pet", circleId = circle.Id })).Content.ReadFromJsonAsync<JsonElement>(Json);
+        var petId = pet.GetProperty("id").GetGuid();
+        (await dono.PutAsJsonAsync($"/api/living-profiles/{petId}/grants", new { userId = editorAuth.UserId, access = "edit" })).EnsureSuccessStatusCode();
+        (await dono.PutAsJsonAsync($"/api/living-profiles/{petId}/grants", new { userId = viewerAuth.UserId, access = "view" })).EnsureSuccessStatusCode();
+
+        var edited = await editor.PutAsJsonAsync($"/api/living-profiles/{petId}", new { name = "Luna editada", kind = "pet", circleId = circle.Id });
+        Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
+        Assert.Equal(
+            HttpStatusCode.Forbidden,
+            (await viewer.PutAsJsonAsync($"/api/living-profiles/{petId}", new { name = "Luna viewer", kind = "pet", circleId = circle.Id })).StatusCode);
+    }
+
+    [Fact]
     public async Task Viewer_NaoLigaPerfilNoCirculo()
     {
         var dono = _factory.CreateClient();

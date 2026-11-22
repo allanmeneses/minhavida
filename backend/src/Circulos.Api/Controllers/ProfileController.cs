@@ -54,6 +54,10 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage, Quo
         profile.Phone = EmptyToNull(request.Phone);
         profile.SecondaryEmail = EmptyToNull(request.SecondaryEmail)?.ToLowerInvariant();
         profile.IsPublic = request.IsPublic;
+        profile.Bio = EmptyToNull(request.Bio);
+        profile.FindableByLocation = request.FindableByLocation;
+        profile.Latitude = request.FindableByLocation ? request.Latitude : null;
+        profile.Longitude = request.FindableByLocation ? request.Longitude : null;
         profile.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
@@ -149,7 +153,15 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage, Quo
     }
 
     private static ProfileResponse ToResponse(Domain.Profile profile) =>
-        new(profile.DisplayName, profile.BirthDate, profile.Phone, profile.SecondaryEmail, profile.IsPublic, profile.PhotoStorageKey is not null);
+        new(
+            profile.DisplayName,
+            profile.BirthDate,
+            profile.Phone,
+            profile.SecondaryEmail,
+            profile.IsPublic,
+            profile.PhotoStorageKey is not null,
+            profile.Bio,
+            profile.FindableByLocation);
 
     private static string? EmptyToNull(string? value)
     {

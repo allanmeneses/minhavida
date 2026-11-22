@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Circulos.Api.Services;
 
-public sealed class QuotaService(AppDbContext db)
+public sealed class QuotaService(AppDbContext db, TimeProvider clock)
 {
     public async Task<string?> TryAddStorageAsync(Guid userId, long bytes, CancellationToken cancellationToken)
     {
@@ -13,9 +13,14 @@ public sealed class QuotaService(AppDbContext db)
             return null;
         }
 
+        var now = clock.GetUtcNow().UtcDateTime;
         var rows = await db.Users
             .Where(user => user.Id == userId
-                && user.StorageUsedBytes + bytes <= (user.Plan == PlanKind.Paid ? PlanLimits.PaidStorageBytes : PlanLimits.FreeStorageBytes))
+                && (user.StorageUsedBytes + bytes <= PlanLimits.FreeStorageBytes
+                    || (user.Plan == PlanKind.Paid
+                        && (user.SubscriptionStatus == SubscriptionStatus.Active
+                            || (user.SubscriptionStatus == SubscriptionStatus.Cancelled && user.PaidUntil != null && user.PaidUntil > now))
+                        && user.StorageUsedBytes + bytes <= PlanLimits.PaidStorageBytes)))
             .ExecuteUpdateAsync(
                 setters => setters.SetProperty(user => user.StorageUsedBytes, user => user.StorageUsedBytes + bytes),
                 cancellationToken);
@@ -49,9 +54,13 @@ public sealed class QuotaService(AppDbContext db)
 
     public async Task<string?> TryAddCircleAsync(Guid userId, CancellationToken cancellationToken)
     {
+        var now = clock.GetUtcNow().UtcDateTime;
         var rows = await db.Users
             .Where(user => user.Id == userId
-                && (user.Plan == PlanKind.Paid || user.OwnedCircleCount < PlanLimits.FreeCircleLimit))
+                && (user.OwnedCircleCount < PlanLimits.FreeCircleLimit
+                    || (user.Plan == PlanKind.Paid
+                        && (user.SubscriptionStatus == SubscriptionStatus.Active
+                            || (user.SubscriptionStatus == SubscriptionStatus.Cancelled && user.PaidUntil != null && user.PaidUntil > now)))))
             .ExecuteUpdateAsync(
                 setters => setters.SetProperty(user => user.OwnedCircleCount, user => user.OwnedCircleCount + 1),
                 cancellationToken);
@@ -73,4 +82,10 @@ public sealed class QuotaService(AppDbContext db)
             .ExecuteUpdateAsync(
                 setters => setters.SetProperty(user => user.OwnedCircleCount, user => user.OwnedCircleCount - 1),
                 cancellationToken);
+
+    public async Task<bool> BenefitsActiveAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(item => item.Id == userId, cancellationToken);
+        return user is not null && PlanLimits.BenefitsActive(user, clock.GetUtcNow().UtcDateTime);
+    }
 }

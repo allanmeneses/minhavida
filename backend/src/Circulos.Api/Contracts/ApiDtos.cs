@@ -143,6 +143,13 @@ public sealed class UpdateProfileRequest
     public string? SecondaryEmail { get; set; }
 
     public bool IsPublic { get; set; }
+
+    [MaxLength(500)]
+    public string? Bio { get; set; }
+
+    public bool FindableByLocation { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
 }
 
 public sealed record ProfileResponse(
@@ -151,7 +158,9 @@ public sealed record ProfileResponse(
     string? Phone,
     string? SecondaryEmail,
     bool IsPublic,
-    bool HasPhoto);
+    bool HasPhoto,
+    string? Bio,
+    bool FindableByLocation);
 
 public sealed record DocumentResponse(
     Guid Id,
@@ -212,6 +221,9 @@ public sealed class CreateCircleRequest
 
     public string Visibility { get; set; } = "private";
     public bool Discoverable { get; set; }
+    public bool FindableByLocation { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public bool IsSurprise { get; set; }
     public string? SurpriseSubjectEmail { get; set; }
     public string Kind { get; set; } = "lasting";
@@ -246,6 +258,7 @@ public sealed record CircleSummaryResponse(
     string? Description,
     string Visibility,
     bool Discoverable,
+    bool FindableByLocation,
     bool IsSurprise,
     bool Revealed,
     string Kind,
@@ -261,6 +274,7 @@ public sealed record CircleDetailResponse(
     string? Description,
     string Visibility,
     bool Discoverable,
+    bool FindableByLocation,
     bool IsSurprise,
     bool Revealed,
     string Kind,
@@ -323,6 +337,9 @@ public sealed class ShortcutRequest
 
     public int SortOrder { get; set; }
     public Guid? ReminderId { get; set; }
+
+    [MaxLength(20)]
+    public string? ActionKind { get; set; }
 }
 
 public sealed class ReorderShortcutsRequest
@@ -330,7 +347,15 @@ public sealed class ReorderShortcutsRequest
     public Guid[] Ids { get; set; } = [];
 }
 
-public sealed record ShortcutResponse(Guid Id, string Label, string Color, int SortOrder, bool IsActive, Guid? ReminderId);
+public sealed record ShortcutResponse(
+    Guid Id,
+    string Label,
+    string Color,
+    int SortOrder,
+    bool IsActive,
+    Guid? ReminderId,
+    string ActionKind,
+    bool IsDeleted);
 
 public sealed record SearchHit(string Type, Guid Id, string Title, string? Detail);
 public sealed record SearchHistoryResponse(IReadOnlyList<string> Recent, IReadOnlyList<string> Frequent);
@@ -383,6 +408,8 @@ public sealed class SharedListItemRequest
 
     [MaxLength(500)]
     public string? Note { get; set; }
+
+    public DateTime? KnownUpdatedAt { get; set; }
 }
 
 public sealed class ReorderListItemsRequest
@@ -411,7 +438,9 @@ public sealed record SharedListItemResponse(
     Guid? AddedByUserId,
     string? AddedByName,
     Guid? DoneByUserId,
-    string? DoneByName);
+    string? DoneByName,
+    DateTime UpdatedAt,
+    bool LastSyncWins);
 
 public sealed record SharedListDetailResponse(
     Guid Id,
@@ -434,7 +463,97 @@ public sealed record PlanResponse(
     long StorageLimitBytes,
     long StorageUsedBytes,
     bool StorageWarning,
-    string Checkout);
+    string Checkout,
+    string SubscriptionStatus,
+    bool InGoodStanding,
+    int ShortcutLimit,
+    bool Sandbox,
+    string Provider,
+    string? SubscriptionProviderId);
+
+public sealed record PlanOfferResponse(
+    string Id,
+    string Name,
+    decimal PriceReais,
+    int? CircleLimit,
+    long StorageLimitBytes,
+    int ShortcutLimit,
+    string Summary);
+
+public sealed record PlanCatalogResponse(
+    string Status,
+    PlanOfferResponse Free,
+    PlanOfferResponse PaidMonthly,
+    PlanOfferResponse PaidYearly,
+    bool Sandbox,
+    string Provider);
+
+public sealed class CheckoutRequest
+{
+    [MaxLength(20)]
+    public string Period { get; set; } = "monthly";
+
+    [MaxLength(80)]
+    public string? CardToken { get; set; }
+}
+
+public sealed class SuccessionVoteRequest
+{
+    [Required]
+    public Guid CandidateUserId { get; set; }
+}
+
+public sealed record SuccessionTallyResponse(Guid CandidateUserId, int Votes);
+
+public sealed record SuccessionVoteResponse(
+    Guid Id,
+    string Status,
+    DateTime OpenedAt,
+    DateTime DeadlineAt,
+    Guid? WinnerUserId,
+    int MemberCount,
+    IReadOnlyList<SuccessionTallyResponse> Tallies,
+    Guid? MyVote);
+
+public sealed class DeleteCircleRequest
+{
+    [Required]
+    [MaxLength(40)]
+    public string Confirmation { get; set; } = string.Empty;
+}
+
+public sealed class CircleLocationRequest
+{
+    public bool FindableByLocation { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
+}
+
+public sealed class NearbySearchRequest
+{
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+    public double RadiusKm { get; set; } = 10;
+}
+
+public sealed record NearbyHitResponse(
+    string Kind,
+    Guid Id,
+    string Name,
+    string? Description,
+    double DistanceKm);
+
+public sealed class LivingProfileGrantRequest
+{
+    [Required]
+    public Guid UserId { get; set; }
+
+    [Required]
+    [MaxLength(20)]
+    public string Access { get; set; } = "view";
+}
+
+public sealed record LivingProfileGrantResponse(Guid UserId, string Name, string Access);
 
 public sealed record DayPanelItem(Guid Id, string Title, string Kind, DateTime At, bool Overdue);
 
@@ -450,6 +569,14 @@ public sealed record DayPanelResponse(
 public static class EnumText
 {
     public static string Plan(PlanKind plan) => plan == PlanKind.Paid ? "paid" : "free";
+    public static string Subscription(SubscriptionStatus status) => status switch
+    {
+        SubscriptionStatus.Active => "active",
+        SubscriptionStatus.PastDue => "past_due",
+        SubscriptionStatus.Suspended => "suspended",
+        SubscriptionStatus.Cancelled => "cancelled",
+        _ => "none",
+    };
     public static string Area(LifeAreaKind kind) => kind switch
     {
         LifeAreaKind.Vaccine => "vaccine",
@@ -481,6 +608,7 @@ public static class EnumText
     {
         CircleStatus.Archived => "archived",
         CircleStatus.LockedNoOwner => "locked",
+        CircleStatus.Deleted => "deleted",
         _ => "active",
     };
 
@@ -544,6 +672,14 @@ public static class EnumText
         "group" or "grupo" or "comunidade" => LivingProfileKind.Group,
         _ => LivingProfileKind.Person,
     };
+
+    public static string LivingAccess(LivingProfileAccess value) =>
+        value == LivingProfileAccess.Edit ? "edit" : "view";
+
+    public static LivingProfileAccess ParseLivingAccess(string? value) =>
+        string.Equals(value, "edit", StringComparison.OrdinalIgnoreCase) || string.Equals(value, "editar", StringComparison.OrdinalIgnoreCase)
+            ? LivingProfileAccess.Edit
+            : LivingProfileAccess.View;
 
     public static string TemplateKind(RoutineTemplateKind value) =>
         value == RoutineTemplateKind.Reminder ? "reminder" : "list";
@@ -656,7 +792,8 @@ public sealed record LivingProfileResponse(
     DateOnly? BirthDate,
     Guid? CircleId,
     bool HasPhoto,
-    bool CanEdit);
+    bool CanEdit,
+    IReadOnlyList<LivingProfileGrantResponse>? Grants);
 
 public sealed record StatusResponse(string Api, string Database, string Telemetry, DateTime CheckedAt);
 
@@ -675,4 +812,4 @@ public sealed record CircleRecapResponse(
 
 public sealed record RecapShareCreatedResponse(string Token, string Path);
 
-public sealed record PublicProfileResponse(Guid UserId, string DisplayName, bool HasPhoto);
+public sealed record PublicProfileResponse(Guid UserId, string DisplayName, bool HasPhoto, string? Description);

@@ -29,17 +29,19 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
             }
 
             var shared = await db.LivingProfiles.AsNoTracking()
+                .Include(x => x.Grants)
                 .Where(x => x.CircleId == cid)
                 .OrderBy(x => x.Name)
                 .ToListAsync(cancellationToken);
-            return Ok(shared.Select(x => ToResponse(x, x.OwnerUserId == userId)).ToList());
+            return Ok(shared.Select(x => ToResponse(x, userId, includeGrants: x.OwnerUserId == userId)).ToList());
         }
 
         var owned = await db.LivingProfiles.AsNoTracking()
+            .Include(x => x.Grants)
             .Where(x => x.OwnerUserId == userId)
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
-        return Ok(owned.Select(x => ToResponse(x, true)).ToList());
+        return Ok(owned.Select(x => ToResponse(x, userId, includeGrants: true)).ToList());
     }
 
     [HttpPost]
@@ -81,7 +83,7 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
         };
         db.LivingProfiles.Add(profile);
         await db.SaveChangesAsync(cancellationToken);
-        return Created($"/api/living-profiles/{profile.Id}", ToResponse(profile, true));
+        return Created($"/api/living-profiles/{profile.Id}", ToResponse(profile, userId, includeGrants: true));
     }
 
     [HttpPut("{id:guid}")]
@@ -91,10 +93,12 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
         CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
-        var profile = await db.LivingProfiles.FirstOrDefaultAsync(x => x.Id == id && x.OwnerUserId == userId, cancellationToken);
-        if (profile is null)
+        var profile = await LoadAsync(id, cancellationToken);
+        if (profile is null || !CanEdit(profile, userId))
         {
-            return NotFound(new ErrorResponse("Perfil nao encontrado."));
+            return profile is null || !CanView(profile, userId)
+                ? NotFound(new ErrorResponse("Perfil nao encontrado."))
+                : StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Quem so visualiza nao edita este perfil."));
         }
 
         if (request.CircleId is Guid cid)
@@ -118,15 +122,57 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
         profile.BirthDate = request.BirthDate;
         profile.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
-        return Ok(ToResponse(profile, true));
+        return Ok(ToResponse(profile, userId, includeGrants: profile.OwnerUserId == userId));
+    }
+
+    [HttpPut("{id:guid}/grants")]
+    public async Task<ActionResult<LivingProfileResponse>> SetGrant(
+        Guid id,
+        [FromBody] LivingProfileGrantRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var profile = await LoadAsync(id, cancellationToken);
+        if (profile is null || profile.OwnerUserId != userId)
+        {
+            return NotFound(new ErrorResponse("Perfil nao encontrado."));
+        }
+
+        if (request.UserId == userId)
+        {
+            return BadRequest(new ErrorResponse("O dono ja edita."));
+        }
+
+        var grant = await db.LivingProfileGrants.FirstOrDefaultAsync(
+            item => item.LivingProfileId == profile.Id && item.UserId == request.UserId,
+            cancellationToken);
+        if (grant is null)
+        {
+            grant = new LivingProfileGrant
+            {
+                Id = Guid.NewGuid(),
+                LivingProfileId = profile.Id,
+                UserId = request.UserId,
+                Access = EnumText.ParseLivingAccess(request.Access),
+            };
+            db.LivingProfileGrants.Add(grant);
+        }
+        else
+        {
+            grant.Access = EnumText.ParseLivingAccess(request.Access);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        profile = await LoadAsync(id, cancellationToken) ?? profile;
+        return Ok(ToResponse(profile, userId, includeGrants: true));
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
-        var profile = await db.LivingProfiles.FirstOrDefaultAsync(x => x.Id == id && x.OwnerUserId == userId, cancellationToken);
-        if (profile is null)
+        var profile = await LoadAsync(id, cancellationToken);
+        if (profile is null || profile.OwnerUserId != userId)
         {
             return NotFound(new ErrorResponse("Perfil nao encontrado."));
         }
@@ -150,10 +196,12 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
         CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
-        var profile = await db.LivingProfiles.FirstOrDefaultAsync(x => x.Id == id && x.OwnerUserId == userId, cancellationToken);
-        if (profile is null)
+        var profile = await LoadAsync(id, cancellationToken);
+        if (profile is null || !CanEdit(profile, userId))
         {
-            return NotFound(new ErrorResponse("Perfil nao encontrado."));
+            return profile is null || !CanView(profile, userId)
+                ? NotFound(new ErrorResponse("Perfil nao encontrado."))
+                : StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Quem so visualiza nao edita este perfil."));
         }
 
         if (file is null || file.Length == 0)
@@ -189,10 +237,20 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
         profile.PhotoSizeBytes = compressed.SizeBytes;
         profile.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
-        return Ok(ToResponse(profile, true));
+        return Ok(ToResponse(profile, userId, includeGrants: profile.OwnerUserId == userId));
     }
 
-    private static LivingProfileResponse ToResponse(LivingProfile profile, bool canEdit) =>
+    private Task<LivingProfile?> LoadAsync(Guid id, CancellationToken cancellationToken) =>
+        db.LivingProfiles.Include(x => x.Grants).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+    private static bool CanEdit(LivingProfile profile, Guid userId) =>
+        profile.OwnerUserId == userId
+        || profile.Grants.Any(grant => grant.UserId == userId && grant.Access == LivingProfileAccess.Edit);
+
+    private static bool CanView(LivingProfile profile, Guid userId) =>
+        profile.OwnerUserId == userId || profile.Grants.Any(grant => grant.UserId == userId);
+
+    private static LivingProfileResponse ToResponse(LivingProfile profile, Guid userId, bool includeGrants) =>
         new(
             profile.Id,
             EnumText.LivingKind(profile.Kind),
@@ -201,5 +259,11 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
             profile.BirthDate,
             profile.CircleId,
             profile.PhotoStorageKey is not null,
-            canEdit);
+            CanEdit(profile, userId),
+            includeGrants
+                ? profile.Grants.Select(grant => new LivingProfileGrantResponse(
+                    grant.UserId,
+                    string.Empty,
+                    EnumText.LivingAccess(grant.Access))).ToList()
+                : null);
 }

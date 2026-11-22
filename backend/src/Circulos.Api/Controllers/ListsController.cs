@@ -207,6 +207,7 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
             SortOrder = access.List.Items.Count == 0 ? 0 : access.List.Items.Max(x => x.SortOrder) + 1,
             AddedByUserId = userId,
             CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
         };
         db.SharedListItems.Add(item);
         await db.SaveChangesAsync(cancellationToken);
@@ -234,12 +235,14 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta lista nao permite editar itens."));
         }
 
+        var lastSyncWins = request.KnownUpdatedAt is DateTime known && known < item.UpdatedAt;
         item.Text = request.Text.Trim();
         item.Quantity = TrimOrNull(request.Quantity);
         item.Note = TrimOrNull(request.Note);
+        item.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
         var names = await Names([item.AddedByUserId, item.DoneByUserId], cancellationToken);
-        return Ok(ToItem(item, names));
+        return Ok(ToItem(item, names, lastSyncWins));
     }
 
     [HttpPost("lists/{id:guid}/items/{itemId:guid}/done")]
@@ -274,6 +277,7 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
             item.DoneAt = DateTime.UtcNow;
         }
 
+        item.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
         var names = await Names([item.AddedByUserId, item.DoneByUserId], cancellationToken);
         return Ok(ToItem(item, names));
@@ -404,7 +408,7 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
             CanManageItems(access),
             CanChangeAccess(access),
             members,
-            access.List.Items.OrderBy(x => x.SortOrder).Select(x => ToItem(x, names)).ToList());
+            access.List.Items.OrderBy(x => x.SortOrder).Select(x => ToItem(x, names, lastSyncWins: false)).ToList());
     }
 
     private async Task<Dictionary<Guid, string>> Names(IEnumerable<Guid?> ids, CancellationToken cancellationToken)
@@ -430,7 +434,10 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
             list.Items.Count,
             list.Items.Count(x => x.IsDone));
 
-    private static SharedListItemResponse ToItem(SharedListItem item, IReadOnlyDictionary<Guid, string> names) =>
+    private static SharedListItemResponse ToItem(
+        SharedListItem item,
+        IReadOnlyDictionary<Guid, string> names,
+        bool lastSyncWins = false) =>
         new(
             item.Id,
             item.Text,
@@ -441,7 +448,9 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
             item.AddedByUserId,
             item.AddedByUserId is Guid added && names.TryGetValue(added, out var addedName) ? addedName : null,
             item.DoneByUserId,
-            item.DoneByUserId is Guid done && names.TryGetValue(done, out var doneName) ? doneName : null);
+            item.DoneByUserId is Guid done && names.TryGetValue(done, out var doneName) ? doneName : null,
+            item.UpdatedAt,
+            lastSyncWins);
 
     private static SharedListAccess Effective(Access access)
     {

@@ -47,7 +47,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: 'O recap e o perfil publico mostram o que?',
     answer:
-      'O recap do perfil so lista o que voce ja usou. No circulo, a retrospectiva e a historia sua, nao os dados dos outros. O perfil nasce privado; se virar publico, quem visita ve so nome e foto. Telefone, e-mail e diario ficam fora.',
+      'O recap do perfil so lista o que voce ja usou. No circulo, a retrospectiva e a historia sua, nao os dados dos outros. O perfil nasce privado; se virar publico, quem visita ve nome, foto e descricao. Telefone, e-mail e diario ficam fora.',
   },
   {
     question: 'Onde ficam as memorias e o calendario?',

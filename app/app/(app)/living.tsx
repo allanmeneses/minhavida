@@ -26,6 +26,8 @@ export default function LivingScreen() {
   const [kind, setKind] = useState<(typeof KINDS)[number]>('pet');
   const [circleId, setCircleId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [grantUserId, setGrantUserId] = useState('');
+  const [grantAccess, setGrantAccess] = useState<'view' | 'edit'>('view');
 
   const load = useCallback(async () => {
     if (!token) {
@@ -62,7 +64,7 @@ export default function LivingScreen() {
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Pet e grupo</Text>
       <Text style={styles.lead}>
-        Perfil vivo de pessoa, pet ou grupo, alem da sua conta. Quem e dono edita. No circulo, os membros veem.
+        Perfil vivo de pessoa, pet ou grupo. Edita quem tem permissao de edicao. Quem so visualiza so visualiza.
       </Text>
       <Feedback message={error} />
       <TextField label="Nome" value={name} onChangeText={setName} placeholder="Luna" />
@@ -88,13 +90,41 @@ export default function LivingScreen() {
         }}
       />
       <Button label="Criar perfil" onPress={() => void create()} disabled={!name.trim()} />
+      <TextField
+        label="Pessoa (id) para permissao"
+        value={grantUserId}
+        onChangeText={setGrantUserId}
+        placeholder="uuid da pessoa"
+      />
+      <Button
+        label={`Permissao: ${grantAccess === 'edit' ? 'editar' : 'visualizar'}`}
+        variant="ghost"
+        onPress={() => setGrantAccess(grantAccess === 'edit' ? 'view' : 'edit')}
+      />
       {items.map((item) => (
         <View key={item.id} style={styles.card}>
           <Text style={styles.item}>{item.name}</Text>
           <Text style={styles.lead}>
             {KIND_LABEL[item.kind as (typeof KINDS)[number]] ?? item.kind}
             {item.context ? ` · ${item.context}` : ''}
+            {item.canEdit ? ' · pode editar' : ' · so visualiza'}
           </Text>
+          {item.canEdit ? (
+            <Button
+              label={`Conceder ${grantAccess} em ${item.name}`}
+              variant="ghost"
+              onPress={() => {
+                if (!token || !grantUserId.trim()) {
+                  return;
+                }
+                void api(`/api/living-profiles/${item.id}/grants`, {
+                  method: 'PUT',
+                  token,
+                  body: JSON.stringify({ userId: grantUserId.trim(), access: grantAccess }),
+                }).then(() => load());
+              }}
+            />
+          ) : null}
         </View>
       ))}
     </ScrollView>

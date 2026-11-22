@@ -822,7 +822,7 @@ test('perfil publico compartilhavel com privacidade', async ({ browser }) => {
   await visitor.goto(`/p/${user.id}`);
   await expect(visitor.getByText('Perfil publico')).toBeVisible();
   await expect(visitor.getByText('Pessoa E2E', { exact: true })).toBeVisible();
-  await expect(visitor.getByText('Quem visita ve so nome e foto. Telefone, e-mail e diario ficam fora.')).toBeVisible();
+  await expect(visitor.getByText('Quem visita ve nome, foto e descricao. Telefone, e-mail e diario ficam fora.')).toBeVisible();
   await expect(visitor.getByLabel('Telefone')).toHaveCount(0);
 
   await owner.getByRole('button', { name: 'Perfil publico' }).click();
@@ -868,4 +868,188 @@ test('backup do perfil e grafico de armazenamento', async ({ page }) => {
   await page.getByRole('button', { name: 'Exportar este circulo' }).click();
   const circleFile = await circleDownload;
   expect(circleFile.suggestedFilename()).toMatch(/circulos-/);
+});
+
+test('assinatura simulada e webhook', async ({ page }) => {
+  await signUp(page, '-plano');
+  await page.goto('/pricing');
+  await expect(page.getByText('Proposta para o Allan aprovar')).toBeVisible();
+  await page.getByRole('button', { name: 'Assinar mensal (sandbox)' }).click();
+  await expect(page.getByText('Assinatura simulada no sandbox')).toBeVisible();
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const token = await page.evaluate(() => localStorage.getItem('circulos.token'));
+  const planRes = await page.request.get(`${apiUrl}/api/plan`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(planRes.ok()).toBeTruthy();
+  const plan = (await planRes.json()) as { subscriptionProviderId: string; plan: string };
+  expect(plan.plan).toBe('paid');
+  const ts = Math.floor(Date.now() / 1000).toString();
+  const requestId = `e2e-${Date.now()}`;
+  const id = plan.subscriptionProviderId.toLowerCase();
+  const manifest = `id:${id};request-id:${requestId};ts:${ts};`;
+  const v1 = createHmac('sha256', 'fake-webhook-secret').update(manifest).digest('hex');
+  const webhook = await page.request.post(`${apiUrl}/webhooks/mercadopago`, {
+    headers: {
+      'content-type': 'application/json',
+      'x-signature': `ts=${ts},v1=${v1}`,
+      'x-request-id': requestId,
+    },
+    data: { type: 'subscription_preapproval', data: { id: plan.subscriptionProviderId } },
+  });
+  expect(webhook.ok()).toBeTruthy();
+  await page.getByRole('button', { name: 'Voltar' }).click();
+  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await expect(page.getByText('Status: active. Em dia. Sandbox. Assinatura ativa.')).toBeVisible();
+});
+
+test('votacao de sucessao com prazo', async ({ browser }) => {
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await signUp(owner, '-voto-dono');
+  const memberContext = await browser.newContext();
+  const member = await memberContext.newPage();
+  const memberEmail = await signUp(member, '-voto-membro');
+  await owner.getByRole('button', { name: 'Circulos' }).click();
+  await owner.getByRole('button', { name: 'Privado' }).click();
+  await owner.getByLabel('Nome', { exact: true }).fill('Casa voto');
+  await owner.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(owner.getByText('Casa voto').first()).toBeVisible();
+  await owner.getByLabel('Convidar por e-mail').fill(memberEmail);
+  await owner.getByRole('button', { name: 'Enviar convite' }).click();
+  const inviteText = await owner.getByText(/Convite criado/).innerText();
+  const inviteToken = inviteText.replace('Convite criado. Codigo: ', '').trim();
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const memberToken = await member.evaluate(() => localStorage.getItem('circulos.token'));
+  const accepted = await member.request.post(`${apiUrl}/api/circles/invites/${inviteToken}/accept`, {
+    headers: { Authorization: `Bearer ${memberToken}`, 'Content-Type': 'application/json' },
+    data: {},
+  });
+  expect(accepted.ok()).toBeTruthy();
+  await owner.getByRole('button', { name: 'Sair e abrir votacao' }).click();
+  await member.getByRole('button', { name: 'Circulos' }).click();
+  await member.getByRole('button', { name: 'Abrir Casa voto' }).click();
+  await expect(member.getByText('Votacao de sucessao')).toBeVisible();
+  await expect(member.getByText(/Prazo de 3 dias/)).toBeVisible();
+  await member.getByRole('button', { name: /Votar em/ }).first().click();
+  await expect(member.getByText(/Status: (open|decided)/)).toBeVisible();
+  await ownerContext.close();
+  await memberContext.close();
+});
+
+test('busca por raio com e sem permissao', async ({ browser }) => {
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await signUp(owner, '-geo-dono');
+  const seekerContext = await browser.newContext();
+  const seeker = await seekerContext.newPage();
+  await signUp(seeker, '-geo-busca');
+  await seeker.getByRole('button', { name: 'Busca' }).click();
+  await seeker.getByRole('button', { name: 'Buscar por perto' }).click();
+  await expect(seeker.getByText('Ninguem por perto com permissao.')).toBeVisible();
+  const geoName = `Geo ${Date.now()}`;
+  await owner.getByRole('button', { name: 'Perfil' }).click();
+  await owner.getByLabel('Nome', { exact: true }).fill(geoName);
+  await owner.getByRole('button', { name: 'Nao aparecer na busca por perto' }).click();
+  await owner.getByRole('button', { name: 'Salvar perfil' }).click();
+  await expect(owner.getByText('Perfil atualizado.')).toBeVisible();
+  await seeker.getByRole('button', { name: 'Buscar por perto' }).click();
+  await expect(seeker.getByText(`${geoName} · person`, { exact: false })).toBeVisible();
+  await ownerContext.close();
+  await seekerContext.close();
+});
+
+test('perfil publico mostra descricao', async ({ browser }) => {
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await signUp(owner, '-bio');
+  await owner.getByRole('button', { name: 'Perfil' }).click();
+  await owner.getByLabel('Descricao publica').fill('Corro de manha');
+  await owner.getByRole('button', { name: 'Perfil privado' }).click();
+  await owner.getByRole('button', { name: 'Salvar perfil' }).click();
+  await expect(owner.getByText('Perfil atualizado.')).toBeVisible();
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const token = await owner.evaluate(() => localStorage.getItem('circulos.token'));
+  const me = await owner.request.get(`${apiUrl}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const user = (await me.json()) as { id: string };
+  const visitorContext = await browser.newContext();
+  const visitor = await visitorContext.newPage();
+  await visitor.goto(`/p/${user.id}`);
+  await expect(visitor.getByText('Corro de manha')).toBeVisible();
+  await ownerContext.close();
+  await visitorContext.close();
+});
+
+test('exclusao definitiva do circulo', async ({ page }) => {
+  await signUp(page, '-apagar');
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  await page.getByLabel('Nome', { exact: true }).fill('Apagar ja');
+  await page.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(page.getByText('Exclusao definitiva. Nao da para desfazer.')).toBeVisible();
+  await page.getByLabel('Confirmacao da exclusao').fill('excluir definitivo');
+  await page.getByRole('button', { name: 'Excluir circulo de vez' }).click();
+  await expect(page.getByText('Os seus')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Abrir Apagar ja' })).toHaveCount(0);
+});
+
+test('permissao de pet e grupo', async ({ browser }) => {
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await signUp(owner, '-pet-dono');
+  const memberContext = await browser.newContext();
+  const member = await memberContext.newPage();
+  const memberEmail = await signUp(member, '-pet-membro');
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const memberToken = await member.evaluate(() => localStorage.getItem('circulos.token'));
+  const memberMe = await member.request.get(`${apiUrl}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${memberToken}` },
+  });
+  const memberUser = (await memberMe.json()) as { id: string };
+  await owner.getByRole('button', { name: 'Circulos' }).click();
+  await owner.getByLabel('Nome', { exact: true }).fill('Casa pet');
+  await owner.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(owner.getByText('Quem esta aqui')).toBeVisible();
+  await owner.getByLabel('Convidar por e-mail').fill(memberEmail);
+  await owner.getByRole('button', { name: 'Enviar convite' }).click();
+  const inviteText = await owner.getByText(/Convite criado/).innerText();
+  const inviteToken = inviteText.replace('Convite criado. Codigo: ', '').trim();
+  const accepted = await member.request.post(`${apiUrl}/api/circles/invites/${inviteToken}/accept`, {
+    headers: { Authorization: `Bearer ${memberToken}`, 'Content-Type': 'application/json' },
+    data: {},
+  });
+  expect(accepted.ok()).toBeTruthy();
+  await owner.getByRole('button', { name: 'Perfil' }).first().click();
+  await owner.getByRole('button', { name: 'Pet e grupo' }).click();
+  await expect(owner.getByText('Pet e grupo', { exact: true })).toBeVisible();
+  await owner.getByPlaceholder('Luna').fill('Luna');
+  await owner.getByPlaceholder('Nossa cachorra').fill('Nossa cachorra');
+  await owner.getByRole('button', { name: 'So no meu perfil' }).click();
+  await expect(owner.getByRole('button', { name: 'Circulo: Casa pet' })).toBeVisible();
+  await owner.getByRole('button', { name: 'Criar perfil' }).click();
+  await expect(owner.getByText('Luna', { exact: true })).toBeVisible();
+  await owner.getByPlaceholder('uuid da pessoa').fill(memberUser.id);
+  await owner.getByRole('button', { name: 'Permissao: visualizar' }).click();
+  await expect(owner.getByRole('button', { name: 'Permissao: editar' })).toBeVisible();
+  await owner.getByRole('button', { name: 'Conceder edit em Luna' }).click();
+  const ownerToken = await owner.evaluate(() => localStorage.getItem('circulos.token'));
+  await expect
+    .poll(async () => {
+      const res = await owner.request.get(`${apiUrl}/api/living-profiles`, {
+        headers: { Authorization: `Bearer ${ownerToken}` },
+      });
+      const items = (await res.json()) as { grants?: { userId: string; access: string }[] }[];
+      return items.some((item) =>
+        item.grants?.some((grant) => grant.userId === memberUser.id && grant.access === 'edit'),
+      );
+    })
+    .toBeTruthy();
+  await member.getByRole('button', { name: 'Circulos' }).click();
+  await member.getByRole('button', { name: 'Abrir Casa pet' }).click();
+  await expect(member.getByText(/Luna · pet · pode editar/)).toBeVisible();
+  await member.getByRole('button', { name: 'Renomear Luna' }).click();
+  await expect(member.getByText('Luna editado · pet · pode editar')).toBeVisible();
+  await ownerContext.close();
+  await memberContext.close();
 });

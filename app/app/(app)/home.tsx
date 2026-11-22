@@ -20,8 +20,10 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [label, setLabel] = useState('');
+  const [actionKind, setActionKind] = useState<'done' | 'start' | 'note'>('done');
   const [reminders, setReminders] = useState<ReminderItem[]>([]);
   const [reminderId, setReminderId] = useState<string | null>(null);
+  const [deletedShortcuts, setDeletedShortcuts] = useState<ShortcutItem[]>([]);
 
   const load = useCallback(async () => {
     if (!token) {
@@ -35,6 +37,12 @@ export default function HomeScreen() {
     }
     try {
       setAllShortcuts(await api<ShortcutItem[]>('/api/shortcuts', { token }));
+      try {
+        const withDeleted = await api<ShortcutItem[]>('/api/shortcuts?includeDeleted=true', { token });
+        setDeletedShortcuts(withDeleted.filter((item) => item.isDeleted));
+      } catch {
+        setDeletedShortcuts([]);
+      }
     } catch {
       // atalho nao entra no cache de leitura desta rodada
     }
@@ -91,7 +99,7 @@ export default function HomeScreen() {
     await api('/api/shortcuts', {
       method: 'POST',
       token,
-      body: JSON.stringify({ label: label.trim(), color: '#C45C26', reminderId }),
+      body: JSON.stringify({ label: label.trim(), actionKind, reminderId }),
     });
     setLabel('');
     setReminderId(null);
@@ -192,8 +200,16 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
+      <Button label="+" onPress={() => setLabel((current) => current)} />
       <View style={styles.card}>
         <TextField label="Nome do atalho" value={label} onChangeText={setLabel} placeholder="Ex.: Tomei o remedio" />
+        <Button
+          label={`Tipo: ${actionKind === 'start' ? 'iniciar' : actionKind === 'note' ? 'nota' : 'concluir'}`}
+          variant="ghost"
+          onPress={() =>
+            setActionKind(actionKind === 'done' ? 'start' : actionKind === 'start' ? 'note' : 'done')
+          }
+        />
         <Button
           label={reminderId ? `Lembrete: ${circleReminders.find((item) => item.id === reminderId)?.title}` : 'Sem lembrete de circulo'}
           variant="ghost"
@@ -209,6 +225,24 @@ export default function HomeScreen() {
         />
         <Button label="Adicionar atalho" onPress={() => void addShortcut()} disabled={!label.trim()} />
       </View>
+      {deletedShortcuts.length > 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.section}>Atalhos excluidos</Text>
+          {deletedShortcuts.map((item) => (
+            <Button
+              key={item.id}
+              label={`Recuperar ${item.label}`}
+              variant="ghost"
+              onPress={() => {
+                if (!token) {
+                  return;
+                }
+                void api(`/api/shortcuts/${item.id}/restore`, { method: 'POST', token }).then(() => load());
+              }}
+            />
+          ))}
+        </View>
+      ) : null}
 
       <Section title="Atrasado" items={panel?.overdue ?? []} />
       <Section title="Vence hoje" items={panel?.dueToday ?? []} />

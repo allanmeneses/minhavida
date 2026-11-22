@@ -18,6 +18,7 @@ public enum CircleStatus
     Active = 0,
     Archived = 1,
     LockedNoOwner = 2,
+    Deleted = 3,
 }
 
 public enum CircleRole

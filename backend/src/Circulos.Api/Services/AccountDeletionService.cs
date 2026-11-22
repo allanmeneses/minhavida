@@ -8,7 +8,8 @@ namespace Circulos.Api.Services;
 public sealed class AccountDeletionService(
     AppDbContext db,
     IFileStorage storage,
-    IEmailSender email)
+    IEmailSender email,
+    SuccessionService succession)
 {
     public async Task DeleteAsync(User user, CancellationToken cancellationToken)
     {
@@ -34,9 +35,18 @@ public sealed class AccountDeletionService(
 
             if (admin is null)
             {
+                var remaining = circle.Members.Where(member => member.UserId != user.Id).ToList();
                 circle.OwnerUserId = null;
-                circle.Status = CircleStatus.LockedNoOwner;
-                db.CircleLogs.Add(Log(circle.Id, null, "locked", "Sem dono ativo. O circulo espera um responsavel."));
+                if (remaining.Count == 0)
+                {
+                    circle.Status = CircleStatus.LockedNoOwner;
+                    db.CircleLogs.Add(Log(circle.Id, null, "locked", "Sem dono ativo. O circulo espera um responsavel."));
+                }
+                else
+                {
+                    circle.Status = CircleStatus.Active;
+                    await succession.OpenIfNeededAsync(circle, cancellationToken);
+                }
             }
             else
             {

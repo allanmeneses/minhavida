@@ -9,6 +9,9 @@ public sealed class Circle
     public string Description { get; set; } = string.Empty;
     public CircleVisibility Visibility { get; set; } = CircleVisibility.Private;
     public bool Discoverable { get; set; }
+    public bool FindableByLocation { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public bool IsSurprise { get; set; }
     public Guid? SurpriseSubjectUserId { get; set; }
     public DateTime? RevealedAt { get; set; }
