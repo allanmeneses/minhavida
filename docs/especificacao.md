@@ -12,7 +12,7 @@ Fora da transcricao original, o dono fechou estas ambiguidades:
 - Somos sem raca: o correto e Sem rastro.
 - E definitiva? e So uma?: sem contexto, nao confirmadas. Nenhuma regra de produto parte delas.
 - Pergunta 229 primeira formula: cortada. Nao inventar a resposta.
-- 22/11/2026: perfil publico mostra nome, foto e descricao; revelacao agendada nao tera; exclusao de circulo e definitiva; conflito offline ultima sincronizacao vence; votacao de sucessao por maioria simples em 3 dias com todos os membros; busca por raio so com permissao explicita; pet/grupo edita quem tem grant de edicao; billing Mercado Pago (proposta de precos em `docs/planos.md`); Azure e SMTP real ainda nao.
+- 22/11/2026: perfil publico mostra nome, foto e descricao; revelacao agendada nao tera; exclusao de circulo e definitiva; conflito offline ultima sincronizacao vence; votacao de sucessao por maioria simples em 3 dias com todos os membros; busca por raio so com permissao explicita; pet/grupo edita quem tem grant de edicao; billing Mercado Pago; precos aprovados R$ 29,90 mensal e R$ 299,00 anual (`docs/planos.md`); Azure e SMTP real ainda nao.
 
 ## Visao
 
@@ -160,7 +160,7 @@ Pedido do dono em 22/11/2026, fora da transcricao original.
 - Atalhos extras, armazenamento maior e retrospectivas bloqueiam se a assinatura suspender; circulos e historico ficam. (315)
 - Armazenamento: 100 MB gratis, 1 GB pago. (275)
 - Pagina de precos comparando planos, valores em reais. (307, 308)
-- Gateway: Mercado Pago. Precos em reais: PROPOSTA 29,90 mensal e 299,00 anual, configuraveis, aguardando aprovacao (`docs/planos.md`). Decidido em 22/11/2026. (309, 310)
+- Gateway: Mercado Pago. Precos em reais aprovados pelo Allan em 22/11/2026: 29,90 mensal e 299,00 anual, configuraveis (`docs/planos.md`). (309, 310)
 - Pagamento so cartao, recorrente automatico (dono tirou o Pix depois de ter dito os dois). Cartao recusado: suspende na hora. Volta na hora se pagar de novo. Historico visivel so se esta em dia ou nao, sem valor nem data. Sem nota fiscal por e-mail. Botao de cancelar visivel; acesso pago ate o fim do ciclo; cancela direto, com e-mail de confirmacao, sem link de reativar. (311 a 324)
 - Sem programa de indicacao. Sem selo feito no Brasil. Sem blog. Redes sociais oficiais depois. Sem onboarding por e-mail. Sem beta fechado. (300 a 306, 302, 303, 304)
 - FAQ no menu, atualiza com o app, sem busca interna, suporte so e-mail sem prazo prometido. Sem ajuda contextual por tela. Tour na primeira abertura, pulavel, reaparece se pedir, cobre tudo, telas estaticas com texto, so avanca. (288 a 299)

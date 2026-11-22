@@ -6,7 +6,7 @@ import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { api, ApiError, type DayPanel, type ReminderItem, type ShortcutItem } from '@/lib/api';
+import { api, ApiError, type CircleSummary, type DayPanel, type ReminderItem, type ShortcutItem } from '@/lib/api';
 import { playShortcutFeedback } from '@/lib/shortcutFeedback';
 import { screenStyles } from '@/lib/screenStyles';
 
@@ -24,13 +24,19 @@ export default function HomeScreen() {
   const [reminders, setReminders] = useState<ReminderItem[]>([]);
   const [reminderId, setReminderId] = useState<string | null>(null);
   const [deletedShortcuts, setDeletedShortcuts] = useState<ShortcutItem[]>([]);
+  const [circles, setCircles] = useState<CircleSummary[]>([]);
+  const [emailsSent, setEmailsSent] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     if (!token) {
       return;
     }
     try {
-      setPanel(await api<DayPanel>('/api/home', { token }));
+      const next = await api<DayPanel>('/api/home', { token });
+      setPanel(next);
+      if ((next.reminderEmailsSent ?? []).length > 0) {
+        setEmailsSent(next.reminderEmailsSent);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Nao foi possivel abrir o dia.');
       return;
@@ -50,6 +56,11 @@ export default function HomeScreen() {
       setReminders(await api<ReminderItem[]>('/api/reminders', { token }));
     } catch {
       // lembretes usam cache quando a rede some
+    }
+    try {
+      setCircles(await api<CircleSummary[]>('/api/circles', { token }));
+    } catch {
+      setCircles([]);
     }
   }, [token]);
 
@@ -167,6 +178,12 @@ export default function HomeScreen() {
       )}
       <Feedback message={error} />
       <Feedback message={flash} tone="ok" />
+      {emailsSent.map((title) => (
+        <Feedback key={title} message={`Enviamos o lembrete ${title} por e-mail`} tone="ok" />
+      ))}
+      {(panel?.shortcutNotices ?? []).map((notice) => (
+        <Feedback key={notice.id} message={notice.detail} tone="ok" />
+      ))}
 
       <View style={extra.row}>
         {panel?.shortcuts.map((item) => (
@@ -178,10 +195,52 @@ export default function HomeScreen() {
               style={[extra.shortcut, { backgroundColor: item.color }]}>
               <Text style={extra.shortcutText}>{item.label}</Text>
             </Pressable>
-            <Button label={`Subir ${item.label}`} variant="ghost" onPress={() => void moveShortcut(item, -1)} />
-            <Button label={`Descer ${item.label}`} variant="ghost" onPress={() => void moveShortcut(item, 1)} />
-            <Button label={`Desativar ${item.label}`} variant="ghost" onPress={() => void deactivateShortcut(item)} />
-            <Button label={`Excluir ${item.label}`} variant="danger" onPress={() => void deleteShortcut(item)} />
+            {item.sharedByName ? <Text style={extra.shortcutFrom}>De {item.sharedByName}</Text> : null}
+            {item.sharedByUserId ? null : (
+              <>
+                <Button label={`Subir ${item.label}`} variant="ghost" onPress={() => void moveShortcut(item, -1)} />
+                <Button label={`Descer ${item.label}`} variant="ghost" onPress={() => void moveShortcut(item, 1)} />
+                <Button label={`Desativar ${item.label}`} variant="ghost" onPress={() => void deactivateShortcut(item)} />
+                <Button
+                  label={`Renomear ${item.label}`}
+                  variant="ghost"
+                  onPress={() => {
+                    if (!token) {
+                      return;
+                    }
+                    void api(`/api/shortcuts/${item.id}`, {
+                      method: 'PUT',
+                      token,
+                      body: JSON.stringify({
+                        label: `${item.label} (editado)`,
+                        color: item.color,
+                        actionKind: item.actionKind,
+                        reminderId: item.reminderId,
+                        sortOrder: item.sortOrder,
+                      }),
+                    }).then(() => load());
+                  }}
+                />
+                {circles.map((circle) => (
+                  <Button
+                    key={`${item.id}-${circle.id}`}
+                    label={`Compartilhar ${item.label} em ${circle.name ?? 'circulo'}`}
+                    variant="ghost"
+                    onPress={() => {
+                      if (!token) {
+                        return;
+                      }
+                      void api(`/api/shortcuts/${item.id}/share`, {
+                        method: 'POST',
+                        token,
+                        body: JSON.stringify({ circleId: circle.id }),
+                      }).then(() => load());
+                    }}
+                  />
+                ))}
+                <Button label={`Excluir ${item.label}`} variant="danger" onPress={() => void deleteShortcut(item)} />
+              </>
+            )}
           </View>
         ))}
       </View>
@@ -305,5 +364,9 @@ const extra = StyleSheet.create({
   shortcutText: {
     color: '#FFFFFF',
     fontWeight: '800',
+  },
+  shortcutFrom: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

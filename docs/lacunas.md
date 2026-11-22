@@ -12,13 +12,39 @@ Legenda:
 
 Numero da pergunta: transcricao. A segunda serie 60-69 aparece como `N (reinicio)`.
 
+## Rodada 9 (tags, mesma entrada, atalho no circulo, e-mail de lembrete, precos aprovados)
+
+Pedido desta rodada: fechar lacunas com regra ja cravada, fora da lista de decisao pendente. Feedback de 1 segundo (105) e estatisticas anonimas (43, 44) nao tinham o recorte fechado (duracao; quais eventos); foram para a secao de decisao. Azure, SMTP real, iOS nativo, PWA, WebSocket, SMS 2FA e cookie httpOnly ficaram fora.
+
+| Item | Status | Origem | Evidencia |
+| --- | --- | --- | --- |
+| Tags opcionais nas entradas | feito e testado | abertura | `LifeEntry.TagsJson`, filtro `?tag=`, busca pelo texto da tag. Testes `Entrada_TagsOpcionaisFiltramEBuscaAcha`, `Entrada_EdicaoDeTagsSobreposta_SubstituiDeVez`. `npm test` `keeps typed tags when only the save function identity changes`. Playwright `tags opcionais na entrada e busca`. |
+| A mesma entrada em varios circulos sem duplicar | feito e testado | abertura | `life_entry_shares` unico `(LifeEntryId, CircleId)`. PUT atualiza o mesmo id nos dois circulos. Visitante nao ve. Testes `Entrada_MesmaNosCirculosSemDuplicar_VisitanteNaoVe`, `Entrada_ShareSobrepostoNoMesmoCirculo_FicaUmaLigacao`. Playwright `a mesma entrada aparece em dois circulos sem duplicar`. |
+| Compartilhar atalho no circulo | feito e testado | 209 a 214 | Membro ve `sharedByName`. Disparo grava no diario do dono e no log do circulo. So o dono edita (403). Aviso `Nome: A -> B`. Testes `Atalho_CompartilhaNoCirculo_MembroVeDeQuemVeioERegistraNoMesmoLugar`, `Atalho_ShareSobreposto_FicaUmaLigacao`, `Atalho_DoisMembrosDisparamSobrepostos_DoisRegistrosNoDono`. Playwright `compartilhar atalho no circulo mostra de quem veio e o aviso do que mudou`. |
+| E-mail de lembrete opcional por pessoa | feito e testado | 13, 14 | Preferencia `EmailRemindersEnabled` desligada por padrao. Disparo na GET `/api/home` com `UserRowLock` e `LastEmailedFireAt`. Caixa local `sent_emails`, sem SMTP real. Testes `Lembrete_EmailOpcional_PadraoOffESobrepostoMandaUm`, `Lembrete_EmailEmFerias_NaoEnvia`. Playwright `lembrete por e-mail opcional dispara na caixa local`. |
+| Precos 29,90 / 299,00 | feito e testado | 309, 310 | Aprovados pelo Allan em 22/11/2026. Status `aprovado` em `GET /api/plans`. Padrao `Plans:PaidMonthlyReais` 29,90 e `PaidYearlyReais` 299,00. Teste `Catalogo_MostraPrecosAprovados`. Playwright `assinatura simulada e webhook`. |
+| Feedback 1 segundo (105) | sem confirmacao | 105 (sem Ok) | A transcricao sugere 1 segundo sem Ok. Nao inventar a duracao. O flash do label continua ate o proximo load. |
+| Estatisticas anonimas (43, 44) | sem confirmacao | 43, 44 | A ligacao diz internas e nunca vendidas. Nao lista quais eventos coletar. Sem catalogo inventado. |
+| Dependabot #26, #27 e #28 | feito e testado | 82 | Aplicado nesta branch, sem merge desses PRs. OpenTelemetry.* 1.21.0 (grupo dotnet-minors do #26). System.Security.Cryptography.Pkcs 11.0.0 (#27). xunit.runner.visualstudio 4.0.1 (#28; cobre o 3.1.5 do #26). |
+
+Testes locais observados nesta rodada (comandos e exit code):
+
+- `dotnet test --nologo` (backend, depois das versoes acima): Passed 148, Failed 0, Skipped 0, exit 0. Aviso no fim: `VSTEST_ARTIFACTS_DIRECTORY environment variable was not found` e `outdated Microsoft.NET.Test.Sdk package reference`. Nao quebrou teste. Microsoft.NET.Test.Sdk ficou em 18.12.0 (nao vinha nos PRs do Dependabot).
+- `npm test` (app): 28 pass, 0 fail, exit 0
+- `npx tsc --noEmit` (app): exit 0
+- `npx playwright test` (app): exit 0, `Running 47 tests using 1 worker`, `app/test-results/.last-run.json` com `status: "passed"` e `failedTests: []`. A linha de resumo `47 passed` nao apareceu no log truncado (SQL do WebServer encheu o teto de 10000 linhas).
+
+Majors: Pkcs 11.0.0 e xunit.runner.visualstudio 4.0.1. A suíte backend passou sem mudanca de codigo alem das versoes. Sem erro observado para registrar como lacuna.
+
+CI desta rodada fica abaixo depois da leitura na API do GitHub.
+
 ## Rodada 8 (billing, votacao, perfil publico, busca por raio)
 
 Decisoes do Allan em 22/11/2026, registradas abaixo. O que ele marcou como nao, ficou fora.
 
 | Item | Status | Origem | Evidencia |
 | --- | --- | --- | --- |
-| Billing Mercado Pago, sandbox, precos configuraveis | feito e testado | 309, 310, 307, 311 a 324 | `PAYMENTS_PROVIDER` padrao simulado. `MercadoPagoGateway` chama `https://api.mercadopago.com` (preapproval e Pix). Webhook HMAC, 401 sem processar, reconsulta sempre, evento idempotente. `notification_url` so com `PUBLIC_BASE_URL` https. `/dev/rotina` 404 no Mercado Pago. Precos em `Plans:PaidMonthlyReais` / `PaidYearlyReais`. Proposta em `docs/planos.md`. Roteiro em `docs/roteiro-mercado-pago.md`. Testes `CheckoutSimulado_AssinaEWebhookValidaAssinatura`, `Checkout_PreapprovalComBackUrlEExternalReference_SemNotificationEmHttp`, `Pix_MesmaChaveDeIdempotencia_NaoCriaDoisPagamentos_EWebhookReconsulta`, `Preapproval_CriaConsultaECancela_NaApiDoMercadoPago`, `Pix_CriaComIdempotencyKeyEConsultaPagamento`, `DevRotina_404QuandoOProvedorEMercadoPago`. Playwright `assinatura simulada e webhook`. |
+| Billing Mercado Pago, sandbox, precos configuraveis | feito e testado | 309, 310, 307, 311 a 324 | `PAYMENTS_PROVIDER` padrao simulado. `MercadoPagoGateway` chama `https://api.mercadopago.com` (preapproval e Pix). Webhook HMAC, 401 sem processar, reconsulta sempre, evento idempotente. `notification_url` so com `PUBLIC_BASE_URL` https. `/dev/rotina` 404 no Mercado Pago. Precos em `Plans:PaidMonthlyReais` / `PaidYearlyReais`, aprovados em 22/11/2026 (`docs/planos.md`). Roteiro em `docs/roteiro-mercado-pago.md`. Testes `CheckoutSimulado_AssinaEWebhookValidaAssinatura`, `Checkout_PreapprovalComBackUrlEExternalReference_SemNotificationEmHttp`, `Pix_MesmaChaveDeIdempotencia_NaoCriaDoisPagamentos_EWebhookReconsulta`, `Preapproval_CriaConsultaECancela_NaApiDoMercadoPago`, `Pix_CriaComIdempotencyKeyEConsultaPagamento`, `DevRotina_404QuandoOProvedorEMercadoPago`, `Catalogo_MostraPrecosAprovados`. Playwright `assinatura simulada e webhook`. |
 | Votacao de sucessao: maioria simples, 3 dias, todos votam | feito e testado | 331 a 344, 336 | `POST /api/circles/{id}/succession/votes`, prazo `SuccessionVote.DeadlineDays = 3`, maioria `votos * 2 > membros`. Teste `Votacao_MaioriaSimplesEmTresDiasElege_EPrazoSemMaioriaTrava`. Playwright `votacao de sucessao com prazo`. |
 | Perfil publico: visitante ve foto e descricao alem do nome | feito e testado | 31 | `PublicProfileResponse.Description`. Diario, documentos, telefone e e-mail fora. Teste `PerfilPublico_VisitanteVeNomeEFoto_PrivadoDa404`. Playwright `perfil publico mostra descricao`. |
 | Revelacao agendada (230) | decidido nao | 230 | Sem `RevealAt` automatico. A revelacao continua sendo acao da pessoa. |
@@ -68,7 +94,7 @@ Testes locais desta rodada (comandos e exit code):
 Antes estavam na lista de pendencias. O dono fechou nesta data:
 
 - 31: visitante do perfil publico ve foto e descricao alem do nome. Diario, documentos, telefone e e-mail ficam fora. Decidido em 22/11/2026.
-- 309 e 310: gateway Mercado Pago. Precos em reais ficam como PROPOSTA em `docs/planos.md` (29,90 mensal e 299,00 anual, configuraveis). Decidido em 22/11/2026.
+- 309 e 310: gateway Mercado Pago. Precos em reais aprovados pelo Allan em 22/11/2026: 29,90 mensal e 299,00 anual, configuraveis, em `docs/planos.md`. Status do catalogo: `aprovado`.
 - 331 a 344 e 336: votacao de sucessao por maioria simples, prazo de 3 dias, todos os membros votam. Decidido em 22/11/2026.
 - 230: revelacao agendada nao tera. Decidido nao em 22/11/2026.
 - 237: exclusao de circulo e definitiva, nao da para desfazer. Decidido em 22/11/2026.
@@ -83,13 +109,14 @@ Antes estavam na lista de pendencias. O dono fechou nesta data:
 Lista fechada, sem inventar regra:
 
 - 72: cookie httpOnly (sugestao sem Ok/Beleza). Fora desta rodada; o cliente Expo usa Bearer.
-- Precos finais em reais: a proposta 29,90 / 299,00 espera aprovacao do Allan (`docs/planos.md`).
 - Login proprio para pet/grupo (conta separada). Nesta rodada so a permissao de edicao/visualizacao.
 - Data de fim automatica do ciclo temporario/diario (16 a 18): arquivar e acao do admin, nao relogio.
 - Arquivamento como beneficio de plano e retrospectiva em PDF/imagem (26, 27, 61 reinicio).
 - Feed de descoberta com silenciar (37 a 39).
 - Denuncia interna / bloqueio pela equipe (21 a 25).
 - SMTP real, deploy Azure, iOS nativo, PWA install, WebSocket, SMS 2FA (ainda nao).
+- 105: o feedback do atalho dura 1 segundo? A transcricao sugere 1 segundo sem Ok. Qual a duracao fechada?
+- 43 e 44: estatisticas anonimas so internas, nunca vendidas. Quais eventos entram no catalogo? Sem lista, nada e coletado.
 
 ## Rodada 6 (memorias, revelacao, modelos, calendario, pet/grupo, observabilidade)
 
@@ -183,7 +210,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Diario estilo Notion no solo, sem busca, sem versao, sem PDF, sync ao abrir, exporta texto | parcial | 243 a 250 | Area Diario com texto e export `.txt` (`LifeAreasController` export, `Diario_ExportaTextoCorrido`). Sem sessoes tipo Notion. Cache offline cobre o perfil; o diario em si nao tem fila propria. Export no app so dispara download se `document` existir (web). |
 | Identidade (nome, foto) | feito e testado | abertura, 1 | Perfil + foto. Testes de auth/perfil/foto. Camera e galeria no perfil (`profile.tsx`); Playwright nao exercita esses botoes. |
 | Tipo pet ou grupo no perfil | feito e testado | abertura (fala do entrevistador); 224 | `LivingProfile` (person/pet/group) alem da conta pessoa. Edita quem tem grant de edicao. Ver secao Rodada 8. Login proprio do pet nao cravado. |
-| A mesma entrada em varios circulos sem duplicar | nao feito | abertura | `LifeEntry` e do perfil; `CirclePost` e outro objeto. |
+| A mesma entrada em varios circulos sem duplicar | feito e testado | abertura | `life_entry_shares`. Ver secao Rodada 9. |
 | Feed geral tipo rede social | sem confirmacao | 20 | Transcricao: sem resposta direta visivel. |
 
 ## Documentos e fotos
@@ -210,13 +237,13 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Access 15 min + refresh 7 dias | feito e testado | 70, 71 (sugestao; rodada 5 pede) | `AccessTokenMinutes: 15`, `RefreshTokenDays: 7`. Ver secao Rodada 5. |
 | Cookie httpOnly | nao feito | 72 (sugestao sem Ok/Beleza) | nao cravado. Bearer + storage. |
 | WebSocket com TLS | nao feito | 73, 74 | Grep em `backend/src`: zero `UseWebSockets` / `SignalR`. |
-| Estatisticas anonimas so internas, nunca vendidas | nao feito | 43, 44 | Sem coleta. |
+| Estatisticas anonimas so internas, nunca vendidas | sem confirmacao | 43, 44 | A ligacao fecha o destino (interno, nunca vender). Nao lista quais eventos. Sem coleta nesta rodada. Ver secao de decisao. |
 | Repositorio privado | feito sem teste | 83 | API GitHub desta rodada: `private: true` em `allanmeneses/minhavida`. |
 | GitHub Actions: build, unit, integracao | feito e testado | 79, 80, 81, 84 | `.github/workflows/ci.yml`: `dotnet test`, `npm test`, `tsc --noEmit`, Playwright. Jobs `backend` e `app` verdes no run desta branch. |
 | Checagem de seguranca / Dependabot | parcial | 82 | `.github/dependabot.yml` nuget/npm/github-actions. CodeQL analisa; upload de code scanning nao ligado no repo. Ver secao Rodada 5. `dotnet list --vulnerable` nao entra no CI. |
 | Testes desde o inicio; nada sobe sem teste | parcial | 79, 80 | xUnit 86 `[Fact]`, `npm test` 18 casos, Playwright 26. Nao ha gate de deploy. Deploy nao foi feito. |
 | Edicao substitui de vez, sem versao | feito e testado | 68, 67 | PUT da entrada sobrescreve (`LifeAreasController.UpdateEntry`). Teste `Entrada_EdicaoSubstituiDeVez`. Sem tabela de versoes. |
-| Tags opcionais nas entradas | nao feito | abertura | |
+| Tags opcionais nas entradas | feito e testado | abertura | `TagsJson`, filtro e busca. Ver secao Rodada 9. |
 
 ## Circulos
 
@@ -260,7 +287,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | --- | --- | --- | --- |
 | Lembrete e funcao do app, nao de outro calendario | feito e testado | 45, 46, 223 | CRUD em `/api/reminders`. Calendario proprio no app/web. Nao cria evento no aparelho. Ver secao Rodada 6. |
 | Integracao calendario so leitura, se existir | parcial | 223 | Visao e exportacao `.ics` (assinatura/download). Sem gravar no calendario nativo do aparelho (46). |
-| E-mail de lembrete opcional por pessoa | nao feito | 13, 14 | `OutboxEmailSender` so em convite, esqueci senha e exclusao. Sem preferencia de e-mail no lembrete. Sem disparo agendado. |
+| E-mail de lembrete opcional por pessoa | feito e testado | 13, 14 | Preferencia desligada por padrao. Outbox local. Ver secao Rodada 9. |
 | Circulo ciclico com atalho que marca feito | feito e testado | 215 | `Shortcut.ReminderId`. `Atalho_MarcaLembreteDeCirculoComoFeito`. UI liga o atalho ao lembrete do circulo. Playwright `atalho marca lembrete de circulo como feito`. |
 | Recorrencia tipo Teams | feito e testado | 216 | Calculadora + UI: none/daily/weekly/monthly/yearly, intervalo, dias da semana, mensal por data ou posicao, until, maxOccurrences. Teste `Anual_MesmoDiaDoAnoSeguinte`. Playwright `lembrete anual aparece na tela`. |
 | Pausa sem perder historico; ao retomar segue a data original | feito e testado | 217 a 221 | `Pausa_MantemProximoDisparoDaGrade`. Skip: `Skip_AvancaParaAProximaOcorrencia` e botao `Pular`. Playwright `pular lembrete e aviso de recorrencia acabando`. |
@@ -277,12 +304,12 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Icone na tela inicial e tecla no computador | nao feito | 100 | Sem widget, sem atalho de teclado, sem PWA install. 99 ficou sem resposta direta; vale a 100. |
 | Sem gesto de balancar | feito (por ausencia) | 100 | Nao ha gesto. |
 | Executa direto, sem confirmacao; so o nome | feito e testado | 101, 104 a 107 | POST `/run` sem dialog. |
-| Feedback 1 segundo | nao feito | 105 (sem Ok) | `flash` do label permanece ate novo load. |
+| Feedback 1 segundo | sem confirmacao | 105 (sem Ok) | Duracao nao fechada. `flash` do label permanece ate novo load. Ver secao de decisao. |
 | Cor por tipo de acao | feito e testado | 106, 107 | `ShortcutPalette` por tipo. Teste `Atalho_TetoDoGratisERecuperaExcluidoComPaleta`. |
 | Som e vibracao opcionais | feito e testado | 109, 200, 201 | `playShortcutFeedback`: bip 880 Hz 0,12s e vibracao 40 ms. `npm test` `usa bip padrao e vibracao curta`. Playwright nao mede audio. |
 | Desativar some da principal; excluir mantem historico | feito e testado | 202 a 207 | UI Desativar/Reativar/Excluir. Soft-delete e restore. Teste `Atalho_TetoDoGratisERecuperaExcluidoComPaleta`. Playwright `atalho desativado some da tela principal e pode voltar`. |
 | Limite 5 gratis / 20 ativos | feito e testado | 108, 208 | Decisao padrao da Rodada 8. `PlanLimits`. Teste `Atalho_TetoDoGratisERecuperaExcluidoComPaleta`. |
-| Compartilhar atalho no circulo | nao feito | 209 a 214 | |
+| Compartilhar atalho no circulo | feito e testado | 209 a 214 | De quem veio, mesmo lugar, so o dono edita, aviso do que mudou. Ver secao Rodada 9. |
 
 ## Notificacoes e interface
 
@@ -312,11 +339,11 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 
 | Decisao | Status | Origem | Evidencia |
 | --- | --- | --- | --- |
-| Plano pago desde o inicio, limites no gratis | feito e testado | 15, 60 reinicio | Limites 3 circulos, 5 atalhos e 100 MB. Checkout simulado em teste (`CheckoutSimulado_AssinaEWebhookValidaAssinatura`). Precos: PROPOSTA em `docs/planos.md`. |
+| Plano pago desde o inicio, limites no gratis | feito e testado | 15, 60 reinicio | Limites 3 circulos, 5 atalhos e 100 MB. Checkout simulado em teste (`CheckoutSimulado_AssinaEWebhookValidaAssinatura`). Precos aprovados em `docs/planos.md` (29,90 / 299,00). |
 | Circulos ilimitados no pago; membro extra; selo anual | nao feito | 15 | Sem cobranca de membro, sem selo. |
 | Pago: >100 membros, retrospectiva PDF/imagem, suporte prioridade | nao feito | 61 reinicio | |
 | Se a assinatura cair, atalhos extras/storage/retrospectivas bloqueiam; historico fica | feito e testado | 315 | `Inadimplencia_BloqueiaAtalhoExtraEWebhookPausado`. Recap share 402 se pago e fora de dia. |
-| Pagina de precos em reais | feito e testado | 307, 308 | `/pricing` e `GET /api/plans`. Valores PROPOSTA em `docs/planos.md`. |
+| Pagina de precos em reais | feito e testado | 307, 308 | `/pricing` e `GET /api/plans`. Status `aprovado`. Valores em `docs/planos.md`. |
 | So cartao recorrente; recusa suspende; historico so em dia ou nao; sem NF; cancelar visivel | feito e testado | 311 a 324 | Checkout cartao simulado. Recusa 400. Webhook paused suspende. Cancelar visivel em Ajustes. Sem NF. |
 | Sem indicacao, sem selo feito no Brasil, sem blog, redes depois, sem onboarding e-mail, sem beta fechado | feito (por ausencia) | 300 a 306 | Nao ha esses produtos. |
 | FAQ no menu, tour na primeira abertura | feito e testado | 288 a 299 | Telas `faq.tsx` e `TourGuide`. Ver secao Rodada 5. |
@@ -364,13 +391,13 @@ Nao some "feito por ausencia" com entrega de produto. Os buracos que ainda imped
 
 ## Fora desta rodada (nao cravar)
 
-Itens ainda fora, depois da Rodada 8:
+Itens ainda fora, depois da Rodada 9:
 
 - WebSocket (73, 74); o painel usa poll de 5s.
 - Cookie httpOnly (72; sugestao sem Ok). Bearer no app.
 - SMS para 2FA (34 cobriu so o recorte inicial; TOTP ja existe).
 - SMTP real, deploy Azure, iOS nativo.
 - Login proprio para pet/grupo.
-- Precos finais em reais: proposta em `docs/planos.md` espera aprovacao.
+- Feedback de 1 segundo (105) e catalogo de estatisticas anonimas (43, 44): ver secao de decisao.
 
 A lista consolidada do que ainda pede o Allan esta na secao **O que ainda depende de decisao do Allan**.

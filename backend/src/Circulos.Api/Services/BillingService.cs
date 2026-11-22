@@ -29,7 +29,7 @@ public sealed class BillingService(
         var monthly = prices.Value.PaidMonthlyReais;
         var yearly = prices.Value.PaidYearlyReais;
         return new PlanCatalogResponse(
-            "PROPOSTA",
+            "aprovado",
             new PlanOfferResponse(
                 "free",
                 "Gratuito",

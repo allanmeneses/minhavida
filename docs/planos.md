@@ -1,6 +1,6 @@
 # Planos do Circulos
 
-Status: **PROPOSTA** para o Allan aprovar. Precos em reais. Os valores nao ficam fixos no codigo da cobranca: vêm de `Plans:PaidMonthlyReais` e `Plans:PaidYearlyReais` (arquivo de configuracao ou secret do ambiente).
+Status: **aprovado** pelo Allan em 22/11/2026. Precos em reais: R$ 29,90 mensal e R$ 299,00 anual. Os valores nao ficam fixos no codigo da cobranca: vêm de `Plans:PaidMonthlyReais` e `Plans:PaidYearlyReais` (arquivo de configuracao ou secret do ambiente). Padrao no codigo: 29,90 e 299,00.
 
 ## Gratis
 
@@ -11,7 +11,7 @@ Status: **PROPOSTA** para o Allan aprovar. Precos em reais. Os valores nao ficam
 
 ## Pago mensal
 
-- Valor proposto: 29,90 reais por mes (configuravel)
+- Valor aprovado: 29,90 reais por mes (configuravel)
 - Circulos ilimitados
 - 1 GB de armazenamento
 - 20 atalhos
@@ -19,7 +19,7 @@ Status: **PROPOSTA** para o Allan aprovar. Precos em reais. Os valores nao ficam
 
 ## Pago anual
 
-- Valor proposto: 299,00 reais por ano (configuravel)
+- Valor aprovado: 299,00 reais por ano (configuravel)
 - Mesmos limites do pago mensal
 - Cobranca anual no mesmo gateway
 

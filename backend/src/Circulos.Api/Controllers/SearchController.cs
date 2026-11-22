@@ -36,7 +36,9 @@ public sealed class SearchController(AppDbContext db, TimeProvider clock) : Cont
             var entries = await db.LifeEntries.AsNoTracking()
                 .Include(x => x.LifeArea)
                 .Where(x => x.UserId == userId)
-                .Where(x => x.Title.ToLower().Contains(lowered) || (x.Body != null && x.Body.ToLower().Contains(lowered)))
+                .Where(x => x.Title.ToLower().Contains(lowered)
+                    || (x.Body != null && x.Body.ToLower().Contains(lowered))
+                    || x.TagsJson.ToLower().Contains(lowered))
                 .OrderByDescending(x => x.UpdatedAt)
                 .Take(40)
                 .ToListAsync(cancellationToken);

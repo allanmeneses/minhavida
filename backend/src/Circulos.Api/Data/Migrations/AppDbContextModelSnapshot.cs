@@ -402,6 +402,11 @@ namespace Circulos.Api.Data.Migrations
                         .HasMaxLength(260)
                         .HasColumnType("character varying(260)");
 
+                    b.Property<string>("TagsJson")
+                        .IsRequired()
+                        .HasMaxLength(800)
+                        .HasColumnType("character varying(800)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -420,6 +425,31 @@ namespace Circulos.Api.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("life_entries", (string)null);
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.LifeEntryShare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CircleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LifeEntryId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CircleId");
+
+                    b.HasIndex("LifeEntryId", "CircleId")
+                        .IsUnique();
+
+                    b.ToTable("life_entry_shares", (string)null);
                 });
 
             modelBuilder.Entity("Circulos.Api.Domain.LivingProfile", b =>
@@ -792,6 +822,9 @@ namespace Circulos.Api.Data.Migrations
                     b.Property<int>("Kind")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("LastEmailedFireAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int?>("MaxOccurrences")
                         .HasColumnType("integer");
 
@@ -1090,6 +1123,60 @@ namespace Circulos.Api.Data.Migrations
                     b.ToTable("shortcuts", (string)null);
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.ShortcutChangeNotice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Detail")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("RecipientUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ShortcutId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipientUserId");
+
+                    b.HasIndex("ShortcutId");
+
+                    b.ToTable("shortcut_change_notices", (string)null);
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.ShortcutShare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CircleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ShortcutId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CircleId");
+
+                    b.HasIndex("ShortcutId", "CircleId")
+                        .IsUnique();
+
+                    b.ToTable("shortcut_shares", (string)null);
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.SuccessionBallot", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1225,6 +1312,9 @@ namespace Circulos.Api.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("EmailRemindersEnabled")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("OwnedCircleCount")
                         .HasColumnType("integer");
@@ -1399,6 +1489,25 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("LifeArea");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.LifeEntryShare", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.Circle", "Circle")
+                        .WithMany()
+                        .HasForeignKey("CircleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Circulos.Api.Domain.LifeEntry", "LifeEntry")
+                        .WithMany("Shares")
+                        .HasForeignKey("LifeEntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Circle");
+
+                    b.Navigation("LifeEntry");
                 });
 
             modelBuilder.Entity("Circulos.Api.Domain.LivingProfile", b =>
@@ -1581,6 +1690,36 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.ShortcutChangeNotice", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.Shortcut", "Shortcut")
+                        .WithMany()
+                        .HasForeignKey("ShortcutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Shortcut");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.ShortcutShare", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.Circle", "Circle")
+                        .WithMany()
+                        .HasForeignKey("CircleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Circulos.Api.Domain.Shortcut", "Shortcut")
+                        .WithMany("Shares")
+                        .HasForeignKey("ShortcutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Circle");
+
+                    b.Navigation("Shortcut");
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.SuccessionBallot", b =>
                 {
                     b.HasOne("Circulos.Api.Domain.SuccessionVote", "Vote")
@@ -1641,6 +1780,11 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("Entries");
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.LifeEntry", b =>
+                {
+                    b.Navigation("Shares");
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.LivingProfile", b =>
                 {
                     b.Navigation("Grants");
@@ -1651,6 +1795,11 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("Grants");
 
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.Shortcut", b =>
+                {
+                    b.Navigation("Shares");
                 });
 
             modelBuilder.Entity("Circulos.Api.Domain.SuccessionVote", b =>

@@ -28,6 +28,7 @@ builder.Services.AddSingleton<IFileStorage>(sp =>
         sp.GetRequiredService<IEncryptionKeyProvider>()));
 builder.Services.AddScoped<QuotaService>();
 builder.Services.AddScoped<IEmailSender, OutboxEmailSender>();
+builder.Services.AddScoped<ReminderEmailService>();
 builder.Services.AddScoped<AccountDeletionService>();
 builder.Services.AddScoped<StatusPage>();
 builder.Services.AddScoped<RecapService>();

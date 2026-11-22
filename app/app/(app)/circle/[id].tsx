@@ -334,6 +334,21 @@ export default function CircleDetailScreen() {
         </>
       ) : null}
 
+      {(detail?.sharedEntries ?? []).length > 0 ? (
+        <>
+          <Text style={styles.section}>Entradas compartilhadas</Text>
+          {(detail?.sharedEntries ?? []).map((item) => (
+            <View key={item.id} style={styles.card}>
+              <Text style={styles.item}>{item.title}</Text>
+              <Text style={styles.lead}>De {item.authorName}. A mesma entrada, sem duplicar.</Text>
+              {(item.tags ?? []).length > 0 ? (
+                <Text style={styles.lead}>Tags: {(item.tags ?? []).join(', ')}</Text>
+              ) : null}
+            </View>
+          ))}
+        </>
+      ) : null}
+
       {detail?.posts.map((item) => (
         <View key={item.id} style={styles.card}>
           <Text style={styles.item}>{item.body}</Text>
