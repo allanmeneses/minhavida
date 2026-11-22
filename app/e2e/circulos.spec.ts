@@ -947,12 +947,14 @@ test('busca por raio com e sem permissao', async ({ browser }) => {
   await seeker.getByRole('button', { name: 'Busca' }).click();
   await seeker.getByRole('button', { name: 'Buscar por perto' }).click();
   await expect(seeker.getByText('Ninguem por perto com permissao.')).toBeVisible();
+  const geoName = `Geo ${Date.now()}`;
   await owner.getByRole('button', { name: 'Perfil' }).click();
+  await owner.getByLabel('Nome', { exact: true }).fill(geoName);
   await owner.getByRole('button', { name: 'Nao aparecer na busca por perto' }).click();
   await owner.getByRole('button', { name: 'Salvar perfil' }).click();
   await expect(owner.getByText('Perfil atualizado.')).toBeVisible();
   await seeker.getByRole('button', { name: 'Buscar por perto' }).click();
-  await expect(seeker.getByText(/Pessoa E2E · person/)).toBeVisible();
+  await expect(seeker.getByText(`${geoName} · person`, { exact: false })).toBeVisible();
   await ownerContext.close();
   await seekerContext.close();
 });

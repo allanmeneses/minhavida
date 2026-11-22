@@ -38,6 +38,6 @@ Num celular fisico, `EXPO_PUBLIC_API_URL=http://127.0.0.1:5288` nao funciona. Us
 - Pagina de status (UptimeRobot ou similar)
 - iOS nativo, PWA de loja, SMS 2FA
 
-Billing desta rodada fica em sandbox, desligado por padrao. Para ligar Mercado Pago de verdade: `Billing:Enabled=true`, `Billing:Provider=MercadoPago`, `MercadoPago:AccessToken` e `MercadoPago:WebhookSecret` so em secret, nunca no repositorio.
+Billing desta rodada fica em sandbox, desligado por padrao. Para ligar Mercado Pago de verdade: `Billing:Enabled=true`, `PAYMENTS_PROVIDER=MercadoPago`, `PUBLIC_BASE_URL=https://...`, `MP_ACCESS_TOKEN` e `MP_WEBHOOK_SECRET` so em secret, nunca no repositorio. Com Mercado Pago, `/dev/rotina` responde 404.
 
 Nenhum desses itens e requisito para o primeiro deploy da API + app atuais.

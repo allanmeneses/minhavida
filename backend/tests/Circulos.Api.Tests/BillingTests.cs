@@ -18,6 +18,14 @@ public sealed class BillingTests : IClassFixture<ApiFactory>
     public BillingTests(ApiFactory factory) => _factory = factory;
 
     [Fact]
+    public async Task DevRotina_ExisteNoSimulado()
+    {
+        var client = _factory.CreateClient();
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/dev/rotina")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/dev/rotina", null)).StatusCode);
+    }
+
+    [Fact]
     public async Task Catalogo_MostraPropostaComPrecosConfiguraveis()
     {
         var client = _factory.CreateClient();
@@ -56,10 +64,69 @@ public sealed class BillingTests : IClassFixture<ApiFactory>
         var requestId = Guid.NewGuid().ToString("N");
         var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
         var v1 = MercadoPagoGateway.Sign(FakePaymentGateway.Secret, MercadoPagoGateway.BuildManifest(requestId, providerId, ts));
+        var gateway = _factory.Services.GetRequiredService<FakePaymentGateway>();
+        var reads = gateway.SubscriptionReads;
         Assert.Equal(HttpStatusCode.Unauthorized, (await PostWebhook(client, "nao", "00", requestId, ts)).StatusCode);
+        Assert.Equal(reads, gateway.SubscriptionReads);
         var webhook = await PostWebhook(client, providerId, v1, requestId, ts);
         Assert.Equal(HttpStatusCode.OK, webhook.StatusCode);
         Assert.Contains("active", await webhook.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(reads + 1, gateway.SubscriptionReads);
+        var again = await PostWebhook(client, providerId, v1, requestId, ts);
+        Assert.Equal(HttpStatusCode.OK, again.StatusCode);
+        Assert.Contains("duplicate", await again.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(reads + 2, gateway.SubscriptionReads);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.Equal(1, await db.BillingEvents.CountAsync(item => item.ResourceId == providerId));
+        }
+    }
+
+    [Fact]
+    public async Task Checkout_PreapprovalComBackUrlEExternalReference_SemNotificationEmHttp()
+    {
+        var client = _factory.CreateClient();
+        var auth = await AuthHelper.RegisterAsync(client);
+        client.WithToken(auth.Token);
+        (await client.PostAsJsonAsync("/api/plan/checkout", new { period = "monthly", cardToken = FakePaymentGateway.ApprovedCardToken })).EnsureSuccessStatusCode();
+        var gateway = _factory.Services.GetRequiredService<FakePaymentGateway>();
+        Assert.True(gateway.SubscriptionRequests.TryGetValue(auth.UserId.ToString("N"), out var request));
+        Assert.Equal(auth.UserId.ToString("N"), request.ExternalReference);
+        Assert.Equal(auth.Email, request.PayerEmail);
+        Assert.Contains("/pricing", request.BackUrl, StringComparison.Ordinal);
+        Assert.Null(request.NotificationUrl);
+        Assert.Equal("months", request.FrequencyType);
+    }
+
+    [Fact]
+    public async Task Pix_MesmaChaveDeIdempotencia_NaoCriaDoisPagamentos_EWebhookReconsulta()
+    {
+        var client = _factory.CreateClient();
+        var auth = await AuthHelper.RegisterAsync(client);
+        var gateway = _factory.Services.GetRequiredService<FakePaymentGateway>();
+        var pixRequest = new PixPaymentRequest(
+            auth.UserId.ToString("N"),
+            29.90m,
+            "Circulos pago mensal",
+            "Pessoa",
+            auth.Email,
+            DateTime.UtcNow.AddHours(1),
+            null,
+            "pix-key-" + auth.UserId.ToString("N"));
+        var first = await gateway.CreatePixPaymentAsync(pixRequest);
+        var second = await gateway.CreatePixPaymentAsync(pixRequest);
+        Assert.Equal(first.ProviderPaymentId, second.ProviderPaymentId);
+        Assert.False(string.IsNullOrWhiteSpace(first.QrCode));
+
+        var requestId = Guid.NewGuid().ToString("N");
+        var ts = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var v1 = MercadoPagoGateway.Sign(FakePaymentGateway.Secret, MercadoPagoGateway.BuildManifest(requestId, first.ProviderPaymentId, ts));
+        var reads = gateway.PaymentReads;
+        var webhook = await PostWebhook(client, first.ProviderPaymentId, v1, requestId, ts, "payment");
+        Assert.Equal(HttpStatusCode.OK, webhook.StatusCode);
+        Assert.Contains("payment_seen", await webhook.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(reads + 1, gateway.PaymentReads);
     }
 
     [Fact]
@@ -128,12 +195,13 @@ public sealed class BillingTests : IClassFixture<ApiFactory>
         string dataId,
         string v1,
         string requestId,
-        string ts)
+        string ts,
+        string type = "subscription_preapproval")
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/webhooks/mercadopago")
         {
             Content = new StringContent(
-                "{\"type\":\"subscription_preapproval\",\"data\":{\"id\":\"" + dataId + "\"}}",
+                "{\"type\":\"" + type + "\",\"data\":{\"id\":\"" + dataId + "\"}}",
                 Encoding.UTF8,
                 "application/json"),
         };

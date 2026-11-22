@@ -29,4 +29,4 @@ Se a assinatura suspender: atalhos extras, armazenamento acima do teto gratis e 
 
 ## Gateway
 
-Mercado Pago, preapproval de cartao, webhook com HMAC (`id` + `request-id` + `ts`). Credenciais so por variavel de ambiente. `Billing:Enabled` desligado por padrao. `Billing:Sandbox` ligado. Sem AccessToken, o app usa o gateway simulado, sem chamada real.
+Mercado Pago, preapproval de cartao, webhook com HMAC (`id` + `request-id` + `ts`). O gateway tambem gera Pix avulso (`/v1/payments`, `X-Idempotency-Key`). Credenciais so por variavel de ambiente (`PAYMENTS_PROVIDER`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `PUBLIC_BASE_URL`). `PAYMENTS_PROVIDER` padrao: simulado. `Billing:Enabled` desligado por padrao. `Billing:Sandbox` ligado. Roteiro de sandbox em `docs/roteiro-mercado-pago.md`.

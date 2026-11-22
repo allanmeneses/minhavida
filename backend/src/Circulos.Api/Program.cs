@@ -34,14 +34,24 @@ builder.Services.AddScoped<RecapService>();
 builder.Services.Configure<BillingOptions>(builder.Configuration.GetSection("Billing"));
 builder.Services.Configure<PlanPriceOptions>(builder.Configuration.GetSection("Plans"));
 builder.Services.Configure<MercadoPagoOptions>(builder.Configuration.GetSection("MercadoPago"));
+builder.Services.PostConfigure<MercadoPagoOptions>(options =>
+{
+    if (string.IsNullOrWhiteSpace(options.AccessToken))
+    {
+        options.AccessToken = builder.Configuration["MP_ACCESS_TOKEN"];
+    }
+
+    if (string.IsNullOrWhiteSpace(options.WebhookSecret))
+    {
+        options.WebhookSecret = builder.Configuration["MP_WEBHOOK_SECRET"];
+    }
+});
 builder.Services.AddScoped<BillingService>();
 builder.Services.AddScoped<SuccessionService>();
-var billingProvider = builder.Configuration["Billing:Provider"] ?? "Simulated";
-var mercadoPagoToken = builder.Configuration["MercadoPago:AccessToken"];
-if (string.Equals(billingProvider, "MercadoPago", StringComparison.OrdinalIgnoreCase)
-    && !string.IsNullOrWhiteSpace(mercadoPagoToken))
+if (PaymentsConfig.IsMercadoPago(builder.Configuration))
 {
-    builder.Services.AddHttpClient<IPaymentGateway, MercadoPagoGateway>();
+    builder.Services.AddHttpClient<IPaymentGateway, MercadoPagoGateway>(client =>
+        client.Timeout = TimeSpan.FromSeconds(20));
 }
 else
 {
@@ -137,6 +147,10 @@ app.UseAuthorization();
 
 app.MapGet("/", () => Results.Json(new { name = "Circulos", version = "2.0.0" }));
 app.MapControllers();
+if (PaymentsConfig.IsSimulated(app.Configuration))
+{
+    app.MapMethods("/dev/rotina", new[] { "GET", "POST" }, () => Results.Ok(new { ok = true, provider = PaymentsConfig.Simulated }));
+}
 
 app.Run();
 

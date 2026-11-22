@@ -10,7 +10,7 @@ using Npgsql;
 
 namespace Circulos.Api.Tests;
 
-public sealed class ApiFactory : WebApplicationFactory<Program>
+public class ApiFactory : WebApplicationFactory<Program>
 {
     private string? _databaseName;
     private string? _adminConnectionString;
@@ -24,8 +24,10 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Database:Provider", "Postgres");
         builder.UseSetting("ConnectionStrings:Default", _connectionString);
         builder.UseSetting("Billing:Enabled", "true");
-        builder.UseSetting("Billing:Provider", "Simulated");
         builder.UseSetting("Billing:Sandbox", "true");
+        builder.UseSetting("Payments:Provider", "Simulated");
+        builder.UseSetting("PAYMENTS_PROVIDER", "Simulated");
+        builder.UseSetting("PublicBaseUrl", "http://127.0.0.1:5288");
         builder.ConfigureServices(services =>
         {
             RemoveService(services, typeof(DbContextOptions<AppDbContext>));

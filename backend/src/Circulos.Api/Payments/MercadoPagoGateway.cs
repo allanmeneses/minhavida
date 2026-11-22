@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -54,6 +55,75 @@ public sealed class MercadoPagoGateway(HttpClient http, IOptions<MercadoPagoOpti
     {
         using var req = Request(HttpMethod.Put, $"/preapproval/{Uri.EscapeDataString(providerSubscriptionId)}", new JsonObject { ["status"] = "cancelled" });
         await SendAsync(req, cancellationToken);
+    }
+
+    public async Task<PixPaymentResult> CreatePixPaymentAsync(PixPaymentRequest request, CancellationToken cancellationToken = default)
+    {
+        var (firstName, lastName) = SplitName(request.PayerName);
+        var payer = new JsonObject
+        {
+            ["email"] = string.IsNullOrWhiteSpace(request.PayerEmail) ? request.ExternalReference + "@circulos.local" : request.PayerEmail,
+            ["first_name"] = firstName,
+            ["last_name"] = lastName,
+        };
+        var body = new JsonObject
+        {
+            ["transaction_amount"] = request.Amount,
+            ["description"] = request.Description,
+            ["payment_method_id"] = "pix",
+            ["external_reference"] = request.ExternalReference,
+            ["date_of_expiration"] = new DateTimeOffset(request.ExpiresAtUtc, TimeSpan.Zero)
+                .ToOffset(TimeSpan.FromHours(-3))
+                .ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz", CultureInfo.InvariantCulture),
+            ["payer"] = payer,
+        };
+        if (!string.IsNullOrEmpty(request.NotificationUrl))
+        {
+            body["notification_url"] = request.NotificationUrl;
+        }
+
+        using var req = Request(HttpMethod.Post, "/v1/payments", body);
+        req.Headers.Add("X-Idempotency-Key", request.IdempotencyKey);
+        var json = await SendAsync(req, cancellationToken) ?? throw new PaymentGatewayException("Resposta do Mercado Pago vazia.");
+        var tx = json["point_of_interaction"]?["transaction_data"];
+        return new PixPaymentResult(
+            json["id"]?.ToString() ?? throw new PaymentGatewayException("Resposta do Mercado Pago sem id."),
+            tx?["qr_code"]?.GetValue<string>(),
+            tx?["qr_code_base64"]?.GetValue<string>(),
+            tx?["ticket_url"]?.GetValue<string>());
+    }
+
+    public async Task<ProviderPayment?> GetPaymentAsync(string providerPaymentId, CancellationToken cancellationToken = default)
+    {
+        using var req = Request(HttpMethod.Get, $"/v1/payments/{Uri.EscapeDataString(providerPaymentId)}");
+        var json = await SendAsync(req, cancellationToken, allowNotFound: true);
+        if (json is null)
+        {
+            return null;
+        }
+
+        var status = json["status"]?.GetValue<string>() switch
+        {
+            "approved" => ProviderPaymentStatus.Approved,
+            "pending" or "in_process" or "authorized" => ProviderPaymentStatus.Pending,
+            "cancelled" => ProviderPaymentStatus.Cancelled,
+            "rejected" => ProviderPaymentStatus.Rejected,
+            "refunded" or "charged_back" => ProviderPaymentStatus.Refunded,
+            _ => ProviderPaymentStatus.Unknown,
+        };
+        DateTime? approved = DateTimeOffset.TryParse(
+            json["date_approved"]?.GetValue<string>(),
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out var parsed)
+            ? parsed.UtcDateTime
+            : null;
+        return new ProviderPayment(
+            json["id"]!.ToString(),
+            status,
+            json["transaction_amount"]?.GetValue<decimal>() ?? 0m,
+            json["external_reference"]?.GetValue<string>(),
+            approved);
     }
 
     public bool IsValidWebhookSignature(string? signatureHeader, string? requestId, string dataId) =>
@@ -255,5 +325,16 @@ public sealed class MercadoPagoGateway(HttpClient http, IOptions<MercadoPagoOpti
 
             return req;
         }
+    }
+
+    private static (string First, string Last) SplitName(string name)
+    {
+        var parts = name.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length switch
+        {
+            0 => ("Pessoa", string.Empty),
+            1 => (parts[0], string.Empty),
+            _ => (parts[0], parts[1]),
+        };
     }
 }

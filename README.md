@@ -23,7 +23,7 @@ O modelo gira em torno de `User`. Perfil, documentos, areas de vida, circulos, l
 - Painel do dia, atalhos de um toque, tema claro/escuro automatico
 - Foto pela camera, galeria ou arquivo, comprimida no padrao Instagram
 - Exclusao de conta com senha e confirmacao por e-mail (LGPD)
-- Limites do plano gratuito (3 circulos, 5 atalhos, 100 MB) e checkout Mercado Pago em sandbox (desligado por padrao)
+- Limites do plano gratuito (3 circulos, 5 atalhos, 100 MB) e checkout Mercado Pago em sandbox (`PAYMENTS_PROVIDER` simulado por padrao)
 
 Nao ha URL publica permanente para arquivo. Foto e documento so saem pelo backend, com autenticacao.
 

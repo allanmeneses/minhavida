@@ -98,11 +98,20 @@ public sealed class BillingService(
 
         var yearly = string.Equals(period, "yearly", StringComparison.OrdinalIgnoreCase);
         var amount = yearly ? prices.Value.PaidYearlyReais : prices.Value.PaidMonthlyReais;
-        var token = string.IsNullOrWhiteSpace(cardToken) ? FakePaymentGateway.ApprovedCardToken : cardToken.Trim();
-        var publicBase = (configuration["PublicBaseUrl"] ?? "https://circulos.local").TrimEnd('/');
-        var notification = publicBase.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
-            ? $"{publicBase}/webhooks/mercadopago?source_news=webhooks"
-            : null;
+        var token = cardToken?.Trim();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            if (!PaymentsConfig.IsSimulated(configuration))
+            {
+                return ActionResultLike<PlanResponse>.Fail(StatusCodes.Status400BadRequest, "Informe o token do cartao.");
+            }
+
+            token = FakePaymentGateway.ApprovedCardToken;
+        }
+
+        var publicBase = PaymentsConfig.PublicBaseUrl(configuration);
+        var notification = WebhookAddress.For(publicBase);
+        var backUrl = string.IsNullOrEmpty(publicBase) ? "https://circulos.local/pricing" : $"{publicBase}/pricing";
 
         ProviderSubscription created;
         try
@@ -113,7 +122,7 @@ public sealed class BillingService(
                     user.Email,
                     amount,
                     yearly ? "Circulos pago anual" : "Circulos pago mensal",
-                    $"{publicBase}/pricing",
+                    backUrl,
                     notification,
                     token,
                     yearly ? "years" : "months",
@@ -151,30 +160,30 @@ public sealed class BillingService(
     public bool SignatureValid(string? signatureHeader, string? requestId, string dataId) =>
         gateway.IsValidWebhookSignature(signatureHeader, requestId, dataId);
 
-    public async Task<string> ApplyWebhookAsync(string topic, string resourceId, CancellationToken cancellationToken)
+    public async Task<string> ApplyWebhookAsync(string topic, string resourceId, string? requestId, CancellationToken cancellationToken)
     {
-        var existing = await db.BillingEvents.FirstOrDefaultAsync(
-            item => item.Provider == gateway.Name && item.EventKey == $"{topic}:{resourceId}",
-            cancellationToken);
-        if (existing is not null)
+        var eventKey = string.IsNullOrWhiteSpace(requestId) ? $"{topic}:{resourceId}" : $"{requestId}:{resourceId}";
+        if (IsPaymentTopic(topic))
         {
-            return "duplicate";
+            var payment = await gateway.GetPaymentAsync(resourceId, cancellationToken);
+            if (payment is null)
+            {
+                return await RecordAsync(topic, resourceId, eventKey, "not_found", cancellationToken);
+            }
+
+            return await RecordAsync(topic, resourceId, eventKey, "payment_seen", cancellationToken);
         }
 
         var remote = await gateway.GetSubscriptionAsync(resourceId, cancellationToken);
         if (remote is null)
         {
-            db.BillingEvents.Add(Event(topic, resourceId, "not_found"));
-            await db.SaveChangesAsync(cancellationToken);
-            return "not_found";
+            return await RecordAsync(topic, resourceId, eventKey, "not_found", cancellationToken);
         }
 
         if (!Guid.TryParseExact(remote.ExternalReference, "N", out var userId)
             && !Guid.TryParse(remote.ExternalReference, out userId))
         {
-            db.BillingEvents.Add(Event(topic, resourceId, "reference_mismatch"));
-            await db.SaveChangesAsync(cancellationToken);
-            return "reference_mismatch";
+            return await RecordAsync(topic, resourceId, eventKey, "reference_mismatch", cancellationToken);
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -182,19 +191,53 @@ public sealed class BillingService(
         var user = await db.Users.FirstOrDefaultAsync(item => item.Id == userId, cancellationToken);
         if (user is null)
         {
-            db.BillingEvents.Add(Event(topic, resourceId, "user_not_found"));
-            await db.SaveChangesAsync(cancellationToken);
+            var missing = await RecordAsync(topic, resourceId, eventKey, "user_not_found", cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-            return "user_not_found";
+            return missing;
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
         var result = ApplyRemote(user, remote, now);
-        db.BillingEvents.Add(Event(topic, resourceId, result));
-        await db.SaveChangesAsync(cancellationToken);
+        result = await RecordAsync(topic, resourceId, eventKey, result, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return result;
     }
+
+    private async Task<string> RecordAsync(
+        string topic,
+        string resourceId,
+        string eventKey,
+        string result,
+        CancellationToken cancellationToken)
+    {
+        var existing = await db.BillingEvents.FirstOrDefaultAsync(
+            item => item.Provider == gateway.Name && item.EventKey == eventKey,
+            cancellationToken);
+        if (existing is not null)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return "duplicate";
+        }
+
+        db.BillingEvents.Add(Event(topic, resourceId, eventKey, result));
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            return "duplicate";
+        }
+
+        return result;
+    }
+
+    private static bool IsPaymentTopic(string topic) =>
+        topic.Equals("payment", StringComparison.OrdinalIgnoreCase)
+        || topic.Equals("pix", StringComparison.OrdinalIgnoreCase)
+        || topic.Contains("payment", StringComparison.OrdinalIgnoreCase)
+            && !topic.Contains("preapproval", StringComparison.OrdinalIgnoreCase)
+            && !topic.Contains("authorized_payment", StringComparison.OrdinalIgnoreCase);
 
     private static string ApplyRemote(User user, ProviderSubscription remote, DateTime now)
     {
@@ -230,12 +273,12 @@ public sealed class BillingService(
         user.PaidUntil = yearly ? now.AddYears(1) : now.AddMonths(1);
     }
 
-    private BillingEvent Event(string topic, string resourceId, string result) =>
+    private BillingEvent Event(string topic, string resourceId, string eventKey, string result) =>
         new()
         {
             Id = Guid.NewGuid(),
             Provider = gateway.Name,
-            EventKey = $"{topic}:{resourceId}",
+            EventKey = eventKey,
             Topic = topic,
             ResourceId = resourceId,
             Result = result,

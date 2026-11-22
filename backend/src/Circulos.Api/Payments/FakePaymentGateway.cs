@@ -9,14 +9,21 @@ public sealed class FakePaymentGateway : IPaymentGateway
     public const string ApprovedCardToken = "fake-cartao-aprovado";
 
     private readonly ConcurrentDictionary<string, ProviderSubscription> _subscriptions = new();
-    private readonly ConcurrentDictionary<string, SubscriptionRequest> _requests = new();
+    private readonly ConcurrentDictionary<string, ProviderPayment> _payments = new();
+    private readonly ConcurrentDictionary<string, string> _idempotency = new();
     private long _seq = 1000;
+    private int _subscriptionReads;
+    private int _paymentReads;
 
-    public string Name => "Simulated";
-    public ConcurrentDictionary<string, SubscriptionRequest> SubscriptionRequests => _requests;
+    public string Name => PaymentsConfig.Simulated;
+    public ConcurrentDictionary<string, SubscriptionRequest> SubscriptionRequests { get; } = new();
+    public ConcurrentDictionary<string, PixPaymentRequest> PixRequests { get; } = new();
     public ConcurrentQueue<string> SubscriptionCancels { get; } = new();
     public Func<Task>? BeforeCreateSubscription { get; set; }
     public Func<Task>? BeforeGetSubscription { get; set; }
+    public Func<Task>? BeforeGetPayment { get; set; }
+    public int SubscriptionReads => _subscriptionReads;
+    public int PaymentReads => _paymentReads;
 
     public async Task<ProviderSubscription> CreateSubscriptionAsync(SubscriptionRequest request, CancellationToken cancellationToken = default)
     {
@@ -30,7 +37,7 @@ public sealed class FakePaymentGateway : IPaymentGateway
             throw new PaymentGatewayException("Cartao recusado (simulado).");
         }
 
-        _requests[request.ExternalReference] = request;
+        SubscriptionRequests[request.ExternalReference] = request;
         var id = "sub-" + Interlocked.Increment(ref _seq);
         var sub = new ProviderSubscription(id, ProviderSubscriptionStatus.Authorized, request.ExternalReference, request.Reason);
         _subscriptions[id] = sub;
@@ -39,6 +46,7 @@ public sealed class FakePaymentGateway : IPaymentGateway
 
     public async Task<ProviderSubscription?> GetSubscriptionAsync(string providerSubscriptionId, CancellationToken cancellationToken = default)
     {
+        Interlocked.Increment(ref _subscriptionReads);
         if (BeforeGetSubscription is { } hook)
         {
             await hook();
@@ -58,12 +66,44 @@ public sealed class FakePaymentGateway : IPaymentGateway
         return Task.CompletedTask;
     }
 
+    public Task<PixPaymentResult> CreatePixPaymentAsync(PixPaymentRequest request, CancellationToken cancellationToken = default)
+    {
+        PixRequests[request.ExternalReference] = request;
+        var id = _idempotency.GetOrAdd(request.IdempotencyKey, _ => Interlocked.Increment(ref _seq).ToString());
+        _payments.TryAdd(id, new ProviderPayment(id, ProviderPaymentStatus.Pending, request.Amount, request.ExternalReference, null));
+        var code = "00020126580014br.gov.bcb.pix0136circulos-fake-" + id;
+        return Task.FromResult(new PixPaymentResult(id, code, null, null));
+    }
+
+    public async Task<ProviderPayment?> GetPaymentAsync(string providerPaymentId, CancellationToken cancellationToken = default)
+    {
+        Interlocked.Increment(ref _paymentReads);
+        if (BeforeGetPayment is { } hook)
+        {
+            await hook();
+        }
+
+        return _payments.TryGetValue(providerPaymentId, out var payment) ? payment : null;
+    }
+
     public void SetSubscriptionStatus(string id, ProviderSubscriptionStatus status)
     {
         if (_subscriptions.TryGetValue(id, out var sub))
         {
             _subscriptions[id] = sub with { Status = status };
         }
+    }
+
+    public ProviderPayment ApprovePayment(string providerPaymentId, DateTime? approvedAtUtc = null)
+    {
+        return _payments.AddOrUpdate(
+            providerPaymentId,
+            id => new ProviderPayment(id, ProviderPaymentStatus.Approved, 0, null, approvedAtUtc ?? DateTime.UtcNow),
+            (_, payment) => payment with
+            {
+                Status = ProviderPaymentStatus.Approved,
+                ApprovedAtUtc = approvedAtUtc ?? DateTime.UtcNow,
+            });
     }
 
     public bool IsValidWebhookSignature(string? signatureHeader, string? requestId, string dataId) =>

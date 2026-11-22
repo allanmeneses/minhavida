@@ -92,7 +92,7 @@ public sealed class BillingController(AppDbContext db, BillingService billing) :
             }
 
             var topic = string.IsNullOrWhiteSpace(type) ? "subscription_preapproval" : type;
-            var result = await billing.ApplyWebhookAsync(topic, dataId, cancellationToken);
+            var result = await billing.ApplyWebhookAsync(topic, dataId, requestId, cancellationToken);
             return Ok(new { result });
         }
     }
