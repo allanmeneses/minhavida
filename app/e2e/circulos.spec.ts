@@ -324,6 +324,85 @@ test('termos e privacidade no app', async ({ page }) => {
   await expect(page.getByText(/ALLAN WANDERSON MENESES DE SOUSA/).first()).toBeVisible();
 });
 
+test('lista de compras no perfil', async ({ page }) => {
+  await signUp(page, '-lista');
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByRole('button', { name: 'Listas' }).click();
+  await page.getByLabel('Nome da lista').fill('Feira');
+  await page.getByRole('button', { name: 'Criar lista' }).click();
+  await page.getByRole('button', { name: 'Feira', exact: true }).click();
+  await page.getByLabel('Item', { exact: true }).fill('Arroz');
+  await page.getByLabel('Quantidade').fill('2 kg');
+  await page.getByRole('button', { name: 'Adicionar item' }).click();
+  await expect(page.getByText('Arroz', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Marcar Arroz' }).click();
+  await expect(page.getByText(/feito por/)).toBeVisible();
+});
+
+test('permissao da lista: so ver e depois marcar feito', async ({ browser }) => {
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await signUp(owner, '-lista-dono');
+  await owner.getByRole('button', { name: 'Circulos' }).click();
+  const circleName = `Casa lista ${Date.now()}`;
+  await owner.getByLabel('Nome', { exact: true }).fill(circleName);
+  await owner.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(owner.getByText('Listas do circulo')).toBeVisible();
+
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const memberEmail = `e2e-${Date.now()}-lista-membro@exemplo.com`;
+  const registered = await owner.request.post(`${apiUrl}/api/auth/register`, {
+    data: { email: memberEmail, password: 'senha-segura-1', name: 'Membro Lista' },
+  });
+  expect(registered.ok()).toBeTruthy();
+  const member = (await registered.json()) as { token: string };
+  await owner.getByLabel('Convidar por e-mail').fill(memberEmail);
+  await owner.getByRole('button', { name: 'Enviar convite' }).click();
+  await expect(owner.getByText(/Convite criado/)).toBeVisible();
+  const inviteText = await owner.getByText(/Convite criado/).innerText();
+  const inviteToken = inviteText.replace('Convite criado. Codigo: ', '').trim();
+  const accepted = await owner.request.post(`${apiUrl}/api/circles/invites/${inviteToken}/accept`, {
+    headers: { Authorization: `Bearer ${member.token}`, 'Content-Type': 'application/json' },
+    data: {},
+  });
+  expect(accepted.ok()).toBeTruthy();
+
+  await owner.getByLabel('Nome da lista').fill('Compras da casa');
+  await expect(owner.getByLabel('Nome da lista')).toHaveValue('Compras da casa');
+  await expect(owner.getByRole('button', { name: 'Criar lista' })).toBeEnabled();
+  await owner.getByRole('button', { name: 'Criar lista' }).click();
+  await expect(owner.getByRole('button', { name: 'Compras da casa', exact: true })).toBeVisible({ timeout: 15_000 });
+  await owner.getByRole('button', { name: 'Compras da casa', exact: true }).click();
+  await owner.getByLabel('Item', { exact: true }).fill('Leite');
+  await owner.getByRole('button', { name: 'Adicionar item' }).click();
+  await expect(owner.getByText('Leite', { exact: true })).toBeVisible();
+
+  const memberContext = await browser.newContext();
+  const memberPage = await memberContext.newPage();
+  await memberPage.goto('/(auth)/login');
+  await memberPage.getByLabel('E-mail').fill(memberEmail);
+  await memberPage.getByLabel('Senha').fill('senha-segura-1');
+  await memberPage.getByRole('button', { name: 'Entrar' }).click();
+  await expect(memberPage.getByText('O que pede atencao hoje')).toBeVisible({ timeout: 20_000 });
+  await memberPage.getByRole('button', { name: 'Circulos' }).click();
+  await memberPage.getByRole('button', { name: `Abrir ${circleName}` }).click();
+  await memberPage.getByRole('button', { name: 'Compras da casa', exact: true }).click();
+  await expect(memberPage.getByText('Voce so ve esta lista.')).toBeVisible();
+  await expect(memberPage.getByRole('button', { name: 'Adicionar item' })).toHaveCount(0);
+  await expect(memberPage.getByRole('button', { name: 'Marcar Leite' })).toHaveCount(0);
+
+  await owner.getByRole('button', { name: /^Permissao dos membros:/ }).click();
+  await owner.getByRole('button', { name: /^Permissao dos membros:/ }).click();
+  await expect(owner.getByRole('button', { name: 'Permissao dos membros: membros marcam feito' })).toBeVisible();
+  await expect(memberPage.getByRole('button', { name: 'Marcar Leite' })).toBeVisible({ timeout: 15_000 });
+  await memberPage.getByRole('button', { name: 'Marcar Leite' }).click();
+  await expect(memberPage.getByText(/feito por/)).toBeVisible();
+  await expect(memberPage.getByRole('button', { name: 'Excluir Leite' })).toHaveCount(0);
+
+  await ownerContext.close();
+  await memberContext.close();
+});
+
 test('modo escuro troca a paleta na hora', async ({ page }) => {
   await signUp(page, '-tema');
   await page.getByRole('button', { name: 'Ajustes' }).first().click();

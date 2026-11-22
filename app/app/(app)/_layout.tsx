@@ -105,6 +105,14 @@ export default function AppLayout() {
         name="circle/[id]"
         options={{ title: 'Circulo', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
+      <Tabs.Screen
+        name="lists"
+        options={{ title: 'Listas', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
+        name="list/[id]"
+        options={{ title: 'Lista', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
     </Tabs>
   );
 }

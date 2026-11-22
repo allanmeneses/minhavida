@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { ProfileForm } from '@/components/ProfileForm';
 import { ProfilePhoto } from '@/components/ProfilePhoto';
 import { Button } from '@/components/ui/Button';
@@ -200,6 +200,7 @@ export default function ProfileScreen() {
         ))}
         <Feedback message={null} />
         <AreaComposer value={newArea} onChange={setNewArea} onCreate={() => void createArea()} />
+        <Button label="Listas" variant="ghost" onPress={() => router.push('/(app)/lists' as Href)} />
       </View>
     </ScrollView>
   );

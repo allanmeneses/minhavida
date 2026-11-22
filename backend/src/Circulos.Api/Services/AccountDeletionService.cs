@@ -63,6 +63,32 @@ public sealed class AccountDeletionService(
             post.AuthorUserId = null;
         }
 
+        var soloLists = await db.SharedLists
+            .Where(list => list.OwnerUserId == user.Id && list.CircleId == null)
+            .ToListAsync(cancellationToken);
+        db.SharedLists.RemoveRange(soloLists);
+
+        var remainingLists = await db.SharedLists.Where(list => list.OwnerUserId == user.Id).ToListAsync(cancellationToken);
+        foreach (var list in remainingLists)
+        {
+            list.OwnerUserId = null;
+        }
+
+        var grants = await db.SharedListGrants.Where(grant => grant.UserId == user.Id).ToListAsync(cancellationToken);
+        db.SharedListGrants.RemoveRange(grants);
+
+        var addedItems = await db.SharedListItems.Where(item => item.AddedByUserId == user.Id).ToListAsync(cancellationToken);
+        foreach (var item in addedItems)
+        {
+            item.AddedByUserId = null;
+        }
+
+        var doneItems = await db.SharedListItems.Where(item => item.DoneByUserId == user.Id).ToListAsync(cancellationToken);
+        foreach (var item in doneItems)
+        {
+            item.DoneByUserId = null;
+        }
+
         var memberships = await db.CircleMembers.Where(member => member.UserId == user.Id).ToListAsync(cancellationToken);
         db.CircleMembers.RemoveRange(memberships);
 

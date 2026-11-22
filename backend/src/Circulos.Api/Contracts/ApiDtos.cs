@@ -280,6 +280,95 @@ public sealed record SearchResponse(
     IReadOnlyList<SearchHit> Hits,
     SearchHistoryResponse History);
 
+public sealed class SharedListRequest
+{
+    [Required]
+    [MinLength(1)]
+    [MaxLength(120)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(20)]
+    public string Kind { get; set; } = "other";
+
+    public Guid? CircleId { get; set; }
+
+    [MaxLength(20)]
+    public string MemberAccess { get; set; } = "view";
+}
+
+public sealed class SharedListAccessRequest
+{
+    [Required]
+    [MaxLength(20)]
+    public string MemberAccess { get; set; } = "view";
+}
+
+public sealed class SharedListGrantRequest
+{
+    [Required]
+    public Guid UserId { get; set; }
+
+    [Required]
+    [MaxLength(20)]
+    public string Access { get; set; } = "view";
+}
+
+public sealed class SharedListItemRequest
+{
+    [Required]
+    [MinLength(1)]
+    [MaxLength(200)]
+    public string Text { get; set; } = string.Empty;
+
+    [MaxLength(80)]
+    public string? Quantity { get; set; }
+
+    [MaxLength(500)]
+    public string? Note { get; set; }
+}
+
+public sealed class ReorderListItemsRequest
+{
+    public Guid[] Ids { get; set; } = [];
+}
+
+public sealed record SharedListSummaryResponse(
+    Guid Id,
+    string Name,
+    string Kind,
+    Guid? CircleId,
+    string MemberAccess,
+    int ItemCount,
+    int DoneCount);
+
+public sealed record SharedListMemberAccessResponse(Guid UserId, string Name, string Access, bool Overridden);
+
+public sealed record SharedListItemResponse(
+    Guid Id,
+    string Text,
+    string? Quantity,
+    string? Note,
+    bool IsDone,
+    int SortOrder,
+    Guid? AddedByUserId,
+    string? AddedByName,
+    Guid? DoneByUserId,
+    string? DoneByName);
+
+public sealed record SharedListDetailResponse(
+    Guid Id,
+    string Name,
+    string Kind,
+    Guid? CircleId,
+    string MemberAccess,
+    string MyAccess,
+    bool CanAdd,
+    bool CanComplete,
+    bool CanManageItems,
+    bool CanChangeAccess,
+    IReadOnlyList<SharedListMemberAccessResponse> Members,
+    IReadOnlyList<SharedListItemResponse> Items);
+
 public sealed record PlanResponse(
     string Plan,
     int? CircleLimit,
@@ -352,4 +441,35 @@ public static class EnumText
     public static ReminderKind ParseReminderKind(string? value) =>
         string.Equals(value, "birthday", StringComparison.OrdinalIgnoreCase) ? Domain.ReminderKind.Birthday : Domain.ReminderKind.General;
 
+    public static string ListKind(SharedListKind value) => value switch
+    {
+        SharedListKind.Shopping => "shopping",
+        SharedListKind.Wishes => "wishes",
+        SharedListKind.Materials => "materials",
+        _ => "other",
+    };
+
+    public static SharedListKind ParseListKind(string? value) => value?.ToLowerInvariant() switch
+    {
+        "shopping" or "compras" => SharedListKind.Shopping,
+        "wishes" or "desejos" => SharedListKind.Wishes,
+        "materials" or "materiais" => SharedListKind.Materials,
+        _ => SharedListKind.Other,
+    };
+
+    public static string ListAccess(SharedListAccess value) => value switch
+    {
+        SharedListAccess.Add => "add",
+        SharedListAccess.Complete => "complete",
+        SharedListAccess.Manage => "manage",
+        _ => "view",
+    };
+
+    public static SharedListAccess ParseListAccess(string? value) => value?.ToLowerInvariant() switch
+    {
+        "add" => SharedListAccess.Add,
+        "complete" => SharedListAccess.Complete,
+        "manage" => SharedListAccess.Manage,
+        _ => SharedListAccess.View,
+    };
 }
