@@ -1,6 +1,4 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 namespace Circulos.Api.Storage;
 
@@ -11,21 +9,47 @@ public static class ImageCompressor
 
     public static async Task<CompressedImage> CompressAsync(Stream input, CancellationToken cancellationToken)
     {
-        using var image = await Image.LoadAsync(input, cancellationToken);
-        var longest = Math.Max(image.Width, image.Height);
-        if (longest > MaxEdge)
+        using var buffer = new MemoryStream();
+        await input.CopyToAsync(buffer, cancellationToken);
+        using var bitmap = SKBitmap.Decode(buffer.ToArray());
+        if (bitmap is null)
         {
-            var ratio = MaxEdge / (double)longest;
-            var width = Math.Max(1, (int)Math.Round(image.Width * ratio));
-            var height = Math.Max(1, (int)Math.Round(image.Height * ratio));
-            image.Mutate(x => x.Resize(width, height));
+            throw new InvalidDataException("A foto nao pode ser lida.");
         }
 
-        var output = new MemoryStream();
-        var encoder = new JpegEncoder { Quality = JpegQuality };
-        await image.SaveAsJpegAsync(output, encoder, cancellationToken);
-        output.Position = 0;
-        return new CompressedImage(output, "image/jpeg", "foto.jpg", output.Length);
+        SKBitmap working = bitmap;
+        SKBitmap? resized = null;
+        try
+        {
+            var longest = Math.Max(bitmap.Width, bitmap.Height);
+            if (longest > MaxEdge)
+            {
+                var ratio = MaxEdge / (double)longest;
+                var width = Math.Max(1, (int)Math.Round(bitmap.Width * ratio));
+                var height = Math.Max(1, (int)Math.Round(bitmap.Height * ratio));
+                resized = bitmap.Resize(
+                    new SKImageInfo(width, height),
+                    new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
+                if (resized is null)
+                {
+                    throw new InvalidDataException("Nao foi possivel redimensionar a foto.");
+                }
+
+                working = resized;
+            }
+
+            using var image = SKImage.FromBitmap(working);
+            using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, JpegQuality)
+                ?? throw new InvalidDataException("Nao foi possivel comprimir a foto.");
+            var output = new MemoryStream();
+            encoded.SaveTo(output);
+            output.Position = 0;
+            return new CompressedImage(output, "image/jpeg", "foto.jpg", output.Length);
+        }
+        finally
+        {
+            resized?.Dispose();
+        }
     }
 }
 

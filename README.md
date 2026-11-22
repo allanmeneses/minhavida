@@ -44,7 +44,7 @@ A sugestao do dono foi ASP.NET e um cliente unico Expo. Mantivemos isso. Ajuste 
 | Arquivos | Disco local, chave interna | Privacidade por usuario; download so autenticado |
 | Cliente | Expo SDK 58 + Expo Router | Um codigo para iOS, Android e web |
 | Visual | Componentes por plataforma | Abas nativas no celular; barra lateral e tabela na web |
-| Testes | xUnit + `WebApplicationFactory` | Auth e documentos isolados, sem Docker na suíte |
+| Testes | xUnit + `WebApplicationFactory` | Integracao e E2E contra PostgreSQL 16 |
 
 Nao usamos um segundo cliente web. O Expo no navegador e a cara de web; no celular, a cara de app nativo.
 
@@ -67,6 +67,8 @@ cd backend
 dotnet test
 dotnet run --project src/Circulos.Api --urls http://127.0.0.1:5288
 ```
+
+`dotnet test` e o Playwright web sobem contra o Postgres local (usuario/senha/banco `circulos`). No GitHub Actions o workflow usa um service container `postgres:16-alpine`.
 
 A API aplica a migracao na subida. Saude: `http://127.0.0.1:5288/health`.
 

@@ -81,11 +81,26 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen name="index" options={{ href: null }} />
-      <Tabs.Screen name="documents" options={{ href: null, title: 'Documentos' }} />
-      <Tabs.Screen name="reminders" options={{ href: null, title: 'Lembretes' }} />
-      <Tabs.Screen name="settings" options={{ href: null, title: 'Ajustes' }} />
-      <Tabs.Screen name="life/[id]" options={{ href: null, title: 'Area' }} />
-      <Tabs.Screen name="circle/[id]" options={{ href: null, title: 'Circulo' }} />
+      <Tabs.Screen
+        name="documents"
+        options={{ title: 'Documentos', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
+        name="reminders"
+        options={{ title: 'Lembretes', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{ title: 'Ajustes', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
+        name="life/[id]"
+        options={{ title: 'Area', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
+        name="circle/[id]"
+        options={{ title: 'Circulo', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
     </Tabs>
   );
 }

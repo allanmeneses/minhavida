@@ -5,7 +5,7 @@ using System.Text.Json;
 using Circulos.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using SixLabors.ImageSharp;
+using SkiaSharp;
 
 namespace Circulos.Api.Tests;
 
@@ -160,7 +160,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var dump = await DumpSqliteAsync(db);
+        var dump = await DumpDatabaseAsync(db);
         Assert.DoesNotContain(TestEncryptionKey.Base64, dump, StringComparison.Ordinal);
         Assert.DoesNotContain("Encryption:Key", dump, StringComparison.Ordinal);
         var document = await db.Documents.AsNoTracking().SingleAsync(x => x.UserId == auth.UserId);
@@ -213,17 +213,18 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
 
     private static MultipartFormDataContent CreatePngFile(string name)
     {
-        using var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(8, 8);
-        using var buffer = new MemoryStream();
-        image.SaveAsPng(buffer);
-        var file = new ByteArrayContent(buffer.ToArray());
+        using var image = new SKBitmap(8, 8, SKColorType.Rgba8888, SKAlphaType.Opaque);
+        image.Erase(SKColors.SteelBlue);
+        using var encoded = SKImage.FromBitmap(image).Encode(SKEncodedImageFormat.Png, 100)
+            ?? throw new InvalidOperationException("Falha ao gerar o PNG de teste.");
+        var file = new ByteArrayContent(encoded.ToArray());
         file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
         var form = new MultipartFormDataContent();
         form.Add(file, "file", name);
         return form;
     }
 
-    private static async Task<string> DumpSqliteAsync(AppDbContext db)
+    private static async Task<string> DumpDatabaseAsync(AppDbContext db)
     {
         var connection = db.Database.GetDbConnection();
         if (connection.State != System.Data.ConnectionState.Open)
@@ -234,7 +235,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         var builder = new StringBuilder();
         await using (var tables = connection.CreateCommand())
         {
-            tables.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
+            tables.CommandText = "SELECT tablename FROM pg_tables WHERE schemaname = 'public'";
             await using var reader = await tables.ExecuteReaderAsync();
             var names = new List<string>();
             while (await reader.ReadAsync())
@@ -245,6 +246,11 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
             await reader.DisposeAsync();
             foreach (var name in names)
             {
+                if (name.Any(ch => !char.IsLetterOrDigit(ch) && ch != '_'))
+                {
+                    continue;
+                }
+
                 await using var rows = connection.CreateCommand();
                 rows.CommandText = $"SELECT * FROM \"{name}\"";
                 await using var data = await rows.ExecuteReaderAsync();

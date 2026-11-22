@@ -14,6 +14,7 @@ public sealed class AccountDeletionService(
     {
         var keys = await CollectKeysAsync(user.Id, cancellationToken);
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, user.Id, cancellationToken);
 
         var owned = await db.Circles
             .Include(circle => circle.Members)
