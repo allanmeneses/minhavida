@@ -54,6 +54,41 @@ public static class RecurrenceCalculator
         return NextOnOrAfter(rule, startUtc, nowUtc, 0) is not null;
     }
 
+    public static IReadOnlyList<DateTime> OccurrencesInRange(
+        RecurrenceRule rule,
+        DateTime startUtc,
+        DateTime fromUtc,
+        DateTime toUtc,
+        int maxOccurrencesShown = 400)
+    {
+        if (toUtc < fromUtc)
+        {
+            return [];
+        }
+
+        var items = new List<DateTime>();
+        var cursor = fromUtc;
+        var count = 0;
+        while (items.Count < maxOccurrencesShown)
+        {
+            var next = NextOnOrAfter(rule, startUtc, cursor, count);
+            if (next is null || next > toUtc)
+            {
+                break;
+            }
+
+            if (next >= fromUtc)
+            {
+                items.Add(next.Value);
+            }
+
+            cursor = next.Value.AddSeconds(1);
+            count++;
+        }
+
+        return items;
+    }
+
     private static DateTime Advance(RecurrenceRule rule, DateTime startUtc, DateTime current, int interval)
     {
         var frequency = rule.Frequency.ToLowerInvariant();

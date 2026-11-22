@@ -35,6 +35,12 @@ public sealed class ExportController(AppDbContext db, IFileStorage storage, Time
             .Include(x => x.Items)
             .Where(x => x.OwnerUserId == userId && x.CircleId == null)
             .ToListAsync(cancellationToken);
+        var memories = await db.Memories.AsNoTracking()
+            .Where(x => x.AuthorUserId == userId && x.CircleId == null)
+            .ToListAsync(cancellationToken);
+        var living = await db.LivingProfiles.AsNoTracking()
+            .Where(x => x.OwnerUserId == userId)
+            .ToListAsync(cancellationToken);
 
         var files = new List<(string Path, string Key)>();
         if (user.Profile.PhotoStorageKey is { } photo)
@@ -50,6 +56,11 @@ public sealed class ExportController(AppDbContext db, IFileStorage storage, Time
         foreach (var entry in entries.Where(x => x.PhotoStorageKey is not null))
         {
             files.Add(($"files/entries/{entry.Id:N}.jpg", entry.PhotoStorageKey!));
+        }
+
+        foreach (var memory in memories.Where(x => x.PhotoStorageKey is not null))
+        {
+            files.Add(($"files/memories/{memory.Id:N}.jpg", memory.PhotoStorageKey!));
         }
 
         var payload = new
@@ -89,6 +100,8 @@ public sealed class ExportController(AppDbContext db, IFileStorage storage, Time
                 kind = EnumText.ListKind(x.Kind),
                 items = x.Items.Select(i => new { i.Id, i.Text, i.Quantity, i.Note, i.IsDone }),
             }),
+            memories = memories.Select(x => new { x.Id, x.Title, x.Body, x.OccurredOn, hasPhoto = x.PhotoStorageKey is not null }),
+            livingProfiles = living.Select(x => new { x.Id, kind = EnumText.LivingKind(x.Kind), x.Name, x.Context, x.BirthDate }),
         };
 
         return File(await ZipAsync(payload, files, cancellationToken), "application/zip", "circulos-perfil.zip");
@@ -117,6 +130,8 @@ public sealed class ExportController(AppDbContext db, IFileStorage storage, Time
             .Where(x => x.CircleId == id)
             .ToListAsync(cancellationToken);
         var visibleLists = lists.Where(list => !HideWishList(circle, userId, list.Kind)).ToList();
+        var memories = await db.Memories.AsNoTracking().Where(x => x.CircleId == id).ToListAsync(cancellationToken);
+        var living = await db.LivingProfiles.AsNoTracking().Where(x => x.CircleId == id).ToListAsync(cancellationToken);
 
         var files = new List<(string Path, string Key)>();
         foreach (var post in circle.Posts.Where(x => x.PhotoStorageKey is not null))
@@ -152,6 +167,8 @@ public sealed class ExportController(AppDbContext db, IFileStorage storage, Time
                 kind = EnumText.ListKind(x.Kind),
                 items = x.Items.Select(i => new { i.Id, i.Text, i.Quantity, i.Note, i.IsDone, i.AddedByUserId }),
             }),
+            memories = memories.Select(x => new { x.Id, x.Title, x.Body, x.OccurredOn, x.AuthorUserId, hasPhoto = x.PhotoStorageKey is not null }),
+            livingProfiles = living.Select(x => new { x.Id, kind = EnumText.LivingKind(x.Kind), x.Name, x.Context }),
         };
 
         return File(await ZipAsync(payload, files, cancellationToken), "application/zip", $"circulos-{circle.Id:N}.zip");

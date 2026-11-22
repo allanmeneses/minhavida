@@ -45,6 +45,11 @@ export const FAQ_ITEMS: FaqItem[] = [
       '100 MB no plano gratuito e 1 GB no pago. O app avisa quando chega a 90% e mostra um grafico de uso, sem separar por tipo.',
   },
   {
+    question: 'Onde ficam as memorias e o calendario?',
+    answer:
+      'Memorias sao a linha do tempo de fotos e textos no perfil ou no circulo, com a mesma permissao de entrada. Lembretes aparecem no calendario do app e da web. Da para baixar um arquivo .ics ou usar a assinatura. Modelos prontos de lista e lembrete estao em portugues, gratuitos, e quem copia pode editar.',
+  },
+  {
     question: 'Como falo com o suporte?',
     answer:
       'So por e-mail, sem prazo de resposta prometido. O contato do responsavel esta na politica de privacidade. Nao ha busca nesta FAQ: role ate achar o assunto.',

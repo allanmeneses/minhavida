@@ -2,6 +2,7 @@ using System.Text;
 using Circulos.Api.Auth;
 using Circulos.Api.Data;
 using Circulos.Api.Domain;
+using Circulos.Api.Observability;
 using Circulos.Api.Services;
 using Circulos.Api.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -27,6 +28,8 @@ builder.Services.AddSingleton<IFileStorage>(sp =>
 builder.Services.AddScoped<QuotaService>();
 builder.Services.AddScoped<IEmailSender, OutboxEmailSender>();
 builder.Services.AddScoped<AccountDeletionService>();
+builder.Services.AddScoped<StatusPage>();
+builder.Services.AddCirculosObservability(builder.Configuration);
 
 builder.Services.Configure<FormOptions>(options =>
 {
@@ -104,6 +107,8 @@ if (!app.Environment.IsEnvironment("Testing"))
     {
         db.Database.Migrate();
     }
+
+    await TemplateCatalog.EnsureSeededAsync(db, CancellationToken.None);
 }
 
 app.UseCors();
@@ -111,7 +116,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/", () => Results.Json(new { name = "Circulos", version = "2.0.0" }));
-app.MapGet("/health", () => Results.Json(new { status = "ok" }));
 app.MapControllers();
 
 app.Run();

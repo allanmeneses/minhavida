@@ -133,6 +133,22 @@ export default function AppLayout() {
         name="list/[id]"
         options={{ title: 'Lista', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
+      <Tabs.Screen
+        name="memories"
+        options={{ title: 'Memorias', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
+        name="calendar"
+        options={{ title: 'Calendario', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
+        name="templates"
+        options={{ title: 'Modelos', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
+        name="living"
+        options={{ title: 'Pet e grupo', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
     </Tabs>
   );
 }

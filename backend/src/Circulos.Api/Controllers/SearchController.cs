@@ -75,6 +75,16 @@ public sealed class SearchController(AppDbContext db, TimeProvider clock) : Cont
             hits.AddRange(birthdays.Select(item => new SearchHit("birthday", item.Id, item.Title, item.PersonName)));
         }
 
+        if (filter is null or "" or "memory")
+        {
+            var memories = await db.Memories.AsNoTracking()
+                .Where(x => x.AuthorUserId == userId && x.CircleId == null)
+                .Where(x => x.Title.ToLower().Contains(lowered) || x.Body.ToLower().Contains(lowered))
+                .Take(20)
+                .ToListAsync(cancellationToken);
+            hits.AddRange(memories.Select(item => new SearchHit("memory", item.Id, item.Title, item.Body)));
+        }
+
         return Ok(new SearchResponse(hits, await History(userId, cancellationToken)));
     }
 

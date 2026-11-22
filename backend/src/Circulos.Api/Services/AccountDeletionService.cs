@@ -63,6 +63,9 @@ public sealed class AccountDeletionService(
             post.AuthorUserId = null;
         }
 
+        var circleMemories = await db.Memories.Where(memory => memory.AuthorUserId == user.Id && memory.CircleId != null).ToListAsync(cancellationToken);
+        db.Memories.RemoveRange(circleMemories);
+
         var soloLists = await db.SharedLists
             .Where(list => list.OwnerUserId == user.Id && list.CircleId == null)
             .ToListAsync(cancellationToken);
@@ -119,6 +122,8 @@ public sealed class AccountDeletionService(
         keys.AddRange(await db.Profiles.Where(x => x.UserId == userId && x.PhotoStorageKey != null).Select(x => x.PhotoStorageKey!).ToListAsync(cancellationToken));
         keys.AddRange(await db.LifeEntries.Where(x => x.UserId == userId && x.PhotoStorageKey != null).Select(x => x.PhotoStorageKey!).ToListAsync(cancellationToken));
         keys.AddRange(await db.Reminders.Where(x => x.UserId == userId && x.PhotoStorageKey != null).Select(x => x.PhotoStorageKey!).ToListAsync(cancellationToken));
+        keys.AddRange(await db.Memories.Where(x => x.AuthorUserId == userId && x.PhotoStorageKey != null).Select(x => x.PhotoStorageKey!).ToListAsync(cancellationToken));
+        keys.AddRange(await db.LivingProfiles.Where(x => x.OwnerUserId == userId && x.PhotoStorageKey != null).Select(x => x.PhotoStorageKey!).ToListAsync(cancellationToken));
         return keys;
     }
 

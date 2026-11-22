@@ -15,5 +15,7 @@ describe('tour', () => {
     assert.match(blob, /Circulos/);
     assert.match(blob, /Offline/);
     assert.match(blob, /backup/);
+    assert.match(blob, /calendario/);
+    assert.match(blob, /recordacoes/);
   });
 });

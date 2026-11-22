@@ -33,10 +33,16 @@ public sealed class CirclesController(
             .Include(x => x.Members)
             .Where(x => ids.Contains(x.Id))
             .ToListAsync(cancellationToken);
+        var revealedForMe = await db.Circles
+            .AsNoTracking()
+            .Include(x => x.Members)
+            .Where(x => x.IsSurprise && x.RevealedAt != null && x.SurpriseSubjectUserId == userId && !ids.Contains(x.Id))
+            .ToListAsync(cancellationToken);
         var roles = memberships.ToDictionary(x => x.CircleId, x => x.Role);
         var result = circles
             .Where(circle => !HiddenSurprise(circle, userId))
             .Select(circle => ToSummary(circle, roles[circle.Id], userId))
+            .Concat(revealedForMe.Select(circle => ToSummary(circle, CircleRole.Viewer, userId)))
             .ToList();
         return Ok(result);
     }
@@ -136,7 +142,9 @@ public sealed class CirclesController(
         var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
         if (member is null)
         {
-            if (circle.Visibility == CircleVisibility.Public || circle.Discoverable)
+            if (CircleAccess.CanSeeAfterReveal(circle, userId)
+                || circle.Visibility == CircleVisibility.Public
+                || circle.Discoverable)
             {
                 return Ok(PublicPreview(circle));
             }
@@ -491,9 +499,11 @@ public sealed class CirclesController(
     }
 
     [HttpPost("{id:guid}/reveal")]
-    public async Task<IActionResult> Reveal(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<RevealSummaryResponse>> Reveal(Guid id, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
         var circle = await LoadCircle(id, cancellationToken);
         var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
         if (circle is null || member is null || member.Role < CircleRole.Admin)
@@ -501,10 +511,84 @@ public sealed class CirclesController(
             return NotFound(new ErrorResponse("Circulo nao encontrado."));
         }
 
-        circle.RevealedAt = DateTime.UtcNow;
+        if (!circle.IsSurprise)
+        {
+            return BadRequest(new ErrorResponse("Este circulo nao e uma surpresa."));
+        }
+
+        circle.RevealedAt ??= DateTime.UtcNow;
         db.CircleLogs.Add(Log(circle.Id, userId, "revealed", "Surpresa revelada."));
         await db.SaveChangesAsync(cancellationToken);
-        return NoContent();
+        await transaction.CommitAsync(cancellationToken);
+        return Ok(ToReveal(circle));
+    }
+
+    [HttpGet("{id:guid}/reveal-summary")]
+    public async Task<ActionResult<RevealSummaryResponse>> RevealSummary(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        if (circle is null || !CanSeeReveal(circle, userId))
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        return Ok(ToReveal(circle));
+    }
+
+    [HttpPost("{id:guid}/keep-memory")]
+    public async Task<ActionResult<MemoryResponse>> KeepMemory(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+        var circle = await LoadCircle(id, cancellationToken);
+        if (circle is null || circle.RevealedAt is null || !CanSeeReveal(circle, userId))
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var existing = await db.Memories.FirstOrDefaultAsync(
+            x => x.AuthorUserId == userId && x.SourceCircleId == circle.Id,
+            cancellationToken);
+        var now = DateTime.UtcNow;
+        var title = $"Recordacao: {circle.Name}";
+        var body = string.Join("\n", circle.Posts.OrderBy(x => x.CreatedAt).Select(x => x.Body).Where(x => !string.IsNullOrWhiteSpace(x)));
+        if (existing is null)
+        {
+            existing = new Memory
+            {
+                Id = Guid.NewGuid(),
+                AuthorUserId = userId,
+                SourceCircleId = circle.Id,
+                Title = title,
+                Body = body,
+                OccurredOn = DateOnly.FromDateTime(circle.RevealedAt ?? now),
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+            db.Memories.Add(existing);
+        }
+        else
+        {
+            existing.Title = title;
+            existing.Body = body;
+            existing.UpdatedAt = now;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Ok(new MemoryResponse(
+            existing.Id,
+            existing.AuthorUserId,
+            existing.CircleId,
+            existing.SourceCircleId,
+            existing.Title,
+            existing.Body,
+            existing.OccurredOn,
+            existing.PhotoStorageKey is not null,
+            existing.CreatedAt,
+            existing.UpdatedAt));
     }
 
     [HttpGet("{id:guid}/log")]
@@ -542,7 +626,36 @@ public sealed class CirclesController(
     }
 
     private static bool HiddenSurprise(Circle circle, Guid userId) =>
-        circle.IsSurprise && circle.RevealedAt is null && circle.SurpriseSubjectUserId == userId;
+        CircleAccess.HiddenSurprise(circle, userId);
+
+    private static bool CanSeeReveal(Circle circle, Guid userId)
+    {
+        if (CircleAccess.HiddenSurprise(circle, userId))
+        {
+            return false;
+        }
+
+        if (circle.Members.Any(x => x.UserId == userId))
+        {
+            return true;
+        }
+
+        return CircleAccess.CanSeeAfterReveal(circle, userId);
+    }
+
+    private static RevealSummaryResponse ToReveal(Circle circle) =>
+        new(
+            circle.Id,
+            circle.Name,
+            circle.Description,
+            circle.RevealedAt,
+            circle.Posts.OrderBy(x => x.CreatedAt).Select(post => new RevealMessageDto(
+                post.Id,
+                post.AuthorUserId,
+                post.Body,
+                post.PhotoStorageKey is not null,
+                post.CreatedAt)).ToList(),
+            circle.Posts.Count(x => x.PhotoStorageKey is not null));
 
     private static CircleRole RoleOf(Circle circle, Guid userId) =>
         circle.Members.FirstOrDefault(x => x.UserId == userId)?.Role ?? CircleRole.Viewer;

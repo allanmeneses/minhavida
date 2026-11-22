@@ -11,6 +11,8 @@ describe('faq', () => {
     assert.match(blob, /sem internet/);
     assert.match(blob, /refresh/);
     assert.match(blob, /backup/);
+    assert.match(blob, /calendario/);
+    assert.match(blob, /memorias/);
     assert.match(blob, /So por e-mail/);
     assert.equal(
       FAQ_ITEMS.some((item) => item.question.toLowerCase().includes('busca')),
