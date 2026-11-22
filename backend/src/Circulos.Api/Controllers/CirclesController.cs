@@ -1,0 +1,525 @@
+using Circulos.Api.Contracts;
+using Circulos.Api.Data;
+using Circulos.Api.Domain;
+using Circulos.Api.Services;
+using Circulos.Api.Storage;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace Circulos.Api.Controllers;
+
+[ApiController]
+[Authorize]
+[Route("api/circles")]
+public sealed class CirclesController(
+    AppDbContext db,
+    QuotaService quota,
+    IEmailSender email,
+    IFileStorage storage) : ControllerBase
+{
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<CircleSummaryResponse>>> Mine(CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var memberships = await db.CircleMembers
+            .AsNoTracking()
+            .Where(x => x.UserId == userId)
+            .Select(x => new { x.CircleId, x.Role })
+            .ToListAsync(cancellationToken);
+        var ids = memberships.Select(x => x.CircleId).ToList();
+        var circles = await db.Circles
+            .AsNoTracking()
+            .Include(x => x.Members)
+            .Where(x => ids.Contains(x.Id))
+            .ToListAsync(cancellationToken);
+        var roles = memberships.ToDictionary(x => x.CircleId, x => x.Role);
+        var result = circles
+            .Where(circle => !HiddenSurprise(circle, userId))
+            .Select(circle => ToSummary(circle, roles[circle.Id], userId))
+            .ToList();
+        return Ok(result);
+    }
+
+    [HttpGet("discover")]
+    public async Task<ActionResult<IReadOnlyList<CircleSummaryResponse>>> Discover(CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var items = await db.Circles
+            .AsNoTracking()
+            .Include(x => x.Members)
+            .Where(x => x.Discoverable && x.Visibility == CircleVisibility.Public && x.Status == CircleStatus.Active)
+            .Where(x => !x.IsSurprise || x.RevealedAt != null || x.SurpriseSubjectUserId != userId)
+            .ToListAsync(cancellationToken);
+        return Ok(items.Select(circle => ToSummary(circle, RoleOf(circle, userId), userId)).ToList());
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<CircleSummaryResponse>> Create(
+        [FromBody] CreateCircleRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var quotaError = await quota.TryAddCircleAsync(userId, cancellationToken);
+        if (quotaError is not null)
+        {
+            return BadRequest(new ErrorResponse(quotaError));
+        }
+
+        Guid? subjectId = null;
+        if (request.IsSurprise && !string.IsNullOrWhiteSpace(request.SurpriseSubjectEmail))
+        {
+            var subject = await db.Users.FirstOrDefaultAsync(
+                x => x.Email == request.SurpriseSubjectEmail.Trim().ToLowerInvariant(),
+                cancellationToken);
+            subjectId = subject?.Id;
+        }
+
+        Guid? successorId = null;
+        if (!string.IsNullOrWhiteSpace(request.SuccessorEmail))
+        {
+            var successor = await db.Users.FirstOrDefaultAsync(
+                x => x.Email == request.SuccessorEmail.Trim().ToLowerInvariant(),
+                cancellationToken);
+            successorId = successor?.Id;
+        }
+
+        var now = DateTime.UtcNow;
+        var circle = new Circle
+        {
+            Id = Guid.NewGuid(),
+            OwnerUserId = userId,
+            SuccessorUserId = successorId,
+            Name = request.Name.Trim(),
+            Description = request.Description?.Trim() ?? string.Empty,
+            Visibility = EnumText.ParseVisibility(request.Visibility),
+            Discoverable = request.Discoverable,
+            IsSurprise = request.IsSurprise,
+            SurpriseSubjectUserId = subjectId,
+            Kind = EnumText.ParseCircleKind(request.Kind),
+            Status = CircleStatus.Active,
+            CreatedAt = now,
+        };
+        db.Circles.Add(circle);
+        db.CircleMembers.Add(new CircleMember
+        {
+            Id = Guid.NewGuid(),
+            CircleId = circle.Id,
+            UserId = userId,
+            Role = CircleRole.Owner,
+            JoinedAt = now,
+        });
+        db.CircleLogs.Add(Log(circle.Id, userId, "created", "Circulo criado."));
+        await db.SaveChangesAsync(cancellationToken);
+        circle.Members = await db.CircleMembers.Where(x => x.CircleId == circle.Id).ToListAsync(cancellationToken);
+        return Created($"/api/circles/{circle.Id}", ToSummary(circle, CircleRole.Owner, userId));
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<CircleDetailResponse>> Get(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        if (circle is null || HiddenSurprise(circle, userId))
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
+        if (member is null)
+        {
+            if (circle.Visibility == CircleVisibility.Public)
+            {
+                return Ok(PublicPreview(circle));
+            }
+
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var names = await MemberNames(circle, cancellationToken);
+        var posts = circle.Posts.OrderByDescending(x => x.CreatedAt).Select(ToPost).ToList();
+        var log = circle.Logs.OrderByDescending(x => x.CreatedAt).Select(ToLog).ToList();
+        return Ok(new CircleDetailResponse(
+            circle.Id,
+            circle.Name,
+            circle.Description,
+            EnumText.Visibility(circle.Visibility),
+            circle.Discoverable,
+            circle.IsSurprise,
+            circle.RevealedAt is not null,
+            EnumText.Kind(circle.Kind),
+            EnumText.Status(circle.Status),
+            circle.OwnerUserId,
+            names,
+            posts,
+            log));
+    }
+
+    [HttpPost("{id:guid}/invites")]
+    public async Task<ActionResult<InviteCreatedResponse>> Invite(
+        Guid id,
+        [FromBody] InviteCircleRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        if (circle is null || HiddenSurprise(circle, userId))
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
+        if (member is null || member.Role < CircleRole.Admin)
+        {
+            return Forbid();
+        }
+
+        var token = TokenHash.NewToken();
+        db.CircleInvites.Add(new CircleInvite
+        {
+            Id = Guid.NewGuid(),
+            CircleId = circle.Id,
+            CreatedByUserId = userId,
+            Email = request.Email.Trim().ToLowerInvariant(),
+            TokenHash = TokenHash.Hash(token),
+            Role = EnumText.ParseRole(request.Role),
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            CreatedAt = DateTime.UtcNow,
+        });
+        db.CircleLogs.Add(Log(circle.Id, userId, "invited", $"Convite enviado para {request.Email.Trim().ToLowerInvariant()}."));
+        await db.SaveChangesAsync(cancellationToken);
+        await email.SendAsync(
+            request.Email.Trim().ToLowerInvariant(),
+            "Convite para um circulo",
+            $"Use este codigo de convite: {token}",
+            cancellationToken);
+        return Ok(new InviteCreatedResponse(token));
+    }
+
+    [HttpPost("invites/{token}/accept")]
+    public async Task<ActionResult<CircleSummaryResponse>> AcceptInvite(string token, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var hash = TokenHash.Hash(token);
+        var invite = await db.CircleInvites.Include(x => x.Circle).ThenInclude(x => x.Members)
+            .FirstOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
+        if (invite is null || invite.AcceptedAt is not null || invite.ExpiresAt < DateTime.UtcNow)
+        {
+            return BadRequest(new ErrorResponse("Convite invalido."));
+        }
+
+        var user = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
+        if (!string.Equals(user.Email, invite.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new ErrorResponse("Este convite e para outro e-mail."));
+        }
+
+        if (HiddenSurprise(invite.Circle, userId))
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        if (invite.Circle.Members.All(x => x.UserId != userId))
+        {
+            db.CircleMembers.Add(new CircleMember
+            {
+                Id = Guid.NewGuid(),
+                CircleId = invite.CircleId,
+                UserId = userId,
+                Role = invite.Role,
+                JoinedAt = DateTime.UtcNow,
+            });
+        }
+
+        invite.AcceptedAt = DateTime.UtcNow;
+        db.CircleLogs.Add(Log(invite.CircleId, userId, "joined", "Entrou no circulo por convite."));
+        await db.SaveChangesAsync(cancellationToken);
+        var circle = await LoadCircle(invite.CircleId, cancellationToken);
+        return Ok(ToSummary(circle!, invite.Role, userId));
+    }
+
+    [HttpPost("{id:guid}/join")]
+    public async Task<IActionResult> Join(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        if (circle is null || HiddenSurprise(circle, userId))
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        if (circle.Members.Any(x => x.UserId == userId))
+        {
+            return NoContent();
+        }
+
+        if (circle.Visibility == CircleVisibility.Public)
+        {
+            db.CircleMembers.Add(new CircleMember
+            {
+                Id = Guid.NewGuid(),
+                CircleId = circle.Id,
+                UserId = userId,
+                Role = CircleRole.Viewer,
+                JoinedAt = DateTime.UtcNow,
+            });
+            db.CircleLogs.Add(Log(circle.Id, userId, "joined", "Entrou no circulo publico."));
+            await db.SaveChangesAsync(cancellationToken);
+            return NoContent();
+        }
+
+        var pending = await db.CircleJoinRequests.AnyAsync(
+            x => x.CircleId == id && x.UserId == userId && x.Status == "pending",
+            cancellationToken);
+        if (!pending)
+        {
+            db.CircleJoinRequests.Add(new CircleJoinRequest
+            {
+                Id = Guid.NewGuid(),
+                CircleId = id,
+                UserId = userId,
+                Status = "pending",
+                CreatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Accepted();
+    }
+
+    [HttpPost("{id:guid}/join-requests/{requestId:guid}/accept")]
+    public async Task<IActionResult> AcceptJoin(Guid id, Guid requestId, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        var actor = circle?.Members.FirstOrDefault(x => x.UserId == userId);
+        if (circle is null || actor is null || actor.Role < CircleRole.Admin)
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var join = await db.CircleJoinRequests.FirstOrDefaultAsync(
+            x => x.Id == requestId && x.CircleId == id && x.Status == "pending",
+            cancellationToken);
+        if (join is null)
+        {
+            return NotFound(new ErrorResponse("Pedido nao encontrado."));
+        }
+
+        join.Status = "accepted";
+        if (circle.Members.All(x => x.UserId != join.UserId))
+        {
+            db.CircleMembers.Add(new CircleMember
+            {
+                Id = Guid.NewGuid(),
+                CircleId = circle.Id,
+                UserId = join.UserId,
+                Role = CircleRole.Viewer,
+                JoinedAt = DateTime.UtcNow,
+            });
+        }
+
+        db.CircleLogs.Add(Log(circle.Id, userId, "joined", "Pedido de entrada aceito."));
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}/membership")]
+    public async Task<IActionResult> Leave(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        if (circle is null)
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
+        if (member is null)
+        {
+            return NoContent();
+        }
+
+        if (member.Role == CircleRole.Owner)
+        {
+            return BadRequest(new ErrorResponse("O dono precisa transferir o circulo antes de sair."));
+        }
+
+        db.CircleMembers.Remove(member);
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("{id:guid}/posts")]
+    public async Task<ActionResult<CirclePostResponse>> Post(
+        Guid id,
+        [FromBody] CirclePostRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        if (circle is null || HiddenSurprise(circle, userId))
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
+        if (member is null || member.Role < CircleRole.Editor)
+        {
+            return Forbid();
+        }
+
+        var post = new CirclePost
+        {
+            Id = Guid.NewGuid(),
+            CircleId = circle.Id,
+            AuthorUserId = userId,
+            Body = request.Body.Trim(),
+            CreatedAt = DateTime.UtcNow,
+        };
+        db.CirclePosts.Add(post);
+        db.CircleLogs.Add(Log(circle.Id, userId, "posted", "Nova entrada."));
+        await db.SaveChangesAsync(cancellationToken);
+        return Created($"/api/circles/{id}/posts/{post.Id}", ToPost(post));
+    }
+
+    [HttpDelete("{id:guid}/posts/{postId:guid}")]
+    public async Task<IActionResult> DeletePost(Guid id, Guid postId, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
+        if (circle is null || member is null)
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var post = circle.Posts.FirstOrDefault(x => x.Id == postId);
+        if (post is null)
+        {
+            return NotFound(new ErrorResponse("Entrada nao encontrada."));
+        }
+
+        if (post.AuthorUserId != userId && member.Role < CircleRole.Admin)
+        {
+            return Forbid();
+        }
+
+        if (post.PhotoStorageKey is not null)
+        {
+            await storage.DeleteAsync(post.PhotoStorageKey, cancellationToken);
+        }
+
+        db.CirclePosts.Remove(post);
+        db.CircleLogs.Add(Log(circle.Id, userId, "deleted", "Entrada apagada."));
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("{id:guid}/reveal")]
+    public async Task<IActionResult> Reveal(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
+        if (circle is null || member is null || member.Role < CircleRole.Admin)
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        circle.RevealedAt = DateTime.UtcNow;
+        db.CircleLogs.Add(Log(circle.Id, userId, "revealed", "Surpresa revelada."));
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("{id:guid}/log")]
+    public async Task<ActionResult<IReadOnlyList<CircleLogResponse>>> LogList(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        if (circle is null || HiddenSurprise(circle, userId) || circle.Members.All(x => x.UserId != userId))
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        return Ok(circle.Logs.OrderByDescending(x => x.CreatedAt).Select(ToLog).ToList());
+    }
+
+    private Task<Circle?> LoadCircle(Guid id, CancellationToken cancellationToken) =>
+        db.Circles
+            .Include(x => x.Members)
+            .Include(x => x.Posts)
+            .Include(x => x.Logs)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+    private async Task<List<CircleMemberDto>> MemberNames(Circle circle, CancellationToken cancellationToken)
+    {
+        var ids = circle.Members.Select(x => x.UserId).ToList();
+        var profiles = await db.Profiles.AsNoTracking()
+            .Where(x => ids.Contains(x.UserId))
+            .ToDictionaryAsync(x => x.UserId, cancellationToken);
+        return circle.Members
+            .Select(member => new CircleMemberDto(
+                member.UserId,
+                profiles.TryGetValue(member.UserId, out var profile) ? profile.DisplayName : "Pessoa",
+                EnumText.Role(member.Role)))
+            .ToList();
+    }
+
+    private static bool HiddenSurprise(Circle circle, Guid userId) =>
+        circle.IsSurprise && circle.RevealedAt is null && circle.SurpriseSubjectUserId == userId;
+
+    private static CircleRole RoleOf(Circle circle, Guid userId) =>
+        circle.Members.FirstOrDefault(x => x.UserId == userId)?.Role ?? CircleRole.Viewer;
+
+    private static CircleSummaryResponse ToSummary(Circle circle, CircleRole role, Guid userId)
+    {
+        var hidden = HiddenSurprise(circle, userId);
+        return new CircleSummaryResponse(
+            circle.Id,
+            hidden ? null : circle.Name,
+            hidden ? null : circle.Description,
+            EnumText.Visibility(circle.Visibility),
+            circle.Discoverable,
+            circle.IsSurprise,
+            circle.RevealedAt is not null,
+            EnumText.Kind(circle.Kind),
+            EnumText.Status(circle.Status),
+            EnumText.Role(role),
+            circle.Members.Count);
+    }
+
+    private static CircleDetailResponse PublicPreview(Circle circle) =>
+        new(
+            circle.Id,
+            circle.Name,
+            circle.Description,
+            EnumText.Visibility(circle.Visibility),
+            circle.Discoverable,
+            circle.IsSurprise,
+            circle.RevealedAt is not null,
+            EnumText.Kind(circle.Kind),
+            EnumText.Status(circle.Status),
+            null,
+            [],
+            [],
+            []);
+
+    private static CirclePostResponse ToPost(CirclePost post) =>
+        new(post.Id, post.AuthorUserId, post.Body, post.PhotoStorageKey is not null, post.CreatedAt);
+
+    private static CircleLogResponse ToLog(CircleLog log) =>
+        new(log.Id, log.ActorUserId, log.Action, log.Detail, log.CreatedAt);
+
+    private static CircleLog Log(Guid circleId, Guid? actorId, string action, string detail) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            CircleId = circleId,
+            ActorUserId = actorId,
+            Action = action,
+            Detail = detail,
+            CreatedAt = DateTime.UtcNow,
+        };
+}

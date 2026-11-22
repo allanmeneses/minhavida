@@ -42,6 +42,7 @@ public sealed class AuthTests : IClassFixture<ApiFactory>
         using var doc = JsonDocument.Parse(await profile.Content.ReadAsStringAsync());
         Assert.Equal("Ana Costa", doc.RootElement.GetProperty("displayName").GetString());
         Assert.False(doc.RootElement.GetProperty("hasPhoto").GetBoolean());
+        Assert.False(doc.RootElement.GetProperty("isPublic").GetBoolean());
     }
 
     [Fact]

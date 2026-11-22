@@ -5,6 +5,7 @@ using System.Text.Json;
 using Circulos.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SixLabors.ImageSharp;
 
 namespace Circulos.Api.Tests;
 
@@ -181,16 +182,17 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         }
 
         var pngSignature = new byte[] { 0x89, 0x50, 0x4E, 0x47 };
+        var jpegSignature = new byte[] { 0xFF, 0xD8 };
         var inspectable = _factory.Services.GetRequiredService<InspectableMemoryFileStorage>();
         Assert.DoesNotContain(
             inspectable.Snapshot().Values,
-            bytes => bytes.AsSpan().StartsWith(pngSignature));
+            bytes => bytes.AsSpan().StartsWith(pngSignature) || bytes.AsSpan().StartsWith(jpegSignature));
 
         var photo = await dono.GetAsync("/api/profile/photo");
         Assert.Equal(HttpStatusCode.OK, photo.StatusCode);
         Assert.Contains("private", photo.Headers.CacheControl?.ToString() ?? string.Empty);
         var downloaded = await photo.Content.ReadAsByteArrayAsync();
-        Assert.True(downloaded.AsSpan().StartsWith(pngSignature));
+        Assert.True(downloaded.AsSpan().StartsWith(jpegSignature));
 
         var outro = _factory.CreateClient();
         var outroAuth = await AuthHelper.RegisterAsync(outro, name: "Visitante");
@@ -211,9 +213,10 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
 
     private static MultipartFormDataContent CreatePngFile(string name)
     {
-        var png = Convert.FromBase64String(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X69gAAAAASUVORK5CYII=");
-        var file = new ByteArrayContent(png);
+        using var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(8, 8);
+        using var buffer = new MemoryStream();
+        image.SaveAsPng(buffer);
+        var file = new ByteArrayContent(buffer.ToArray());
         file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
         var form = new MultipartFormDataContent();
         form.Add(file, "file", name);

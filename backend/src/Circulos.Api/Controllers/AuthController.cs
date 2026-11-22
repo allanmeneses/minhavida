@@ -3,6 +3,8 @@ using Circulos.Api.Auth;
 using Circulos.Api.Contracts;
 using Circulos.Api.Data;
 using Circulos.Api.Domain;
+using Circulos.Api.Services;
+using Circulos.Api.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -16,7 +18,8 @@ namespace Circulos.Api.Controllers;
 public sealed class AuthController(
     AppDbContext db,
     IPasswordHasher<User> passwordHasher,
-    JwtTokenService tokens) : ControllerBase
+    JwtTokenService tokens,
+    IEmailSender email) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
@@ -24,38 +27,42 @@ public sealed class AuthController(
         [FromBody] RegisterRequest request,
         CancellationToken cancellationToken)
     {
-        var email = NormalizeEmail(request.Email);
-        var exists = await db.Users.AnyAsync(x => x.Email == email, cancellationToken);
-        if (exists)
-        {
-            return Conflict(new ErrorResponse("Ja existe uma conta com este e-mail."));
-        }
-
-        var now = DateTime.UtcNow;
-        var user = new User
-        {
-            Id = Guid.NewGuid(),
-            Email = email,
-            CreatedAt = now,
-            Profile = new Profile
-            {
-                DisplayName = request.Name.Trim(),
-                UpdatedAt = now,
-            },
-        };
-        user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
-
-        db.Users.Add(user);
+        var normalized = NormalizeEmail(request.Email);
         try
         {
+            var exists = await db.Users.AnyAsync(x => x.Email == normalized, cancellationToken);
+            if (exists)
+            {
+                return Conflict(new ErrorResponse("Ja existe uma conta com este e-mail."));
+            }
+
+            var now = DateTime.UtcNow;
+            var user = new User
+            {
+                Id = Guid.NewGuid(),
+                Email = normalized,
+                CreatedAt = now,
+                Profile = new Profile
+                {
+                    DisplayName = request.Name.Trim(),
+                    IsPublic = false,
+                    UpdatedAt = now,
+                },
+            };
+            user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
+            foreach (var area in LifeAreaDefaults.ForUser(user.Id, now))
+            {
+                user.LifeAreas.Add(area);
+            }
+
+            db.Users.Add(user);
             await db.SaveChangesAsync(cancellationToken);
+            return Created("/api/auth/me", ToResponse(user));
         }
-        catch (DbUpdateException ex) when (IsEmailUniqueViolation(ex))
+        catch (Exception ex) when (IsEmailUniqueViolation(ex) || IsBusyWrite(ex))
         {
             return Conflict(new ErrorResponse("Ja existe uma conta com este e-mail."));
         }
-
-        return Created("/api/auth/me", ToResponse(user));
     }
 
     [HttpPost("login")]
@@ -64,10 +71,10 @@ public sealed class AuthController(
         [FromBody] LoginRequest request,
         CancellationToken cancellationToken)
     {
-        var email = NormalizeEmail(request.Email);
+        var normalized = NormalizeEmail(request.Email);
         var user = await db.Users
             .Include(x => x.Profile)
-            .FirstOrDefaultAsync(x => x.Email == email, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Email == normalized, cancellationToken);
 
         if (user is null)
         {
@@ -81,6 +88,60 @@ public sealed class AuthController(
         }
 
         return Ok(ToResponse(user));
+    }
+
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ForgotPassword(
+        [FromBody] ForgotPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var normalized = NormalizeEmail(request.Email);
+        var user = await db.Users.FirstOrDefaultAsync(x => x.Email == normalized, cancellationToken);
+        if (user is not null)
+        {
+            var token = TokenHash.NewToken();
+            db.PasswordResets.Add(new PasswordReset
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                TokenHash = TokenHash.Hash(token),
+                ExpiresAt = DateTime.UtcNow.AddHours(2),
+                CreatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync(cancellationToken);
+            await email.SendAsync(
+                user.Email,
+                "Redefinir senha do Circulos",
+                $"Use este codigo para redefinir a senha: {token}",
+                cancellationToken);
+        }
+
+        return NoContent();
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPassword(
+        [FromBody] ResetPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var hash = TokenHash.Hash(request.Token);
+        var reset = await db.PasswordResets
+            .Include(x => x.User)
+            .FirstOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
+        if (reset is null || reset.UsedAt is not null || reset.ExpiresAt < DateTime.UtcNow)
+        {
+            return BadRequest(new ErrorResponse("Este link de redefinicao nao e valido."));
+        }
+
+        reset.UsedAt = DateTime.UtcNow;
+        reset.User.PasswordHash = passwordHasher.HashPassword(reset.User, request.Password);
+        await db.PasswordResets
+            .Where(x => x.UserId == reset.UserId && x.Id != reset.Id && x.UsedAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.UsedAt, DateTime.UtcNow), cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
     }
 
     [HttpGet("me")]
@@ -105,9 +166,9 @@ public sealed class AuthController(
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 
-    private static bool IsEmailUniqueViolation(DbUpdateException exception)
+    private static bool IsEmailUniqueViolation(Exception exception)
     {
-        if (exception.InnerException is Npgsql.PostgresException postgres
+        if (exception is DbUpdateException update && update.InnerException is PostgresException postgres
             && postgres.SqlState == PostgresErrorCodes.UniqueViolation)
         {
             return true;
@@ -116,6 +177,13 @@ public sealed class AuthController(
         var message = exception.InnerException?.Message ?? exception.Message;
         return message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase)
             || message.Contains("IX_users_Email", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBusyWrite(Exception exception)
+    {
+        var message = exception.InnerException?.Message ?? exception.Message;
+        return message.Contains("database is locked", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("active statements", StringComparison.OrdinalIgnoreCase);
     }
 }
 

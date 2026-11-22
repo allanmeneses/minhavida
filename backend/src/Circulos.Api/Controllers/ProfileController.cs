@@ -1,5 +1,6 @@
 using Circulos.Api.Contracts;
 using Circulos.Api.Data;
+using Circulos.Api.Services;
 using Circulos.Api.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,7 @@ namespace Circulos.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/profile")]
-public sealed class ProfileController(AppDbContext db, IFileStorage storage) : ControllerBase
+public sealed class ProfileController(AppDbContext db, IFileStorage storage, QuotaService quota) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<ProfileResponse>> Get(CancellationToken cancellationToken)
@@ -52,6 +53,7 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage) : C
         profile.BirthDate = request.BirthDate;
         profile.Phone = EmptyToNull(request.Phone);
         profile.SecondaryEmail = EmptyToNull(request.SecondaryEmail)?.ToLowerInvariant();
+        profile.IsPublic = request.IsPublic;
         profile.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);
@@ -59,7 +61,7 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage) : C
     }
 
     [HttpPost("photo")]
-    [RequestSizeLimit(FileRules.MaxPhotoBytes + 1024)]
+    [RequestSizeLimit(FileRules.MaxIncomingBytes + 1024)]
     public async Task<ActionResult<ProfileResponse>> UploadPhoto(IFormFile? file, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
@@ -80,21 +82,28 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage) : C
             return NotFound(new ErrorResponse("Perfil nao encontrado."));
         }
 
-        var userId = User.GetUserId();
-        var key = $"{userId:N}/photo/{Guid.NewGuid():N}{Path.GetExtension(fileName).ToLowerInvariant()}";
-        await using (var stream = file.OpenReadStream())
+        await using var original = file.OpenReadStream();
+        await using var compressed = await ImageCompressor.CompressAsync(original, cancellationToken);
+        var quotaError = await quota.TryAddStorageAsync(User.GetUserId(), compressed.SizeBytes, cancellationToken);
+        if (quotaError is not null)
         {
-            await storage.SaveAsync(key, stream, cancellationToken);
+            return BadRequest(new ErrorResponse(quotaError));
         }
+
+        var userId = User.GetUserId();
+        var key = $"{userId:N}/photo/{Guid.NewGuid():N}.jpg";
+        await storage.SaveAsync(key, compressed.Content, cancellationToken);
 
         if (profile.PhotoStorageKey is not null)
         {
             await storage.DeleteAsync(profile.PhotoStorageKey, cancellationToken);
+            await quota.ReleaseStorageAsync(userId, profile.PhotoSizeBytes, cancellationToken);
         }
 
         profile.PhotoStorageKey = key;
-        profile.PhotoContentType = FileRules.CanonicalContentType(fileName, file.ContentType);
-        profile.PhotoFileName = fileName;
+        profile.PhotoContentType = compressed.ContentType;
+        profile.PhotoFileName = compressed.FileName;
+        profile.PhotoSizeBytes = compressed.SizeBytes;
         profile.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
 
@@ -112,7 +121,7 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage) : C
 
         var stream = await storage.OpenReadAsync(profile.PhotoStorageKey, cancellationToken);
         Response.Headers.CacheControl = "private, no-store";
-        return File(stream, profile.PhotoContentType, profile.PhotoFileName ?? "foto");
+        return File(stream, profile.PhotoContentType, profile.PhotoFileName ?? "foto.jpg");
     }
 
     [HttpDelete("photo")]
@@ -127,18 +136,20 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage) : C
         if (profile.PhotoStorageKey is not null)
         {
             await storage.DeleteAsync(profile.PhotoStorageKey, cancellationToken);
+            await quota.ReleaseStorageAsync(User.GetUserId(), profile.PhotoSizeBytes, cancellationToken);
         }
 
         profile.PhotoStorageKey = null;
         profile.PhotoContentType = null;
         profile.PhotoFileName = null;
+        profile.PhotoSizeBytes = 0;
         profile.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
         return Ok(ToResponse(profile));
     }
 
     private static ProfileResponse ToResponse(Domain.Profile profile) =>
-        new(profile.DisplayName, profile.BirthDate, profile.Phone, profile.SecondaryEmail, profile.PhotoStorageKey is not null);
+        new(profile.DisplayName, profile.BirthDate, profile.Phone, profile.SecondaryEmail, profile.IsPublic, profile.PhotoStorageKey is not null);
 
     private static string? EmptyToNull(string? value)
     {
