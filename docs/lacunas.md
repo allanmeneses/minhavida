@@ -225,7 +225,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 - Prints em `/opt/cursor/artifacts/android-login.png`, `android-hoje.png`, `android-circulo.png`, `android-lembrete.png` (existem neste disco). Nao reexecutei o emulador nesta continuacao da analise.
 - `href: null` nas tabs escondidas impedia abrir Lembretes e o detalhe do circulo no nativo; o codigo agora usa `tabBarButton: () => null`. Sem teste automatizado nativo disso.
 - `usesCleartextTraffic: true` em `app.json`.
-- Job `android` do run `45038488241`: no momento em que esta pagina foi fechada para commit, o step `Gerar APK` ainda estava `in_progress` (inicio 15:28:44 UTC). Jobs `backend` e `app` desse run: `success`.
+- Job `android` do run [45038488241](https://github.com/allanmeneses/minhavida/actions/runs/45038488241) (SHA `5c0e6ef`): conclusion `success`. Step `Gerar APK` 15:28:44 a 15:57:50 UTC. Step `Publicar APK` `success`. Artefato `circulos-android` (id `14762035932`, 20927286 bytes, `expired: false`). Download na pagina do run. Jobs `backend` e `app` do mesmo run: `success`. Run inteiro: `success`.
 
 ## Contagem
 
