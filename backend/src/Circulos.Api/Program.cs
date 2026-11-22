@@ -2,6 +2,7 @@ using System.Text;
 using Circulos.Api.Auth;
 using Circulos.Api.Data;
 using Circulos.Api.Domain;
+using Circulos.Api.Services;
 using Circulos.Api.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
@@ -13,19 +14,38 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<JwtTokenService>();
-builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
+builder.Services.AddSingleton<IEncryptionKeyProvider, ConfigurationEncryptionKeyProvider>();
+builder.Services.AddSingleton<LocalFileStorage>();
+builder.Services.AddSingleton<IFileStorage>(sp =>
+    new EncryptedFileStorage(
+        sp.GetRequiredService<LocalFileStorage>(),
+        sp.GetRequiredService<IEncryptionKeyProvider>()));
+builder.Services.AddScoped<QuotaService>();
+builder.Services.AddScoped<IEmailSender, OutboxEmailSender>();
+builder.Services.AddScoped<AccountDeletionService>();
 
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = FileRules.MaxDocumentBytes + (1024 * 1024);
+    options.MultipartBodyLengthLimit = FileRules.MaxIncomingBytes + (1024 * 1024);
 });
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? "Host=127.0.0.1;Port=5432;Database=circulos;Username=circulos;Password=circulos";
+var databaseProvider = builder.Configuration["Database:Provider"] ?? "Postgres";
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        options.UseSqlite(connectionString);
+        return;
+    }
+
+    options.UseNpgsql(connectionString);
+});
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 var jwtKey = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key nao configurada.");
@@ -75,14 +95,21 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+    {
+        db.Database.EnsureCreated();
+    }
+    else
+    {
+        db.Database.Migrate();
+    }
 }
 
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGet("/", () => Results.Json(new { name = "Circulos", version = "1.0.0" }));
+app.MapGet("/", () => Results.Json(new { name = "Circulos", version = "2.0.0" }));
 app.MapGet("/health", () => Results.Json(new { status = "ok" }));
 app.MapControllers();
 

@@ -1,6 +1,7 @@
 using Circulos.Api.Contracts;
 using Circulos.Api.Data;
 using Circulos.Api.Domain;
+using Circulos.Api.Services;
 using Circulos.Api.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,7 @@ namespace Circulos.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/documents")]
-public sealed class DocumentsController(AppDbContext db, IFileStorage storage) : ControllerBase
+public sealed class DocumentsController(AppDbContext db, IFileStorage storage, QuotaService quota) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<DocumentResponse>>> List(CancellationToken cancellationToken)
@@ -28,7 +29,7 @@ public sealed class DocumentsController(AppDbContext db, IFileStorage storage) :
     }
 
     [HttpPost]
-    [RequestSizeLimit(FileRules.MaxDocumentBytes + 1024)]
+    [RequestSizeLimit(FileRules.MaxIncomingBytes + 1024)]
     public async Task<ActionResult<DocumentResponse>> Upload(IFormFile? file, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
@@ -44,29 +45,52 @@ public sealed class DocumentsController(AppDbContext db, IFileStorage storage) :
         }
 
         var userId = User.GetUserId();
+        string? quotaError;
+        try
+        {
+            quotaError = await quota.TryAddStorageAsync(userId, file.Length, cancellationToken);
+        }
+        catch (Exception ex) when (ex is DbUpdateException or System.Data.Common.DbException)
+        {
+            return BadRequest(new ErrorResponse("Conta nao encontrada."));
+        }
+
+        if (quotaError is not null)
+        {
+            return BadRequest(new ErrorResponse(quotaError));
+        }
+
         var documentId = Guid.NewGuid();
         var key = $"{userId:N}/docs/{documentId:N}";
 
-        await using (var stream = file.OpenReadStream())
+        try
         {
-            await storage.SaveAsync(key, stream, cancellationToken);
+            await using (var stream = file.OpenReadStream())
+            {
+                await storage.SaveAsync(key, stream, cancellationToken);
+            }
+
+            var document = new PersonalDocument
+            {
+                Id = documentId,
+                UserId = userId,
+                FileName = fileName,
+                ContentType = FileRules.CanonicalContentType(fileName, file.ContentType),
+                SizeBytes = file.Length,
+                StorageKey = key,
+                CreatedAt = DateTime.UtcNow,
+            };
+
+            db.Documents.Add(document);
+            await db.SaveChangesAsync(cancellationToken);
+            return Created($"/api/documents/{document.Id}/download", ToResponse(document));
         }
-
-        var document = new PersonalDocument
+        catch
         {
-            Id = documentId,
-            UserId = userId,
-            FileName = fileName,
-            ContentType = FileRules.CanonicalContentType(fileName, file.ContentType),
-            SizeBytes = file.Length,
-            StorageKey = key,
-            CreatedAt = DateTime.UtcNow,
-        };
-
-        db.Documents.Add(document);
-        await db.SaveChangesAsync(cancellationToken);
-
-        return Created($"/api/documents/{document.Id}/download", ToResponse(document));
+            await quota.ReleaseStorageAsync(userId, file.Length, cancellationToken);
+            await storage.DeleteAsync(key, cancellationToken);
+            throw;
+        }
     }
 
     [HttpGet("{id:guid}/download")]
@@ -93,9 +117,12 @@ public sealed class DocumentsController(AppDbContext db, IFileStorage storage) :
             return NotFound(new ErrorResponse("Documento nao encontrado."));
         }
 
-        await storage.DeleteAsync(document.StorageKey, cancellationToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         db.Documents.Remove(document);
         await db.SaveChangesAsync(cancellationToken);
+        await quota.ReleaseStorageAsync(document.UserId, document.SizeBytes, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        await storage.DeleteAsync(document.StorageKey, cancellationToken);
         return NoContent();
     }
 

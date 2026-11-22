@@ -22,7 +22,7 @@ export default function RegisterScreen() {
     setBusy(true);
     try {
       await register(name.trim(), email.trim(), password);
-      router.replace('/(app)/profile');
+      router.replace('/(app)/home');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Nao foi possivel criar a conta.');
     } finally {
@@ -78,8 +78,8 @@ export default function RegisterScreen() {
         <View style={styles.webBrand}>
           <BrandMark inverted />
           <Text style={styles.webLead}>
-            O perfil pessoal e o ponto de partida de tudo. Guarde seus dados e documentos privados
-            antes dos circulos e lembretes chegarem nas proximas versoes.
+            O perfil pessoal e o ponto de partida de tudo. Guarde dados, documentos, circulos e
+            lembretes no celular e no navegador.
           </Text>
         </View>
         <View style={styles.webPanel}>

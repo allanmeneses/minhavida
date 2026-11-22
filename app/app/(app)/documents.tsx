@@ -3,12 +3,15 @@ import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from '
 import * as DocumentPicker from 'expo-document-picker';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
-import { colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import type { ColorPalette } from '@/constants/theme';
 import { api, ApiError, downloadDocument, uploadNativeFile, type DocumentItem } from '@/lib/api';
 
 export default function DocumentsScreen() {
   const { token } = useAuth();
+  const { colors } = useTheme();
+  const styles = documentStyles(colors);
   const [items, setItems] = useState<DocumentItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -194,7 +197,7 @@ function formatDate(value: string): string {
   return date.toLocaleDateString('pt-BR');
 }
 
-const styles = StyleSheet.create({
+const documentStyles = (colors: ColorPalette) => StyleSheet.create({
   page: {
     paddingBottom: 48,
     maxWidth: 920,

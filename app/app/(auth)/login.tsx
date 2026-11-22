@@ -21,7 +21,7 @@ export default function LoginScreen() {
     setBusy(true);
     try {
       await login(email.trim(), password);
-      router.replace('/(app)/profile');
+      router.replace('/(app)/home');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Nao foi possivel entrar.');
     } finally {
@@ -50,6 +50,11 @@ export default function LoginScreen() {
       <Feedback message={error} />
       <Button label="Entrar" onPress={onSubmit} loading={busy} disabled={!email || !password} />
       <Text style={styles.hint}>
+        <Link href="/(auth)/forgot" style={styles.link}>
+          Esqueci a senha
+        </Link>
+      </Text>
+      <Text style={styles.hint}>
         Ainda nao tem conta?{' '}
         <Link href="/(auth)/register" style={styles.link}>
           Criar conta
@@ -64,8 +69,8 @@ export default function LoginScreen() {
         <View style={styles.webBrand}>
           <BrandMark inverted />
           <Text style={styles.webLead}>
-            Um hub da sua vida pessoal. Nesta primeira versao, o ponto de partida e o seu perfil:
-            dados basicos e documentos so seus.
+            Um hub da sua vida pessoal. Perfil, documentos, circulos e lembretes no mesmo lugar,
+            no celular e no navegador.
           </Text>
         </View>
         <View style={styles.webPanel}>

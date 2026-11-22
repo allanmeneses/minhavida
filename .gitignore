@@ -13,6 +13,8 @@ app/node_modules/
 app/.expo/
 app/dist/
 app/web-build/
+app/test-results/
+app/playwright-report/
 app/.env.local
 npm-debug.log*
 

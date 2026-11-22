@@ -7,9 +7,11 @@ public sealed class Profile
     public DateOnly? BirthDate { get; set; }
     public string? Phone { get; set; }
     public string? SecondaryEmail { get; set; }
+    public bool IsPublic { get; set; }
     public string? PhotoStorageKey { get; set; }
     public string? PhotoContentType { get; set; }
     public string? PhotoFileName { get; set; }
+    public long PhotoSizeBytes { get; set; }
     public DateTime UpdatedAt { get; set; }
 
     public User User { get; set; } = null!;

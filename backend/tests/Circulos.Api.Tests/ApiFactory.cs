@@ -17,11 +17,15 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.UseSetting("Encryption:Key", TestEncryptionKey.Base64);
         builder.ConfigureServices(services =>
         {
             RemoveService(services, typeof(DbContextOptions<AppDbContext>));
             RemoveService(services, typeof(AppDbContext));
             RemoveService(services, typeof(IFileStorage));
+            RemoveService(services, typeof(IEncryptionKeyProvider));
+            RemoveService(services, typeof(LocalFileStorage));
+            RemoveService(services, typeof(EncryptedFileStorage));
 
             foreach (var descriptor in services
                 .Where(d => d.ServiceType.FullName?.Contains("DbContext", StringComparison.Ordinal) == true
@@ -40,7 +44,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
                 options.UseSqlite(_connection);
                 options.AddInterceptors(new OverlapSaveInterceptor());
             });
-            services.AddSingleton<IFileStorage, MemoryFileStorage>();
+            var inspectable = new InspectableMemoryFileStorage();
+            services.AddSingleton(inspectable);
+            services.AddSingleton<IEncryptionKeyProvider>(_ => new StaticEncryptionKeyProvider(TestEncryptionKey.Bytes));
+            services.AddSingleton<IFileStorage>(sp =>
+                new EncryptedFileStorage(sp.GetRequiredService<InspectableMemoryFileStorage>(), sp.GetRequiredService<IEncryptionKeyProvider>()));
         });
     }
 
@@ -90,40 +98,3 @@ internal sealed class OverlapSaveInterceptor : SaveChangesInterceptor
     }
 }
 
-public sealed class MemoryFileStorage : IFileStorage
-{
-    private readonly Dictionary<string, byte[]> _files = new(StringComparer.Ordinal);
-
-    public async Task SaveAsync(string key, Stream content, CancellationToken cancellationToken)
-    {
-        using var memory = new MemoryStream();
-        await content.CopyToAsync(memory, cancellationToken);
-        lock (_files)
-        {
-            _files[key] = memory.ToArray();
-        }
-    }
-
-    public Task<Stream> OpenReadAsync(string key, CancellationToken cancellationToken)
-    {
-        lock (_files)
-        {
-            if (!_files.TryGetValue(key, out var bytes))
-            {
-                throw new FileNotFoundException("Arquivo nao encontrado no armazenamento.", key);
-            }
-
-            return Task.FromResult<Stream>(new MemoryStream(bytes, writable: false));
-        }
-    }
-
-    public Task DeleteAsync(string key, CancellationToken cancellationToken)
-    {
-        lock (_files)
-        {
-            _files.Remove(key);
-        }
-
-        return Task.CompletedTask;
-    }
-}

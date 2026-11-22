@@ -1,17 +1,42 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 
 export function BrandMark({ compact = false, inverted = false }: { compact?: boolean; inverted?: boolean }) {
+  const { colors } = useTheme();
   return (
     <View style={styles.wrap}>
-      <View style={[styles.mark, compact && styles.markCompact, inverted && styles.markInverted]}>
-        <View style={[styles.ring, inverted && styles.ringInverted]} />
-        <View style={[styles.inner, inverted && styles.innerInverted]} />
+      <View
+        style={[
+          styles.mark,
+          compact && styles.markCompact,
+          { backgroundColor: inverted ? colors.white : colors.primary },
+        ]}>
+        <View
+          style={[
+            styles.ring,
+            { borderColor: inverted ? colors.primary : colors.white },
+          ]}
+        />
+        <View
+          style={[
+            styles.inner,
+            { backgroundColor: inverted ? colors.primary : colors.white },
+          ]}
+        />
       </View>
       <View>
-        <Text style={[styles.title, compact && styles.titleCompact, inverted && styles.titleInverted]}>Circulos</Text>
+        <Text
+          style={[
+            styles.title,
+            compact && styles.titleCompact,
+            { color: inverted ? colors.white : colors.ink },
+          ]}>
+          Circulos
+        </Text>
         {!compact ? (
-          <Text style={[styles.subtitle, inverted && styles.subtitleInverted]}>A partir do seu perfil</Text>
+          <Text style={[styles.subtitle, { color: inverted ? 'rgba(255,255,255,0.82)' : colors.muted }]}>
+            A partir do seu perfil
+          </Text>
         ) : null}
       </View>
     </View>
@@ -28,7 +53,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -43,41 +67,22 @@ const styles = StyleSheet.create({
     height: '68%',
     borderRadius: 999,
     borderWidth: 2,
-    borderColor: colors.white,
     opacity: 0.7,
   },
   inner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.white,
   },
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: colors.ink,
   },
   titleCompact: {
     fontSize: 18,
   },
   subtitle: {
     marginTop: 2,
-    color: colors.muted,
     fontSize: 13,
-  },
-  markInverted: {
-    backgroundColor: colors.white,
-  },
-  ringInverted: {
-    borderColor: colors.primary,
-  },
-  innerInverted: {
-    backgroundColor: colors.primary,
-  },
-  titleInverted: {
-    color: colors.white,
-  },
-  subtitleInverted: {
-    color: 'rgba(255,255,255,0.82)',
   },
 });

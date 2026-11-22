@@ -20,7 +20,75 @@ export type Profile = {
   birthDate: string | null;
   phone: string | null;
   secondaryEmail: string | null;
+  isPublic: boolean;
   hasPhoto: boolean;
+};
+export type LifeArea = {
+  id: string;
+  name: string;
+  kind: string;
+  sortOrder: number;
+  suggested: boolean;
+};
+export type LifeEntry = {
+  id: string;
+  lifeAreaId: string;
+  title: string;
+  body: string | null;
+  numberValue: number | null;
+  occurredOn: string | null;
+  location: string | null;
+  hasPhoto: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+export type CircleSummary = {
+  id: string;
+  name: string | null;
+  description: string | null;
+  visibility: string;
+  isSurprise: boolean;
+  revealed: boolean;
+  kind: string;
+  status: string;
+  role: string;
+  memberCount: number;
+};
+export type ReminderItem = {
+  id: string;
+  title: string;
+  kind: string;
+  nextFireAt: string;
+  isPaused: boolean;
+  personName: string | null;
+  advanceDays: number;
+  giftIdeas: string[];
+  endingSoon: boolean;
+};
+export type ShortcutItem = {
+  id: string;
+  label: string;
+  color: string;
+  sortOrder: number;
+  isActive: boolean;
+};
+export type PlanInfo = {
+  plan: string;
+  circleLimit: number | null;
+  circleCount: number;
+  storageLimitBytes: number;
+  storageUsedBytes: number;
+  storageWarning: boolean;
+  checkout: string;
+};
+export type DayPanel = {
+  overdue: { id: string; title: string; kind: string; at: string; overdue: boolean }[];
+  dueToday: { id: string; title: string; kind: string; at: string; overdue: boolean }[];
+  upcoming: { id: string; title: string; kind: string; at: string; overdue: boolean }[];
+  activeCircleCount: number;
+  shortcuts: ShortcutItem[];
+  vacationUntil: string | null;
+  plan: PlanInfo;
 };
 export type DocumentItem = {
   id: string;

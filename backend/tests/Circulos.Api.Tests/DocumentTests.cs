@@ -2,6 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Circulos.Api.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using SixLabors.ImageSharp;
 
 namespace Circulos.Api.Tests;
 
@@ -117,6 +121,54 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Upload_ArquivoSalvoNaoEstaLegivel()
+    {
+        const string secret = "texto-privado-que-nao-pode-aparecer-em-claro-" + "9f3c2a";
+        var client = _factory.CreateClient();
+        var auth = await AuthHelper.RegisterAsync(client);
+        client.WithToken(auth.Token);
+
+        DocumentDto created;
+        using (var form = CreateTextFile("segredo.txt", secret))
+        {
+            var upload = await client.PostAsync("/api/documents", form);
+            Assert.Equal(HttpStatusCode.Created, upload.StatusCode);
+            created = (await upload.Content.ReadFromJsonAsync<DocumentDto>(Json))!;
+        }
+
+        var inspectable = _factory.Services.GetRequiredService<InspectableMemoryFileStorage>();
+        var rawFiles = inspectable.Snapshot();
+        Assert.NotEmpty(rawFiles);
+        Assert.DoesNotContain(
+            rawFiles.Values,
+            bytes => Encoding.UTF8.GetString(bytes).Contains(secret, StringComparison.Ordinal));
+
+        var download = await client.GetAsync($"/api/documents/{created.Id}/download");
+        Assert.Equal(secret, await download.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task ChaveDeCifra_NaoFicaNoBanco()
+    {
+        var client = _factory.CreateClient();
+        var auth = await AuthHelper.RegisterAsync(client);
+        client.WithToken(auth.Token);
+        using (var form = CreateTextFile("nota.txt", "conteudo privado da nota"))
+        {
+            (await client.PostAsync("/api/documents", form)).EnsureSuccessStatusCode();
+        }
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var dump = await DumpSqliteAsync(db);
+        Assert.DoesNotContain(TestEncryptionKey.Base64, dump, StringComparison.Ordinal);
+        Assert.DoesNotContain("Encryption:Key", dump, StringComparison.Ordinal);
+        var document = await db.Documents.AsNoTracking().SingleAsync(x => x.UserId == auth.UserId);
+        Assert.False(string.IsNullOrWhiteSpace(document.StorageKey));
+        Assert.DoesNotContain(TestEncryptionKey.Base64, document.StorageKey, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task FotoDoPerfil_SoODonoBaixa()
     {
         var dono = _factory.CreateClient();
@@ -129,9 +181,18 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
             Assert.Equal(HttpStatusCode.OK, upload.StatusCode);
         }
 
+        var pngSignature = new byte[] { 0x89, 0x50, 0x4E, 0x47 };
+        var jpegSignature = new byte[] { 0xFF, 0xD8 };
+        var inspectable = _factory.Services.GetRequiredService<InspectableMemoryFileStorage>();
+        Assert.DoesNotContain(
+            inspectable.Snapshot().Values,
+            bytes => bytes.AsSpan().StartsWith(pngSignature) || bytes.AsSpan().StartsWith(jpegSignature));
+
         var photo = await dono.GetAsync("/api/profile/photo");
         Assert.Equal(HttpStatusCode.OK, photo.StatusCode);
         Assert.Contains("private", photo.Headers.CacheControl?.ToString() ?? string.Empty);
+        var downloaded = await photo.Content.ReadAsByteArrayAsync();
+        Assert.True(downloaded.AsSpan().StartsWith(jpegSignature));
 
         var outro = _factory.CreateClient();
         var outroAuth = await AuthHelper.RegisterAsync(outro, name: "Visitante");
@@ -152,13 +213,53 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
 
     private static MultipartFormDataContent CreatePngFile(string name)
     {
-        var png = Convert.FromBase64String(
-            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+X69gAAAAASUVORK5CYII=");
-        var file = new ByteArrayContent(png);
+        using var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(8, 8);
+        using var buffer = new MemoryStream();
+        image.SaveAsPng(buffer);
+        var file = new ByteArrayContent(buffer.ToArray());
         file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
         var form = new MultipartFormDataContent();
         form.Add(file, "file", name);
         return form;
+    }
+
+    private static async Task<string> DumpSqliteAsync(AppDbContext db)
+    {
+        var connection = db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+
+        var builder = new StringBuilder();
+        await using (var tables = connection.CreateCommand())
+        {
+            tables.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
+            await using var reader = await tables.ExecuteReaderAsync();
+            var names = new List<string>();
+            while (await reader.ReadAsync())
+            {
+                names.Add(reader.GetString(0));
+            }
+
+            await reader.DisposeAsync();
+            foreach (var name in names)
+            {
+                await using var rows = connection.CreateCommand();
+                rows.CommandText = $"SELECT * FROM \"{name}\"";
+                await using var data = await rows.ExecuteReaderAsync();
+                while (await data.ReadAsync())
+                {
+                    for (var i = 0; i < data.FieldCount; i++)
+                    {
+                        builder.Append(data.IsDBNull(i) ? string.Empty : data.GetValue(i));
+                        builder.Append('|');
+                    }
+                }
+            }
+        }
+
+        return builder.ToString();
     }
 
     private sealed record DocumentDto(Guid Id, string FileName, string ContentType, long SizeBytes, DateTime CreatedAt);

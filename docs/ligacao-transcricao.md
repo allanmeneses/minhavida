@@ -902,9 +902,11 @@ Nao ha Beleza, Concordo ou Ok visivel. O dialogo seguiu com essa linha.
 
 **Pergunta 229:** quando compartilhada, a outra pessoa pode adicionar ideias ou so [cortado no print]
 
-**Resposta:** Assim como eu posso criar um circulo temporario de um aniversario de uma pessoa, colocar, organizar pra essa pessoa em especifico. Essa pessoa nao sabe dessa surpresa que ela ta passando. La tem uma lista de ideias, as pessoas que fazem parte desse circulo, que tem um ciclo de vida muito bem definido, que e, participei, aconteceu e acabou. E, eu acabei de criar um circulo sobre um evento aleatorio.
+A pergunta ficou cortada. O dono confirmou depois que nao se invente a parte que falta. Esta formula nao tem resposta confirmada. Nao decidir se a outra pessoa pode adicionar ideias na lista compartilhada.
 
-A resposta abre o tema do circulo surpresa. O entrevistador repetiu o ordinal.
+**Resposta visivel a seguir:** Assim como eu posso criar um circulo temporario de um aniversario de uma pessoa, colocar, organizar pra essa pessoa em especifico. Essa pessoa nao sabe dessa surpresa que ela ta passando. La tem uma lista de ideias, as pessoas que fazem parte desse circulo, que tem um ciclo de vida muito bem definido, que e, participei, aconteceu e acabou. E, eu acabei de criar um circulo sobre um evento aleatorio.
+
+Essa fala abre o tema do circulo surpresa. Nao responde a pergunta cortada. O entrevistador repetiu o ordinal.
 
 **Pergunta 229 (reformulada):** durante a surpresa, o aniversariante nao ve nada do circulo - nem nome, nem descricao?
 
@@ -942,13 +944,13 @@ A resposta abre o tema do circulo surpresa. O entrevistador repetiu o ordinal.
 
 **Resposta:** E definitiva?
 
-O entrevistador registrou: Definitiva. A fala visivel e uma pergunta de volta.
+O entrevistador registrou: Definitiva. A fala visivel e uma pergunta de volta, sem contexto. O dono confirmou depois que essa fala nao esta confirmada. Nao basear nenhuma decisao nela.
 
 **Pergunta 238:** o app guarda algum registro de que aquela pessoa ja participou, ou some sem rastro nenhum?
 
-**Resposta:** Somos sem raca.
+**Resposta:** Sem rastro.
 
-O entrevistador registrou: Sem rastro. A fala visivel e Somos sem raca.
+A fala visivel no print parece Somos sem raca. O dono confirmou depois que o correto e Sem rastro.
 
 **Pergunta 239:** o app tem um modo de ferias que silencia tudo de uma vez?
 
@@ -1288,7 +1290,7 @@ O entrevistador registrou: saiu do escopo.
 
 **Resposta:** So o app.
 
-O entrevistador registrou: So web. A fala visivel e So o app. Nao ha confirmacao posterior no print.
+O entrevistador registrou: So web. A fala visivel e So o app. O dono confirmou depois que o produto deve funcionar como app e como web, nas duas plataformas.
 
 **Pergunta 306:** vai ter selo de feito no Brasil ou algo assim na pagina?
 
@@ -1442,7 +1444,7 @@ Nao ha Beleza, Concordo ou Ok visivel. O dialogo seguiu para desconto anual.
 
 **Resposta:** So uma?
 
-O entrevistador registrou: So uma. A fala visivel e So uma?
+O entrevistador registrou: So uma. A fala visivel e uma pergunta de volta, sem contexto. O dono confirmou depois que essa fala nao esta confirmada. Nao basear nenhuma decisao nela.
 
 **Pergunta 337:** a votacao pode ser cancelada pelo dono anterior antes de fechar?
 
@@ -1537,6 +1539,6 @@ Nao ha pergunta 346 nem posteriores. A 345 nao teve decisao de produto.
 
 - Nenhum balao inteiro ficou ilegivel a ponto de nao dar para ler a fala. Onde o topo ou o rodape do print corta uma frase, o print vizinho completa o mesmo texto.
 - [lacuna entre prints]: nao ha salto de conteudo entre IMG consecutivos na ordem da conversa, exceto o salto de numeracao 109 para 200, que e do ordinal falado, nao de um print faltando.
-- Falas curtas que o entrevistador interpretou de outro modo (So o app versus So web; Somos sem raca versus Sem rastro; E definitiva?; So uma?; E dois.; Cansar esse pedido.) ficaram transcritas como visiveis, com a interpretacao do entrevistador ao lado.
-- A pergunta 229 primeira formula termina com ou so [cortado no print]; o resto da pergunta nao reaparece.
+- Falas curtas que o entrevistador interpretou de outro modo ficaram transcritas como visiveis. Confirmacoes posteriores do dono: So o app / So web significa app e web; Somos sem raca e na verdade Sem rastro. E definitiva? e So uma? continuam sem contexto, nao confirmadas, e nao devem gerar regra de produto. E dois. e Cansar esse pedido. seguem so como fala visivel.
+- A pergunta 229 primeira formula termina com ou so [cortado no print]; o resto da pergunta nao reaparece. O dono pediu para nao inventar a resposta.
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Image, Platform, StyleSheet, Text, View } from 'react-native';
-import { colors } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 import { apiBlob } from '@/lib/api';
 import { API_URL } from '@/lib/config';
 
@@ -12,6 +12,7 @@ type Props = {
 };
 
 export function ProfilePhoto({ name, hasPhoto, token, revision }: Props) {
+  const { colors } = useTheme();
   const [webUri, setWebUri] = useState<string | null>(null);
   const initials = name
     .split(' ')
@@ -54,8 +55,8 @@ export function ProfilePhoto({ name, hasPhoto, token, revision }: Props) {
 
   if (!hasPhoto || !token) {
     return (
-      <View style={styles.placeholder}>
-        <Text style={styles.initials}>{initials || '?'}</Text>
+      <View style={[styles.placeholder, { backgroundColor: colors.primary }]}>
+        <Text style={[styles.initials, { color: colors.white }]}>{initials || '?'}</Text>
       </View>
     );
   }
@@ -63,12 +64,12 @@ export function ProfilePhoto({ name, hasPhoto, token, revision }: Props) {
   if (Platform.OS === 'web') {
     if (!webUri) {
       return (
-        <View style={styles.placeholder}>
-          <Text style={styles.initials}>{initials || '?'}</Text>
+        <View style={[styles.placeholder, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.initials, { color: colors.white }]}>{initials || '?'}</Text>
         </View>
       );
     }
-    return <Image source={{ uri: webUri }} style={styles.photo} />;
+    return <Image source={{ uri: webUri }} style={[styles.photo, { backgroundColor: colors.primarySoft }]} />;
   }
 
   return (
@@ -77,7 +78,7 @@ export function ProfilePhoto({ name, hasPhoto, token, revision }: Props) {
         uri: `${API_URL}/api/profile/photo?r=${revision}`,
         headers: { Authorization: `Bearer ${token}` },
       }}
-      style={styles.photo}
+      style={[styles.photo, { backgroundColor: colors.primarySoft }]}
     />
   );
 }
@@ -87,18 +88,15 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: colors.primarySoft,
   },
   placeholder: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   initials: {
-    color: colors.white,
     fontSize: 28,
     fontWeight: '800',
   },

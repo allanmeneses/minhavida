@@ -2,11 +2,12 @@ import { Redirect, Slot, usePathname, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BrandMark } from '@/components/BrandMark';
 import { LoadingScreen } from '@/components/LoadingScreen';
-import { colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function AppWebLayout() {
   const { loading, user, logout } = useAuth();
+  const { colors } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -18,25 +19,21 @@ export default function AppWebLayout() {
   }
 
   return (
-    <View style={styles.shell}>
-      <View style={styles.sidebar}>
+    <View style={[styles.shell, { backgroundColor: colors.bg }]}>
+      <View style={[styles.sidebar, { backgroundColor: colors.surface, borderRightColor: colors.line }]}>
         <BrandMark compact />
-        <Text style={styles.userName}>{user.name}</Text>
-        <Text style={styles.userEmail}>{user.email}</Text>
+        <Text style={[styles.userName, { color: colors.ink }]}>{user.name}</Text>
+        <Text style={[styles.userEmail, { color: colors.muted }]}>{user.email}</Text>
         <View style={styles.nav}>
-          <NavItem
-            label="Perfil"
-            active={pathname.includes('profile')}
-            onPress={() => router.push('/(app)/profile')}
-          />
-          <NavItem
-            label="Documentos"
-            active={pathname.includes('documents')}
-            onPress={() => router.push('/(app)/documents')}
-          />
+          <NavItem label="Hoje" active={pathname.includes('home') || pathname === '/'} onPress={() => router.push('/(app)/home')} />
+          <NavItem label="Circulos" active={pathname.includes('circle')} onPress={() => router.push('/(app)/circles')} />
+          <NavItem label="Perfil" active={pathname.includes('profile') || pathname.includes('life')} onPress={() => router.push('/(app)/profile')} />
+          <NavItem label="Documentos" active={pathname.includes('documents')} onPress={() => router.push('/(app)/documents')} />
+          <NavItem label="Lembretes" active={pathname.includes('reminders')} onPress={() => router.push('/(app)/reminders')} />
+          <NavItem label="Ajustes" active={pathname.includes('settings')} onPress={() => router.push('/(app)/settings')} />
         </View>
-        <Pressable onPress={() => void logout()} style={styles.logout}>
-          <Text style={styles.logoutText}>Sair</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Sair" onPress={() => void logout()} style={styles.logout}>
+          <Text style={[styles.logoutText, { color: colors.primary }]}>Sair</Text>
         </Pressable>
       </View>
       <View style={styles.main}>
@@ -47,9 +44,14 @@ export default function AppWebLayout() {
 }
 
 function NavItem({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
   return (
-    <Pressable onPress={onPress} style={[styles.navItem, active && styles.navItemActive]}>
-      <Text style={[styles.navLabel, active && styles.navLabelActive]}>{label}</Text>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={[styles.navItem, active && { backgroundColor: colors.primarySoft }]}>
+      <Text style={[styles.navLabel, { color: active ? colors.primaryDark : colors.muted }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -59,23 +61,18 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     minHeight: '100%' as unknown as number,
-    backgroundColor: colors.bg,
   },
   sidebar: {
     width: 260,
-    backgroundColor: colors.surface,
     borderRightWidth: 1,
-    borderRightColor: colors.line,
     padding: 24,
   },
   userName: {
     marginTop: 28,
     fontWeight: '700',
-    color: colors.ink,
     fontSize: 16,
   },
   userEmail: {
-    color: colors.muted,
     fontSize: 13,
     marginTop: 4,
   },
@@ -89,21 +86,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
   },
-  navItemActive: {
-    backgroundColor: colors.primarySoft,
-  },
   navLabel: {
-    color: colors.muted,
     fontWeight: '600',
-  },
-  navLabelActive: {
-    color: colors.primaryDark,
   },
   logout: {
     paddingVertical: 10,
   },
   logoutText: {
-    color: colors.primary,
     fontWeight: '700',
   },
   main: {

@@ -1,5 +1,5 @@
 import { Platform, StyleSheet, Text, TextInput, View, type KeyboardTypeOptions } from 'react-native';
-import { colors } from '@/constants/theme';
+import { useTheme } from '@/context/ThemeContext';
 
 type Props = {
   label: string;
@@ -22,9 +22,10 @@ export function TextField({
   autoCapitalize = 'none',
   autoComplete,
 }: Props) {
+  const { colors } = useTheme();
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.ink }]}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -35,7 +36,15 @@ export function TextField({
         autoCapitalize={autoCapitalize}
         autoComplete={autoComplete}
         autoCorrect={false}
-        style={styles.input}
+        accessibilityLabel={label}
+        style={[
+          styles.input,
+          {
+            borderColor: colors.line,
+            backgroundColor: colors.white,
+            color: colors.ink,
+          },
+        ]}
       />
     </View>
   );
@@ -46,18 +55,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    color: colors.ink,
     fontSize: 13,
     fontWeight: '600',
   },
   input: {
     minHeight: Platform.OS === 'web' ? 42 : 48,
     borderWidth: 1,
-    borderColor: colors.line,
     borderRadius: Platform.OS === 'web' ? 8 : 14,
     paddingHorizontal: 14,
-    backgroundColor: colors.white,
-    color: colors.ink,
     fontSize: Platform.OS === 'web' ? 14 : 16,
   },
 });

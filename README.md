@@ -11,24 +11,26 @@ Este repositorio e o projeto **minhavida**.
 3. **Uso no dia a dia.** Se a pessoa quer lembrar de algo, abre o app e usa. Os exemplos nao limitam o produto.
 4. **Circulos.** Espacos criados pela pessoa para familia, amizade ou interesse. O organizador publica; quem participa acompanha. Fora da v1.
 
-O modelo de dados da v1 gira em torno de `User`. Perfil e documentos pessoais apontam para esse usuario. Circulos, membros e lembretes entram depois, sempre ancorados no mesmo `User`.
+O modelo gira em torno de `User`. Perfil, documentos, areas de vida, circulos, lembretes e atalhos apontam para esse usuario.
 
-## O que a v1 faz
+## O que esta versao faz
 
-Somente o perfil pessoal:
+- Cadastro e login com e-mail e senha, mais esqueci a senha por e-mail
+- Perfil solo privado (pode virar publico) com vacinas, lembretes, documentos e diario
+- Documentos e fotos cifrados em AES-256-GCM no servidor; a chave fica fora do banco
+- Circulos com dono, convite, publico/privado, surpresa e log
+- Lembretes com recorrencia, aniversario e modo ferias
+- Painel do dia, atalhos de um toque, tema claro/escuro automatico
+- Foto pela camera, galeria ou arquivo, comprimida no padrao Instagram
+- Exclusao de conta com senha e confirmacao por e-mail (LGPD)
+- Limites do plano gratuito (3 circulos, 100 MB) sem gateway de cobranca
 
-- Cadastro e login com e-mail e senha
-- Perfil com nome, foto, data de nascimento e contatos
-- Area de documentos pessoais: enviar, listar, baixar e apagar arquivos privados
-
-Circulos, lembretes e o restante ficam no roadmap. Nao ha URL publica permanente para arquivo. Foto e documento so saem pelo backend, com autenticacao, e so para o dono.
+Nao ha URL publica permanente para arquivo. Foto e documento so saem pelo backend, com autenticacao.
 
 ## Roadmap
 
-- **v1 (esta):** conta, perfil e documentos privados
-- **v2:** lembretes pessoais (aniversarios e avisos simples)
-- **v3:** circulos, convites e publicacoes do organizador
-- **depois:** notificacoes, compartilhamento controlado e uso cotidiano mais amplo
+- **feito aqui:** conta, perfil solo, documentos cifrados, circulos, lembretes, atalhos, tema, compressao, esqueci senha, exclusao LGPD, limites de plano
+- **depois:** gateway de cobranca, 2FA, votacao de sucessao, WebSocket, PWA de loja
 
 ## Stack e por que
 
@@ -48,7 +50,7 @@ Nao usamos um segundo cliente web. O Expo no navegador e a cara de web; no celul
 
 ## Como rodar local
 
-Requisitos: .NET 10 SDK, Node 22+, Docker (para o Postgres) ou um PostgreSQL 16 na porta 5432.
+Requisitos: .NET 10 SDK, Node 22+, Docker (para o Postgres) ou um PostgreSQL 16 na porta 5432. Sem Docker, da para subir a API com SQLite.
 
 ### 1. Banco
 
@@ -67,6 +69,13 @@ dotnet run --project src/Circulos.Api --urls http://127.0.0.1:5288
 ```
 
 A API aplica a migracao na subida. Saude: `http://127.0.0.1:5288/health`.
+
+Sem Postgres:
+
+```bash
+Database__Provider=Sqlite ConnectionStrings__Default="Data Source=/tmp/circulos.db" \
+  dotnet run --project src/Circulos.Api --urls http://127.0.0.1:5288
+```
 
 A chave JWT em `appsettings.json` e so para desenvolvimento local. Troque antes de qualquer ambiente compartilhado.
 
@@ -98,5 +107,6 @@ docker-compose.yml          Postgres local
 - Cada linha em `personal_documents` tem `UserId`. Listar, baixar e apagar filtram por esse id.
 - Se o id nao e da pessoa autenticada, a API responde 404. Nao confirma que o arquivo existe.
 - A chave de armazenamento nunca vai para o cliente.
+- Documentos e fotos entram cifrados em AES-256-GCM. A chave fica em `Encryption:Key` (configuracao), fora do banco.
 - Download e foto usam `Cache-Control: private, no-store`.
 - Sem bucket publico e sem URL assinada de longa duracao nesta versao.

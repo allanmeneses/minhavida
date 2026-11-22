@@ -27,6 +27,7 @@
     "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@types/react": "~19.3.0",
     "typescript": "~6.0.3"
   },
@@ -35,7 +36,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "node --experimental-strip-types --test lib/*.test.mjs"
+    "test": "node --experimental-strip-types --test lib/*.test.mjs",
+    "test:e2e": "npx playwright test"
   },
   "private": true
 }
