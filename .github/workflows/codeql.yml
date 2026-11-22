@@ -21,7 +21,7 @@ jobs:
       matrix:
         language: [csharp, javascript]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
@@ -31,7 +31,7 @@ jobs:
           category: '/language:${{ matrix.language }}'
           upload: false
           output: ${{ runner.temp }}/codeql-sarif
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: codeql-${{ matrix.language }}
           path: ${{ runner.temp }}/codeql-sarif
