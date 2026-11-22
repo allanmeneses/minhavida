@@ -80,9 +80,9 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Backup pessoal do que e da pessoa num circulo | parcial | 7 | Export do diario (`/api/life-areas/{id}/export`). Sem export do circulo (posts, membros, log). |
 | Foto comprime, cifra, substitui original | feito e testado | 56, 57, 273, 274 | `ImageCompressor` + `EncryptedFileStorage`. `Foto_ComprimeSubstituiOriginalEFicaCifrada`. Qualidade 82 e o valor no codigo. |
 | Sem limite de tamanho no upload | nao feito | 272 | `FileRules.MaxIncomingBytes = 80 MB`. |
-| Entradas: foto, texto, numero; sem video | parcial | 53, 54, 55 | `LifeEntry` tem titulo, body, `NumberValue`, foto (POST `/entries/{id}/photo`). UI de area nao expoe campo numerico nem botao de foto. Video nao aparece. |
-| Foto por camera, galeria ou arquivo | parcial | 54, 55 | Perfil: camera e galeria. Documentos: `DocumentPicker`. Entrada de vida: API de foto existe, UI nao chama. |
-| 100 MB gratis / 1 GB pago; aviso a 90% | parcial | 275, 277 a 283 | `PlanLimits`. `Plano_MostraLimitesSemGateway`, `Armazenamento_DoisEnviosSobrepostosRespeitamOTeto`. Home mostra aviso de storage. Sem grafico (279). Sem limpeza em lote (281; dono pediu para sair do escopo). Excluir foto: `DELETE /api/profile/photo` existe; `profile.tsx` nao tem botao de apagar. |
+| Entradas: foto, texto, numero; sem video | feito e testado | 53, 54, 55 | `life/[id].tsx` tem numero e foto. Playwright `entrada guarda numero e o log do circulo mostra data`. Video nao aparece. |
+| Foto por camera, galeria ou arquivo | feito e testado | 54, 55 | Perfil: camera e galeria. Documentos: `DocumentPicker`. Entrada: camera, galeria e arquivo na web. |
+| 100 MB gratis / 1 GB pago; aviso a 90% | parcial | 275, 277 a 283 | `PlanLimits`. `Plano_MostraLimitesSemGateway`, `Armazenamento_DoisEnviosSobrepostosRespeitamOTeto`. Home mostra aviso de storage. Sem grafico (279). Sem limpeza em lote (281; dono pediu para sair do escopo). Excluir foto: `DELETE /api/profile/photo` e botao `Remover foto` em `profile.tsx`. Playwright `remover foto de perfil`. |
 
 ## Seguranca, auth e pipeline
 
@@ -103,23 +103,23 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 
 | Decisao | Status | Origem | Evidencia |
 | --- | --- | --- | --- |
-| Dono fixo que pode mudar; historico fica | parcial | 2, 3 | Um `OwnerUserId`. Troca so na exclusao de conta (`AccountDeletionService`). Leave do dono responde "precisa transferir" (`CirclesController.Leave`) mas nao ha endpoint de transferencia em vida. `SuccessorEmail` existe no create; a UI nao envia. Teste da troca: `Exclusao_TransfereCirculoParaAdminEAnonimizaLog`. |
+| Dono fixo que pode mudar; historico fica | feito e testado | 2, 3 | POST `/api/circles/{id}/transfer` com `UserRowLock`. Historico e permissoes ficam. Testes `Dono_TransfereEmVida_HistoricoEPermissoesFicam` e `TransferenciaSobreposta_SoUmaVence`. Playwright `transferir dono do circulo em vida`. |
 | Varios gestores | parcial | 3 | Papel `Admin` existe (`CircleRole`). Nao ha varios donos simultaneos. |
-| Sem dono ativo em caso sensivel: trava | parcial | 4 | `CircleStatus.LockedNoOwner` na exclusao sem admin/sucessor. Sem teste que force o lock. Sem trava por inatividade. |
-| Circulo nao some na exclusao: transfere ou trava; se nao houver sucessor, votacao | parcial | 327 a 331, 330 | Transfere para admin: testado. Lock existe sem teste. Votacao nao existe. |
+| Sem dono ativo em caso sensivel: trava | parcial | 4 | `CircleStatus.LockedNoOwner` na exclusao sem admin/sucessor. Teste `Exclusao_SemAdminNemSucessor_TravaCirculo`. Sem trava por inatividade. |
+| Circulo nao some na exclusao: transfere ou trava; se nao houver sucessor, votacao | parcial | 327 a 331, 330 | Transfere para admin: testado. Lock: `Exclusao_SemAdminNemSucessor_TravaCirculo`. Votacao nao existe (331 a 344; 336 sem confirmacao). |
 | Votacao de sucessao (10%, candidaturas, empate, etc.) | nao feito | 331 a 344; 336 sem confirmacao | Sem entidades de voto. README coloca votacao no depois. 336 e 345 nao cravam regra. |
 | Vida util temporario / duradouro / diario | parcial | 16 | Enum `CircleKind` Lasting/Temporary/Daily no create. UI nao escolhe kind (cai no padrao `lasting`). Sem arquivar sozinho. |
 | Temporario encerrado: arquivo + retrospectiva | nao feito | 17, 18 | Status `Archived` existe no enum. Nenhum endpoint arquiva nem gera retrospectiva. |
 | Compartilhar retrospectiva so a narrativa da pessoa | nao feito | 19, 20 | |
 | Arquivamento como beneficio de plano; retencao indefinida | nao feito | 26, 27 | Nao ha compactacao nem exclusao por tempo. Retencao de fato e "fica no banco"; nao ha politica escrita no codigo. |
-| Cadastro livre; entrar em circulo alheio por pedido ou convite | parcial | 8 | Convite: `Dono_CriaConviteEOutroAceita`. Join publico direto; privado cria `CircleJoinRequest`. Sem teste do pedido. UI de convite no detalhe; pedido e descoberta sem tela. |
+| Cadastro livre; entrar em circulo alheio por pedido ou convite | feito e testado | 8 | Convite: `Dono_CriaConviteEOutroAceita`. Pedido: UI `Pedir para entrar` e lista no dono. Playwright `descobrir circulo e pedir entrada`. |
 | Publico: quem nao entrou ve so nome e descricao | feito e testado | 9 | `Publico_VisitanteVeSoNomeEDescricao`. |
-| Privado: so admins controlam permanencia | parcial | 8 | Aceitar pedido exige `Role >= Admin`. Sem UI de moderar pedidos. |
-| Busca por interesse e, com opt-in, por localizacao | nao feito | 10, 11, 12, 12 reformulada | GET `/api/circles/discover` lista publicos com `Discoverable`. Sem geo, sem interesses, sem busca textual. UI nao chama discover. |
-| Circulos que nao querem ser encontrados: invisivel por padrao | feito sem teste | 12 | `CreateCircleRequest.Discoverable` e `bool` (false se omitido). UI de criacao nao envia o campo. |
+| Privado: so admins controlam permanencia | feito e testado | 8 | Aceitar pedido exige `Role >= Admin`. UI no detalhe. Playwright `descobrir circulo e pedir entrada`. |
+| Busca por interesse e, com opt-in, por localizacao | parcial | 10, 11, 12, 12 reformulada | GET `/api/circles/discover?q=` e tela `Descobrir circulos`. Sem geo (localizacao nao cravada nesta rodada). |
+| Circulos que nao querem ser encontrados: invisivel por padrao | feito e testado | 12 | `Discoverable` false se omitido. UI: `Oculto na busca` / `Aparece na busca`. Playwright cria com o botao. |
 | Feed de descoberta interno, da para silenciar | nao feito | 37, 38, 39 | Discover lista circulos; nao e feed e nao ha silenciar. |
-| Entrada apagada deixa rastro com quem e quando | parcial | 5, 6 | `EntradaApagada_DeixaRastroNoLog` prova `action=deleted` e `ActorUserId`. `CreatedAt` vai no DTO. A tela `circle/[id].tsx` mostra `action: detail` e nao mostra data/hora. |
-| Log visivel para o circulo, para sempre, fuso da pessoa | parcial | 267 a 271 | GET log no detalhe, visivel a membro. Sem retencao. Sem filtro (270 foi sugestao sem Ok). Sem fuso gravado; UI nao formata `CreatedAt`. |
+| Entrada apagada deixa rastro com quem e quando | feito e testado | 5, 6 | `EntradaApagada_DeixaRastroNoLog`. Tela formata `CreatedAt` com `formatPersonTime`. Playwright espera data no log. |
+| Log visivel para o circulo, para sempre, fuso da pessoa | parcial | 267 a 271 | GET log no detalhe. UI mostra data/hora no fuso do aparelho. Sem retencao. Sem filtro (270 foi sugestao sem Ok; nao cravar). |
 | Circulo surpresa: aniversariante nao ve; revelacao; recordacao no perfil; sair sem rastro | parcial | 229 reformulada a 236, 238 | `Surpresa_AniversarianteNaoVeOCirculo`, `Sair_NaoDeixaRastroDeParticipacao`. POST `/reveal` existe; sem teste de revelacao e sem botao na UI. Sem resumo com fotos, sem guardar recordacao no perfil, sem edicao em silencio. |
 | Lista de ideias compartilhada: a outra pessoa pode incluir? | sem confirmacao | 229 primeira formula (cortada) | Lembrete tem `giftIdeas` so no dono. Nao ha compartilhar no circulo (228). |
 | Templates de rotina | nao feito | 47 a 52 | |
@@ -130,9 +130,9 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 
 | Decisao | Status | Origem | Evidencia |
 | --- | --- | --- | --- |
-| Painel do dia primeiro: vence, atrasado, em seguida, quantos circulos | parcial | 251 a 254 | `GET /api/home`, `home.tsx`. Playwright espera "O que pede atencao hoje". `ModoFerias_EscondeLembretesDoPainelEGuardaORegistro`. Atualiza ao recarregar ou apos disparar atalho. Sem atualizacao sozinha quando algo muda (254). |
+| Painel do dia primeiro: vence, atrasado, em seguida, quantos circulos | feito e testado | 251 a 254 | `GET /api/home`, `home.tsx`. Poll a cada 5s e ao voltar o foco (sem WebSocket; 73 e 74 nao feitos). Playwright `painel do dia atualiza sozinho`. |
 | Botao + no painel sugerindo contexto | nao feito | 255, 256 (sem Ok) | |
-| Busca unificada + historico sincronizado | nao feito | 257 a 260 | |
+| Busca unificada + historico sincronizado | feito e testado | 257 a 260 | `GET /api/search` e `/api/search/history`. Tela `search.tsx`. Teste `Busca_UnificadaComHistoricoSincronizadoETermosFrequentes`. Playwright `busca unificada com historico`. |
 | Offline: guarda local, ultima sync vence, icone online/offline | nao feito | 261 a 266 | Sem fila local. |
 
 ## Lembretes e recorrencia
@@ -142,26 +142,26 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Lembrete e funcao do app, nao de outro calendario | feito sem teste da negativa | 45, 46, 223 | CRUD em `/api/reminders`. Sem integracao de calendario. |
 | Integracao calendario so leitura, se existir | nao feito | 223 | |
 | E-mail de lembrete opcional por pessoa | nao feito | 13, 14 | `OutboxEmailSender` so em convite, esqueci senha e exclusao. Sem preferencia de e-mail no lembrete. Sem disparo agendado. |
-| Circulo ciclico com atalho que marca feito | nao feito | 215 | Atalho grava no diario (`HomeController.Run`), nao completa lembrete de circulo. |
-| Recorrencia tipo Teams | parcial | 216 | `RecurrenceCalculator` cobre daily/weekly/monthly/yearly, intervalo, daysOfWeek, monthly date/position, until, maxOccurrences. Testes: `DiariaComIntervaloDois_SegueAGradeOriginal`, `SemanalACadaDuasSemanas_Avanca14Dias`, `MensalPorData_UsaODiaDoMes`, `MensalPorPosicao_TerceiraTerca`, `TerminoPorNumero_ParaQuandoCompleta`. Sem teste de yearly. UI (`reminders.tsx`) so cicla none/daily/weekly/yearly; weekly manda `interval: 2`; sem N dias, sem dias da semana, sem termino. |
-| Pausa sem perder historico; ao retomar segue a data original | feito e testado | 217 a 221 | `Pausa_MantemProximoDisparoDaGrade`. Skip existe na API (`/skip`); sem botao na UI e sem teste do skip. |
-| Aviso de fim (ultimos 3) | feito sem teste | 222 | Campo `endingSoon` em `RemindersController.ToResponse`. UI nao mostra. |
+| Circulo ciclico com atalho que marca feito | feito e testado | 215 | `Shortcut.ReminderId`. `Atalho_MarcaLembreteDeCirculoComoFeito`. UI liga o atalho ao lembrete do circulo. Playwright `atalho marca lembrete de circulo como feito`. |
+| Recorrencia tipo Teams | feito e testado | 216 | Calculadora + UI: none/daily/weekly/monthly/yearly, intervalo, dias da semana, mensal por data ou posicao, until, maxOccurrences. Teste `Anual_MesmoDiaDoAnoSeguinte`. Playwright `lembrete anual aparece na tela`. |
+| Pausa sem perder historico; ao retomar segue a data original | feito e testado | 217 a 221 | `Pausa_MantemProximoDisparoDaGrade`. Skip: `Skip_AvancaParaAProximaOcorrencia` e botao `Pular`. Playwright `pular lembrete e aviso de recorrencia acabando`. |
+| Aviso de fim (ultimos 3) | feito e testado | 222 | `endingSoon`. Teste `RecorrenciaComPoucoRestante_MarcaEndingSoon`. UI: `Recorrencia acabando`. |
 | Aniversario com antecedencia, foto, ideias de presente | parcial | 222, 224 a 228 | `Aniversario_ComAntecedenciaEListaDeIdeias`. Playwright cria aniversario. `Reminder.PhotoStorageKey` existe; nao ha endpoint de foto do lembrete. Ideias nao compartilham no circulo. |
-| Modo ferias silencia; ao voltar so o que ainda faz sentido | parcial | 239 a 242 | `ModoFerias_EscondeLembretesDoPainelEGuardaORegistro`, `VoltaDasFerias_IgnoraOneshotQueJaNaoFazSentido`. UI: "Silenciar 7 dias" (`settings.tsx`). Sem prazo livre. |
+| Modo ferias silencia; ao voltar so o que ainda faz sentido | feito e testado | 239 a 242 | `Ferias_AceitaPrazoEscolhidoPelaPessoa`. UI: campo `Dias de ferias`. Playwright `ferias com prazo escolhido`. |
 
 ## Atalhos
 
 | Decisao | Status | Origem | Evidencia |
 | --- | --- | --- | --- |
 | Atalhos de uma acao, varios na tela | feito e testado | 98, 102, 103 | Home lista e dispara. `Atalho_ExecutaSemConfirmacaoEApareceNoPainel`. Playwright `atalho de um toque dispara sem confirmacao`. |
-| Posicionaveis livremente | nao feito | 102, 103 | `SortOrder` existe; a UI nao reordena. |
+| Posicionaveis livremente | parcial | 102, 103 | Reordena com Subir/Descer e `PUT /api/shortcuts/order`. Teste `Atalho_ReordenaNaTela`. Playwright `atalhos reordenam na tela`. Sem arrastar livre (103). |
 | Icone na tela inicial e tecla no computador | nao feito | 100 | Sem widget, sem atalho de teclado, sem PWA install. 99 ficou sem resposta direta; vale a 100. |
 | Sem gesto de balancar | feito (por ausencia) | 100 | Nao ha gesto. |
 | Executa direto, sem confirmacao; so o nome | feito e testado | 101, 104 a 107 | POST `/run` sem dialog. |
 | Feedback 1 segundo | nao feito | 105 (sem Ok) | `flash` do label permanece ate novo load. |
 | Cor por tipo de acao | parcial | 106, 107 | UI cria com `#C45C26`. Sem paleta por tipo. API default se omitir cor: `#1F6F66`. |
-| Som e vibracao opcionais | nao feito | 109, 200, 201 | |
-| Desativar some da principal; excluir mantem historico | parcial | 202 a 207 | `deactivate` / `activate` / `DELETE` na API. Home so lista `IsActive`. Sem UI desses botoes. DELETE remove a linha; nao ha recuperar atalho excluido (207). |
+| Som e vibracao opcionais | feito e testado | 109, 200, 201 | `playShortcutFeedback`: bip 880 Hz 0,12s e vibracao 40 ms. `npm test` `usa bip padrao e vibracao curta`. Playwright nao mede audio. |
+| Desativar some da principal; excluir mantem historico | parcial | 202 a 207 | UI Desativar/Reativar/Excluir. Playwright `atalho desativado some da tela principal e pode voltar`. Recuperar depois de excluir (207) nao cravar: resposta "Pode ser alterado". |
 | Limite 5 gratis / 20 ativos | nao feito | 108, 208 (sem Ok) | Sem teto. |
 | Compartilhar atalho no circulo | nao feito | 209 a 214 | |
 
@@ -181,8 +181,8 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 
 | Decisao | Status | Origem | Evidencia |
 | --- | --- | --- | --- |
-| Termo e politica no dia um | nao feito | 60 | Sem telas nem URLs. |
-| Adequacao LGPD: revogacao/exclusao | parcial | 61, 62, 63 | Exclusao de conta existe. Sem termo, sem painel do titular. |
+| Termo e politica no dia um | feito e testado | 60 | Paginas `/termos` e `/privacidade` em portugues, responsavel ALLAN WANDERSON MENESES DE SOUSA, sem CNPJ. Playwright `termos e privacidade no app`. |
+| Adequacao LGPD: revogacao/exclusao | parcial | 61, 62, 63 | Exclusao de conta existe. Termos e privacidade descrevem o que o app faz. Sem painel do titular (69). |
 | Exclusao: dono do dado, confirma e-mail, rastro anonimo | feito e testado | 64, 65, 66, 325, 326 | `Exclusao_PedeSenhaConfirmaPorEmailEApagaDadosPessoais`, `Exclusao_TransfereCirculoParaAdminEAnonimizaLog`. E-mail de encerramento sem `http`. |
 | Sem painel de transparencia | feito (por ausencia) | 69 | Nao ha painel. |
 | Sair do circulo sem rastro para os outros | feito e testado | 238 | `Sair_NaoDeixaRastroDeParticipacao`. |
@@ -224,9 +224,31 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 
 - Prints em `/opt/cursor/artifacts/android-login.png`, `android-hoje.png`, `android-circulo.png`, `android-lembrete.png` (existem neste disco). Nao reexecutei o emulador nesta continuacao da analise.
 - `href: null` nas tabs escondidas impedia abrir Lembretes e o detalhe do circulo no nativo; o codigo agora usa `tabBarButton: () => null`. Sem teste automatizado nativo disso.
-- `usesCleartextTraffic: true` em `app.json`.
+- HTTP em texto puro: plugin `withCleartextDebugOnly` trava release (`usesCleartextTraffic=false`) e libera so `app/src/debug`. Teste `nao libera HTTP na configuracao de producao do app.json`. CI grepa os dois manifests apos o prebuild.
 - Job `android` do run [45038488241](https://github.com/allanmeneses/minhavida/actions/runs/45038488241) (SHA `5c0e6ef`): conclusion `success`. Step `Gerar APK` 15:28:44 a 15:57:50 UTC. Step `Publicar APK` `success`. Artefato `circulos-android` (id `14762035932`, 20927286 bytes, `expired: false`). Download na pagina do run. Jobs `backend` e `app` do mesmo run: `success`. Run inteiro: `success`.
 
 ## Contagem
 
 Nao some "feito por ausencia" com entrega de produto. Os buracos que ainda impedem o combinado da ligacao estao nas linhas **parcial** e **nao feito**.
+
+## Listas compartilhadas (pedido 22/11/2026)
+
+| Decisao | Status | Origem | Evidencia |
+| --- | --- | --- | --- |
+| Lista no perfil solo ou no circulo, com tipo | feito e testado | pedido 22/11/2026 | `POST /api/lists`. Telas `lists.tsx`, `circle/[id].tsx`. `Solo_CriaListaAdicionaItemMarcaReordenaEExclui`. Playwright `lista de compras no perfil`. |
+| Itens com texto, qtd, nota, feito, quem, ordem, exclusao | feito e testado | pedido 22/11/2026 | `SharedListItem`. Teste solo acima. |
+| Membros veem ao atualizar, inclusive escrita sobreposta | feito e testado | pedido 22/11/2026 | `Circulo_DoisMembrosVeemAMesmaListaMesmoComEscritaSobreposta`. Tela da lista faz poll de 5s. |
+| Permissao por lista (view/add/complete/manage), alteravel, 403 | feito e testado | complemento 22/11/2026 | `PUT /api/lists/{id}/access`. Testes `PermissaoView_MembroSoVe_403NoResto`, `PermissaoAdd_MembroAdiciona_403NoDone`, `PermissaoComplete_MembroMarca_403NoEditar`, `PermissaoManage_MembroEditaEExclui`, `PermissaoAlteradaDepois_PassaAValer`. Playwright `permissao da lista: so ver e depois marcar feito`. |
+| Override por membro | feito e testado | complemento 22/11/2026 | `PUT /api/lists/{id}/grants`. `PermissaoPorMembro_SobrescreveOPadrao`. |
+| Desejos escondidos do homenageado na surpresa | feito e testado | pedido 22/11/2026 | `Surpresa_HomenageadoNaoVeListaDeDesejos`. |
+| Criar lista no circulo respeita papel Editor+ | feito e testado | pedido 22/11/2026 | `Viewer_NaoCriaListaDoCirculo`. |
+
+## Fora desta rodada (nao cravar)
+
+- Busca por localizacao / geo (10 a 12 no detalhe do opt-in e se some depois).
+- Recuperar atalho depois de excluir (207; resposta "Pode ser alterado").
+- Filtro do log (270; sugestao sem Ok).
+- Votacao de sucessao (331 a 344; 336 sem confirmacao).
+- WebSocket (73, 74); o painel usa poll de 5s.
+- Botao + no painel (255, 256; sugestao sem Ok).
+- Arrastar atalho para qualquer ponto da tela (103).
