@@ -17,6 +17,7 @@
     },
     "android": {
       "package": "dev.circulos.app",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#1F6F66",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
