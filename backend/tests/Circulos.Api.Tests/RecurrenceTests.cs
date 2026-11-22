@@ -73,6 +73,21 @@ public sealed class RecurrenceTests
     }
 
     [Fact]
+    public void OcorrenciasNoIntervalo_DiariaPreencheOsDias()
+    {
+        var rule = new RecurrenceRule { Frequency = "daily", Interval = 1 };
+        var start = new DateTime(2026, 11, 1, 8, 0, 0, DateTimeKind.Utc);
+        var items = RecurrenceCalculator.OccurrencesInRange(
+            rule,
+            start,
+            new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 11, 3, 23, 59, 59, DateTimeKind.Utc));
+        Assert.Equal(3, items.Count);
+        Assert.Equal(start, items[0]);
+        Assert.Equal(start.AddDays(2), items[2]);
+    }
+
+    [Fact]
     public void AtrasadoSemRecorrencia_NaoSegueRelevante()
     {
         var rule = new RecurrenceRule { Frequency = "none" };

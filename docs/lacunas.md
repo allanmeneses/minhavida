@@ -12,6 +12,25 @@ Legenda:
 
 Numero da pergunta: transcricao. A segunda serie 60-69 aparece como `N (reinicio)`.
 
+## Rodada 6 (memorias, revelacao, modelos, calendario, pet/grupo, observabilidade)
+
+Pedido desta rodada, so o que a especificacao/lacunas sustentam. O que nao estava cravado nao foi inventado.
+
+| Item | Status | Origem | Evidencia |
+| --- | --- | --- | --- |
+| Album / linha do tempo de memorias por perfil e por circulo | feito e testado | abertura (entrada foto/texto); 229 reformulada a 232 (recordacao no perfil) | `GET/POST /api/memories`, foto `POST /api/memories/{id}/photo`. Permissao: solo so o dono; circulo Viewer le, Editor+ cria, Admin apaga. Surpresa esconde do honrado ate revelar. Testes `Perfil_CriaLinhaDoTempoEEdicaoSilenciosaNaoApagaTexto`, `Circulo_EditorCria_ViewerRecebe403_VisitanteNaoVe`, `Surpresa_HomenageadoNaoVeMemoriaAntesDaRevelacao`, `FotoDaMemoria_ComprimeEFicaDisponivelNoAlbum`, `KeepMemory_SobrepostoDoMesmoUsuario_FicaUmaSo`. `npm test` `rerender com nova identidade de onSave nao apaga o texto digitado`. Playwright `album de memorias no perfil e rascunho sobrevive ao rerender`. |
+| Revelacao surpresa: resumo com mensagens e fotos; guardar no perfil; edicao silenciosa | feito e testado | 229 reformulada a 236, 230 | `POST /api/circles/{id}/reveal` idempotente com `UserRowLock`. `GET /reveal-summary`. `POST /keep-memory` com indice unico `AuthorUserId+SourceCircleId`. UI `Revelar surpresa` e `Guardar recordacao no meu perfil`. Testes `Revelacao_DevolveResumoComMensagensEFotos_HomenageadoGuardaNoPerfil`, `RevelacaoSobreposta_OsDoisPassamEFicaRevelado`. Playwright `revelacao surpresa guarda recordacao no perfil`. |
+| Revelacao agendada por data (conteudo que aparece so no dia) | nao cravado | 230 | A transcricao fala do momento da revelacao (`POST /reveal`), nao de um `RevealAt` automatico. Nao inventar. |
+| Templates de listas e lembretes, pt-BR, gratis, editaveis, ranking/uso, criador anonimo | feito e testado | 47 a 52 | Catalogo inicial no codigo (`TemplateCatalog`). GET incrementa ranking por `UseCount`. POST cria modelo sem devolver o criador. Copia vira lista ou lembrete editavel. Testes `Catalogo_TemModelosPtBrAnonimosECopiaEditavel`, `CopiaLembrete_CriaRecorrenciaEditavel`, `CopiaSobreposta_ContaUsoDuasVezes`, `PessoaCriaModeloDeLista_SemNomeDoCriador`. `npm test` `catalogo inicial esta em portugues e e anonimo`. Playwright `modelos prontos copiam lista em portugues`. |
+| Calendario de lembretes no app e na web + exportacao .ics | feito e testado | 223; pedido desta rodada | `GET /api/calendar`, telas `calendar.tsx` (app e web). Download autenticado e assinatura anonima `GET /api/calendar/feed/{token}`. Nao cria evento no calendario do aparelho (46). Testes `Mes_MostraOcorrenciasEExportaIcsComAssinatura`, `Skip_NaoMarcaAOcorrenciaPuladaNoCalendario`, `Feed_PrimeiroAcessoSobreposto_GeraUmTokenSo`, `MontaEventoComResumoEEscapaTexto`. Playwright `calendario mostra lembrete e baixa ics`. |
+| Perfil pet ou grupo (alem da conta pessoa) | feito e testado | abertura (fala do entrevistador); 224 | `LivingProfile` kind person/pet/group. Dono edita. Membro do circulo ve, nao edita. Viewer nao cria no circulo. Sem login proprio para o pet. Testes `DonoCriaPetEGrupo_MembroVe_NaoEdita`, `Viewer_NaoLigaPerfilNoCirculo`. Playwright `perfil de pet no circulo`. |
+| Edicao de perfil vivo por qualquer membro do circulo | nao cravado | abertura | So o dono edita. Nao inventar papel extra. |
+| OpenTelemetry traces e metricas, exportador por env, desligado por padrao | feito e testado | 77, 78 (sugestao; esta rodada pede) | `OTEL_ENABLED` e `OTEL_EXPORTER_OTLP_ENDPOINT`. `Observability:Enabled` false. Testes `OpenTelemetry_DesligadoPorPadrao_LigaPorVariavel`, `npm test` `OpenTelemetry liga por variavel e nasce desligado`. Grafana Cloud fica fora: o exportador e OTLP generico. |
+| Health/status + pagina simples | feito e testado | 87, 88, 89 | `GET /health`, `/health/ready`, `/api/status`, HTML `/status`. Teste `HealthEStatus_PublicosEBancoOk`. Playwright `pagina de status publica`. UptimeRobot como provedor externo nao foi cadastrado daqui. |
+| Billing, SMTP real, Azure, iOS, votacao, WebSocket, cookie httpOnly (72), conflito offline (262) | nao feito | pedido desta rodada | Fora do escopo. |
+
+CI do main no squash `0600691` (run [45059088563](https://github.com/allanmeneses/minhavida/actions/runs/45059088563)): job `backend` conclusion `success` (Testes da API 19:09:16-19:10:30 UTC). Job `app` conclusion `success` (Playwright web 19:10:02-19:11:54 UTC). Job `android` ainda estava em `Gerar APK` (status `in_progress`) na leitura desta rodada. CodeQL run [45059088493](https://github.com/allanmeneses/minhavida/actions/runs/45059088493) conclusion `success`.
+
 ## Rodada 5 (JWT, 2FA, offline, FAQ, backup, Dependabot)
 
 Pedido desta rodada, com o que a especificacao/lacunas sustentam. O que nao estava cravado nao foi inventado.
@@ -84,7 +103,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Metricas do perfil acompanham o uso | nao feito | 36 | Sem recap por uso. |
 | Diario estilo Notion no solo, sem busca, sem versao, sem PDF, sync ao abrir, exporta texto | parcial | 243 a 250 | Area Diario com texto e export `.txt` (`LifeAreasController` export, `Diario_ExportaTextoCorrido`). Sem sessoes tipo Notion. Cache offline cobre o perfil; o diario em si nao tem fila propria. Export no app so dispara download se `document` existir (web). |
 | Identidade (nome, foto) | feito e testado | abertura, 1 | Perfil + foto. Testes de auth/perfil/foto. Camera e galeria no perfil (`profile.tsx`); Playwright nao exercita esses botoes. |
-| Tipo pet ou grupo no perfil | nao feito | abertura (fala do entrevistador) | `Profile` e de usuario pessoa. |
+| Tipo pet ou grupo no perfil | feito e testado | abertura (fala do entrevistador); 224 | `LivingProfile` (person/pet/group) alem da conta pessoa. Ver secao Rodada 6. Login proprio do pet nao cravado. |
 | A mesma entrada em varios circulos sem duplicar | nao feito | abertura | `LifeEntry` e do perfil; `CirclePost` e outro objeto. |
 | Feed geral tipo rede social | sem confirmacao | 20 | Transcricao: sem resposta direta visivel. |
 
@@ -141,9 +160,9 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Feed de descoberta interno, da para silenciar | nao feito | 37, 38, 39 | Discover lista circulos; nao e feed e nao ha silenciar. |
 | Entrada apagada deixa rastro com quem e quando | feito e testado | 5, 6 | `EntradaApagada_DeixaRastroNoLog`. Tela formata `CreatedAt` com `formatPersonTime`. Playwright espera data no log. |
 | Log visivel para o circulo, para sempre, fuso da pessoa | parcial | 267 a 271 | GET log no detalhe. UI mostra data/hora no fuso do aparelho. Sem retencao. Sem filtro (270 foi sugestao sem Ok; nao cravar). |
-| Circulo surpresa: aniversariante nao ve; revelacao; recordacao no perfil; sair sem rastro | parcial | 229 reformulada a 236, 238 | `Surpresa_AniversarianteNaoVeOCirculo`, `Sair_NaoDeixaRastroDeParticipacao`. POST `/reveal` existe; sem teste de revelacao e sem botao na UI. Sem resumo com fotos, sem guardar recordacao no perfil, sem edicao em silencio. |
+| Circulo surpresa: aniversariante nao ve; revelacao; recordacao no perfil; sair sem rastro | feito e testado | 229 reformulada a 236, 238 | `Surpresa_AniversarianteNaoVeOCirculo`, `Sair_NaoDeixaRastroDeParticipacao`. Revelacao, resumo e recordacao: ver secao Rodada 6. Revelacao por data automatica nao cravada (230). |
 | Lista de ideias compartilhada: a outra pessoa pode incluir? | sem confirmacao | 229 primeira formula (cortada) | Lembrete tem `giftIdeas` so no dono. Nao ha compartilhar no circulo (228). |
-| Templates de rotina | nao feito | 47 a 52 | |
+| Templates de rotina | feito e testado | 47 a 52 | Catalogo pt-BR, copia editavel, uso/ranking, criador anonimo. Ver secao Rodada 6. |
 | Denuncia interna, bloqueio pela equipe, recurso humano | nao feito | 21 a 25 | |
 | Papeis so ver / comentar / editar | parcial | abertura | Enum Viewer/Commenter/Editor/Admin/Owner. Convite aceita `role`. Posts exigem Editor. Commenter nao tem endpoint de comentario. |
 
@@ -160,8 +179,8 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 
 | Decisao | Status | Origem | Evidencia |
 | --- | --- | --- | --- |
-| Lembrete e funcao do app, nao de outro calendario | feito sem teste da negativa | 45, 46, 223 | CRUD em `/api/reminders`. Sem integracao de calendario. |
-| Integracao calendario so leitura, se existir | nao feito | 223 | |
+| Lembrete e funcao do app, nao de outro calendario | feito e testado | 45, 46, 223 | CRUD em `/api/reminders`. Calendario proprio no app/web. Nao cria evento no aparelho. Ver secao Rodada 6. |
+| Integracao calendario so leitura, se existir | parcial | 223 | Visao e exportacao `.ics` (assinatura/download). Sem gravar no calendario nativo do aparelho (46). |
 | E-mail de lembrete opcional por pessoa | nao feito | 13, 14 | `OutboxEmailSender` so em convite, esqueci senha e exclusao. Sem preferencia de e-mail no lembrete. Sem disparo agendado. |
 | Circulo ciclico com atalho que marca feito | feito e testado | 215 | `Shortcut.ReminderId`. `Atalho_MarcaLembreteDeCirculoComoFeito`. UI liga o atalho ao lembrete do circulo. Playwright `atalho marca lembrete de circulo como feito`. |
 | Recorrencia tipo Teams | feito e testado | 216 | Calculadora + UI: none/daily/weekly/monthly/yearly, intervalo, dias da semana, mensal por data ou posicao, until, maxOccurrences. Teste `Anual_MesmoDiaDoAnoSeguinte`. Playwright `lembrete anual aparece na tela`. |
@@ -234,8 +253,8 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | So EF, nao Dapper | feito e testado | 66 e 67 reinicio | EF Core + Npgsql. Grep `Dapper` em `backend/src`: zero. |
 | API REST, nao GraphQL | feito e testado | 68 reinicio | Controllers REST. Grep `GraphQL` em `backend/src`: zero. |
 | Fila tabela ou NATS | parcial | 75, 76 | `sent_emails` funciona como outbox de e-mail. Sem worker, sem NATS, sem fila de retrospectiva. |
-| Observabilidade gratuita (OTel + Grafana, sem Ok) | nao feito | 77, 78 | Grep `OpenTelemetry` em `backend/src`: zero. |
-| Pagina de status (UptimeRobot registrado pelo entrevistador) | nao feito | 87, 88, 89 | |
+| Observabilidade gratuita (OTel + Grafana, sem Ok) | feito e testado | 77, 78 | OpenTelemetry traces e metricas, desligado por padrao. Grafana Cloud nao foi ligado. Ver secao Rodada 6. |
+| Pagina de status (UptimeRobot registrado pelo entrevistador) | feito e testado | 87, 88, 89 | `/health`, `/api/status` e HTML `/status`. Cadastro no UptimeRobot nao foi feito daqui. Ver secao Rodada 6. |
 | Conventional Commits | nao feito | 85, 86 | Mensagens curtas nesta branch, sem prefixo `feat:`/`fix:`. Semver: dono indiferente. |
 | PWA com atalho na tela inicial | nao feito | abertura | Sem manifesto PWA, sem service worker. |
 | TokTok Aluguel / limite do bot | fora de escopo | abertura | Outro produto. |
@@ -277,3 +296,5 @@ Nao some "feito por ausencia" com entrega de produto. Os buracos que ainda imped
 - Conflito offline entre dois aparelhos (262; ultima sincronizada vence, sem regra de merge).
 - SMS para 2FA (34 cobriu so o recorte inicial; esta rodada fez TOTP).
 - Billing/gateway, SMTP real, deploy Azure, iOS nativo.
+- Revelacao surpresa agendada por data (230; a ligacao descreve o momento da revelacao, nao um relogio).
+- Login proprio para pet/grupo; edicao do perfil vivo por qualquer membro.

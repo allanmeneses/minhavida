@@ -222,6 +222,7 @@ export default function HomeScreen() {
       ) : null}
 
       <Button label="Lembretes" variant="ghost" onPress={() => router.push('/(app)/reminders')} />
+      <Button label="Calendario" variant="ghost" onPress={() => router.push('/(app)/calendar' as Href)} />
       <Button label="Busca" variant="ghost" onPress={() => router.push('/(app)/search' as Href)} />
       <Button label="FAQ" variant="ghost" onPress={() => router.push('/(app)/faq' as Href)} />
       <Button label="Ajustes" variant="ghost" onPress={() => router.push('/(app)/settings')} />

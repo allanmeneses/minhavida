@@ -48,6 +48,7 @@ export default function ListsScreen() {
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Listas</Text>
       <Text style={styles.lead}>Privadas no seu perfil. Compras, desejos, materiais ou outra.</Text>
+      <Button label="Modelos de lista" variant="ghost" onPress={() => router.push('/(app)/templates' as Href)} />
       <Feedback message={error} />
       <TextField label="Nome da lista" value={name} onChangeText={setName} placeholder="Feira" />
       <Button

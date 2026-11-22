@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
@@ -14,6 +15,7 @@ export default function RemindersScreen() {
   const { token } = useAuth();
   const { colors } = useTheme();
   const styles = screenStyles(colors);
+  const router = useRouter();
   const [items, setItems] = useState<ReminderItem[]>([]);
   const [circles, setCircles] = useState<CircleSummary[]>([]);
   const [title, setTitle] = useState('');
@@ -102,6 +104,8 @@ export default function RemindersScreen() {
       <Text style={styles.lead}>
         Recorrencia no modelo de agenda: diaria, semanal, mensal, anual, intervalo e termino.
       </Text>
+      <Button label="Ver calendario" variant="ghost" onPress={() => router.push('/(app)/calendar' as Href)} />
+      <Button label="Modelos de lembrete" variant="ghost" onPress={() => router.push('/(app)/templates' as Href)} />
       <Feedback message={error} />
       <TextField label="Titulo" value={title} onChangeText={setTitle} />
       <Button

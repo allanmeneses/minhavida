@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Image, ScrollView, Text, View } from 'react-native';
+import { Image, Linking, ScrollView, Text, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useTour } from '@/context/TourContext';
 import { api, ApiError, downloadNamedBlob, type PlanInfo, type TwoFactorSetup } from '@/lib/api';
+import { API_URL } from '@/lib/config';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function SettingsScreen() {
@@ -194,6 +195,7 @@ export default function SettingsScreen() {
 
       <Text style={styles.section}>Ajuda</Text>
       <Button label="FAQ" variant="ghost" onPress={() => router.push('/(app)/faq' as Href)} />
+      <Button label="Status do sistema" variant="ghost" onPress={() => void Linking.openURL(`${API_URL}/status`)} />
       <Button label="Ver tour de novo" variant="ghost" onPress={() => void tour.replay()} />
 
       <Text style={styles.section}>Documentos legais</Text>

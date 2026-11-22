@@ -45,9 +45,16 @@ export default function AppWebLayout() {
         <View style={styles.nav}>
           <NavItem label="Hoje" active={pathname.includes('home') || pathname === '/'} onPress={() => router.push('/(app)/home')} />
           <NavItem label="Circulos" active={pathname.includes('circle')} onPress={() => router.push('/(app)/circles')} />
-          <NavItem label="Perfil" active={pathname.includes('profile') || pathname.includes('life')} onPress={() => router.push('/(app)/profile')} />
+          <NavItem
+            label="Perfil"
+            active={pathname.includes('profile') || (pathname.includes('life') && !pathname.includes('living'))}
+            onPress={() => router.push('/(app)/profile')}
+          />
           <NavItem label="Documentos" active={pathname.includes('documents')} onPress={() => router.push('/(app)/documents')} />
           <NavItem label="Lembretes" active={pathname.includes('reminders')} onPress={() => router.push('/(app)/reminders')} />
+          <NavItem label="Calendario" active={pathname.includes('calendar')} onPress={() => router.push('/(app)/calendar')} />
+          <NavItem label="Memorias" active={pathname.includes('memories')} onPress={() => router.push('/(app)/memories')} />
+          <NavItem label="Modelos" active={pathname.includes('templates')} onPress={() => router.push('/(app)/templates')} />
           <NavItem label="FAQ" active={pathname.includes('faq')} onPress={() => router.push('/(app)/faq')} />
           <NavItem label="Ajustes" active={pathname.includes('settings')} onPress={() => router.push('/(app)/settings')} />
         </View>

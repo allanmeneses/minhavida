@@ -6,7 +6,7 @@ import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { api, ApiError, downloadNamedBlob, type CircleDetail, type SharedListSummary } from '@/lib/api';
+import { api, ApiError, downloadNamedBlob, type CircleDetail, type LivingProfileItem, type MemoryItem, type RevealSummary, type SharedListSummary } from '@/lib/api';
 import { formatPersonTime } from '@/lib/formatPersonTime';
 import {
   LIST_ACCESS,
@@ -28,8 +28,12 @@ export default function CircleDetailScreen() {
   const router = useRouter();
   const [detail, setDetail] = useState<CircleDetail | null>(null);
   const [lists, setLists] = useState<SharedListSummary[]>([]);
+  const [memories, setMemories] = useState<MemoryItem[]>([]);
+  const [living, setLiving] = useState<LivingProfileItem[]>([]);
+  const [reveal, setReveal] = useState<RevealSummary | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const [post, setPost] = useState('');
+  const [memoryTitle, setMemoryTitle] = useState('');
   const [listName, setListName] = useState('');
   const [listKind, setListKind] = useState<ListKind>('shopping');
   const [listAccess, setListAccess] = useState<ListAccess>('view');
@@ -45,6 +49,21 @@ export default function CircleDetailScreen() {
       setLists(await api<SharedListSummary[]>(`/api/lists?circleId=${circleId}`, { token }));
     } catch {
       setLists([]);
+    }
+    try {
+      setMemories(await api<MemoryItem[]>(`/api/memories?circleId=${circleId}`, { token }));
+    } catch {
+      setMemories([]);
+    }
+    try {
+      setLiving(await api<LivingProfileItem[]>(`/api/living-profiles?circleId=${circleId}`, { token }));
+    } catch {
+      setLiving([]);
+    }
+    try {
+      setReveal(await api<RevealSummary>(`/api/circles/${circleId}/reveal-summary`, { token }));
+    } catch {
+      setReveal(null);
     }
   }, [token, circleId]);
 
@@ -146,6 +165,37 @@ export default function CircleDetailScreen() {
     await load();
   }
 
+  async function revealSurprise() {
+    if (!token || !circleId) {
+      return;
+    }
+    const summary = await api<RevealSummary>(`/api/circles/${circleId}/reveal`, { method: 'POST', token });
+    setReveal(summary);
+    setOk('Surpresa revelada. O resumo com mensagens e fotos esta visivel.');
+    await load();
+  }
+
+  async function keepMemory() {
+    if (!token || !circleId) {
+      return;
+    }
+    await api(`/api/circles/${circleId}/keep-memory`, { method: 'POST', token });
+    setOk('Recordacao guardada no seu perfil. A edicao e silenciosa.');
+  }
+
+  async function createMemory() {
+    if (!token || !circleId || !memoryTitle.trim()) {
+      return;
+    }
+    await api('/api/memories', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ title: memoryTitle.trim(), circleId }),
+    });
+    setMemoryTitle('');
+    await load();
+  }
+
   async function acceptJoin(requestId: string) {
     if (!token || !circleId) {
       return;
@@ -161,8 +211,27 @@ export default function CircleDetailScreen() {
       <Text style={styles.lead}>{detail?.description}</Text>
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />
+      {isAdmin && detail?.isSurprise && !detail.revealed ? (
+        <Button label="Revelar surpresa" onPress={() => void revealSurprise()} />
+      ) : null}
+      {detail?.isSurprise && reveal ? (
+        <>
+          <Text style={styles.section}>Resumo da revelacao</Text>
+          <Text style={styles.lead}>
+            {reveal.messages.length} mensagens · {reveal.photoCount} fotos
+          </Text>
+          {reveal.messages.map((item) => (
+            <Text key={item.postId} style={styles.item}>
+              {item.body}
+            </Text>
+          ))}
+          {reveal.revealedAt ? (
+            <Button label="Guardar recordacao no meu perfil" onPress={() => void keepMemory()} />
+          ) : null}
+        </>
+      ) : null}
 
-      {!isMember ? (
+      {!isMember && !(detail?.isSurprise && detail.revealed) ? (
         <Button
           label={detail?.visibility === 'public' ? 'Entrar' : 'Pedir para entrar'}
           onPress={() => void join()}
@@ -211,6 +280,24 @@ export default function CircleDetailScreen() {
 
       {isMember ? (
         <>
+          <Text style={styles.section}>Memorias do circulo</Text>
+          {memories.map((item) => (
+            <Text key={item.id} style={styles.item}>
+              {item.title}
+            </Text>
+          ))}
+          {canCreateList ? (
+            <>
+              <TextField label="Titulo da memoria" value={memoryTitle} onChangeText={setMemoryTitle} />
+              <Button label="Guardar memoria no circulo" onPress={() => void createMemory()} disabled={!memoryTitle.trim()} />
+            </>
+          ) : null}
+          <Text style={styles.section}>Perfis deste circulo</Text>
+          {living.map((item) => (
+            <Text key={item.id} style={styles.lead}>
+              {item.name} · {item.kind}
+            </Text>
+          ))}
           <Text style={styles.section}>Listas do circulo</Text>
           {lists.map((item) => (
             <Pressable

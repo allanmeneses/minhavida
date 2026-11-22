@@ -28,6 +28,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<TwoFactorChallenge> TwoFactorChallenges => Set<TwoFactorChallenge>();
     public DbSet<TwoFactorRecoveryCode> TwoFactorRecoveryCodes => Set<TwoFactorRecoveryCode>();
+    public DbSet<Memory> Memories => Set<Memory>();
+    public DbSet<LivingProfile> LivingProfiles => Set<LivingProfile>();
+    public DbSet<RoutineTemplate> RoutineTemplates => Set<RoutineTemplate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,6 +44,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.VacationUntil).HasColumnType("timestamp with time zone");
             entity.Property(x => x.TwoFactorSecret).HasMaxLength(64);
+            entity.Property(x => x.CalendarFeedToken).HasMaxLength(64);
+            entity.HasIndex(x => x.CalendarFeedToken).IsUnique().HasFilter("\"CalendarFeedToken\" IS NOT NULL");
             entity.HasOne(x => x.Profile)
                 .WithOne(x => x.User)
                 .HasForeignKey<Profile>(x => x.UserId)
@@ -371,6 +376,63 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasIndex(x => new { x.UserId, x.CodeHash }).IsUnique();
             entity.Property(x => x.CodeHash).HasMaxLength(64).IsRequired();
             entity.Property(x => x.UsedAt).HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<Memory>(entity =>
+        {
+            entity.ToTable("memories");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.AuthorUserId);
+            entity.HasIndex(x => x.CircleId);
+            entity.HasIndex(x => new { x.AuthorUserId, x.SourceCircleId })
+                .IsUnique()
+                .HasFilter("\"SourceCircleId\" IS NOT NULL");
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Body).HasMaxLength(8000).IsRequired();
+            entity.Property(x => x.PhotoStorageKey).HasMaxLength(260);
+            entity.Property(x => x.PhotoContentType).HasMaxLength(120);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.Author)
+                .WithMany()
+                .HasForeignKey(x => x.AuthorUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Circle)
+                .WithMany()
+                .HasForeignKey(x => x.CircleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LivingProfile>(entity =>
+        {
+            entity.ToTable("living_profiles");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.OwnerUserId);
+            entity.HasIndex(x => x.CircleId);
+            entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Context).HasMaxLength(200);
+            entity.Property(x => x.PhotoStorageKey).HasMaxLength(260);
+            entity.Property(x => x.PhotoContentType).HasMaxLength(120);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.Owner)
+                .WithMany()
+                .HasForeignKey(x => x.OwnerUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Circle)
+                .WithMany()
+                .HasForeignKey(x => x.CircleId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<RoutineTemplate>(entity =>
+        {
+            entity.ToTable("routine_templates");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.PayloadJson).HasMaxLength(8000).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<SentEmail>(entity =>

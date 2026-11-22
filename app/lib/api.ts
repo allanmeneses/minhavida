@@ -102,11 +102,66 @@ export type CircleDetail = {
   description: string | null;
   visibility: string;
   discoverable: boolean;
+  isSurprise: boolean;
+  revealed: boolean;
   ownerUserId: string | null;
   members: { userId: string; name: string; role: string }[];
   posts: { id: string; body: string; createdAt: string }[];
   log: { id: string; action: string; detail: string; createdAt: string; actorUserId: string | null }[];
   joinRequests: CircleJoinRequest[];
+};
+export type MemoryItem = {
+  id: string;
+  authorUserId: string;
+  circleId: string | null;
+  sourceCircleId: string | null;
+  title: string;
+  body: string;
+  occurredOn: string | null;
+  hasPhoto: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+export type RevealSummary = {
+  circleId: string;
+  name: string;
+  description: string;
+  revealedAt: string | null;
+  messages: { postId: string; authorUserId: string | null; body: string; hasPhoto: boolean; createdAt: string }[];
+  photoCount: number;
+};
+export type TemplateItem = {
+  id: string;
+  kind: string;
+  name: string;
+  description: string;
+  useCount: number;
+  rank: number;
+  curated: boolean;
+};
+export type CalendarEvent = {
+  reminderId: string;
+  title: string;
+  kind: string;
+  at: string;
+  paused: boolean;
+  circleId: string | null;
+};
+export type CalendarMonth = {
+  from: string;
+  to: string;
+  events: CalendarEvent[];
+  feedUrl: string | null;
+};
+export type LivingProfileItem = {
+  id: string;
+  kind: string;
+  name: string;
+  context: string | null;
+  birthDate: string | null;
+  circleId: string | null;
+  hasPhoto: boolean;
+  canEdit: boolean;
 };
 export type ReminderItem = {
   id: string;

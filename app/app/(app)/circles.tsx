@@ -22,6 +22,7 @@ export default function CirclesScreen() {
   const [visibility, setVisibility] = useState<'private' | 'public'>('private');
   const [discoverable, setDiscoverable] = useState(false);
   const [surprise, setSurprise] = useState(false);
+  const [surpriseEmail, setSurpriseEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -51,10 +52,12 @@ export default function CirclesScreen() {
           visibility,
           discoverable,
           isSurprise: surprise,
+          surpriseSubjectEmail: surprise ? surpriseEmail.trim() || null : null,
         }),
       });
       setName('');
       setDescription('');
+      setSurpriseEmail('');
       router.push(`/(app)/circle/${created.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Nao foi possivel criar o circulo.');
@@ -91,6 +94,9 @@ export default function CirclesScreen() {
         variant="ghost"
         onPress={() => setSurprise(!surprise)}
       />
+      {surprise ? (
+        <TextField label="E-mail de quem vai se surpreender" value={surpriseEmail} onChangeText={setSurpriseEmail} />
+      ) : null}
       <Button label="Criar circulo" onPress={() => void create()} disabled={!name.trim()} />
 
       <Text style={styles.section}>Descobrir circulos</Text>

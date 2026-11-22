@@ -201,6 +201,9 @@ export default function ProfileScreen() {
         <Feedback message={null} />
         <AreaComposer value={newArea} onChange={setNewArea} onCreate={() => void createArea()} />
         <Button label="Listas" variant="ghost" onPress={() => router.push('/(app)/lists' as Href)} />
+        <Button label="Memorias" variant="ghost" onPress={() => router.push('/(app)/memories' as Href)} />
+        <Button label="Pet e grupo" variant="ghost" onPress={() => router.push('/(app)/living' as Href)} />
+        <Button label="Modelos" variant="ghost" onPress={() => router.push('/(app)/templates' as Href)} />
       </View>
     </ScrollView>
   );

@@ -12,6 +12,7 @@ public sealed class User
     public DateTime? VacationUntil { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public string? TwoFactorSecret { get; set; }
+    public string? CalendarFeedToken { get; set; }
 
     public Profile Profile { get; set; } = null!;
     public ICollection<PersonalDocument> Documents { get; set; } = new List<PersonalDocument>();

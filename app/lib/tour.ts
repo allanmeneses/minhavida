@@ -29,6 +29,10 @@ export const TOUR_SCREENS: TourScreen[] = [
     body: 'Sem rede, o app le o que ja estava guardado. Adicionar item e marcar feito entram na fila e sobem quando voce volta. O icone mostra so se esta online ou offline.',
   },
   {
+    title: 'Memorias e calendario',
+    body: 'O album do perfil e do circulo guarda recordacoes. Na surpresa, a revelacao mostra mensagens e fotos, e cada um guarda a recordacao no proprio perfil. Lembretes aparecem no calendario, com exportacao .ics.',
+  },
+  {
     title: 'Conta e backup',
     body: 'A sessao usa um acesso curto e um refresh. Segundo fator e opcional. Voce exporta o que e seu, no perfil ou no circulo, se tiver permissao. O grafico mostra o uso de armazenamento.',
   },

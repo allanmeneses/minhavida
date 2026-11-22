@@ -530,4 +530,132 @@ public static class EnumText
         "manage" => SharedListAccess.Manage,
         _ => SharedListAccess.View,
     };
+
+    public static string LivingKind(LivingProfileKind value) => value switch
+    {
+        LivingProfileKind.Pet => "pet",
+        LivingProfileKind.Group => "group",
+        _ => "person",
+    };
+
+    public static LivingProfileKind ParseLivingKind(string? value) => value?.ToLowerInvariant() switch
+    {
+        "pet" => LivingProfileKind.Pet,
+        "group" or "grupo" or "comunidade" => LivingProfileKind.Group,
+        _ => LivingProfileKind.Person,
+    };
+
+    public static string TemplateKind(RoutineTemplateKind value) =>
+        value == RoutineTemplateKind.Reminder ? "reminder" : "list";
+
+    public static RoutineTemplateKind ParseTemplateKind(string? value) =>
+        string.Equals(value, "reminder", StringComparison.OrdinalIgnoreCase) || string.Equals(value, "lembrete", StringComparison.OrdinalIgnoreCase)
+            ? RoutineTemplateKind.Reminder
+            : RoutineTemplateKind.List;
 }
+
+public sealed class MemoryRequest
+{
+    [Required]
+    [MinLength(1)]
+    [MaxLength(200)]
+    public string Title { get; set; } = string.Empty;
+
+    [MaxLength(8000)]
+    public string? Body { get; set; }
+
+    public DateOnly? OccurredOn { get; set; }
+    public Guid? CircleId { get; set; }
+}
+
+public sealed record MemoryResponse(
+    Guid Id,
+    Guid AuthorUserId,
+    Guid? CircleId,
+    Guid? SourceCircleId,
+    string Title,
+    string Body,
+    DateOnly? OccurredOn,
+    bool HasPhoto,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);
+
+public sealed record RevealMessageDto(Guid PostId, Guid? AuthorUserId, string Body, bool HasPhoto, DateTime CreatedAt);
+
+public sealed record RevealSummaryResponse(
+    Guid CircleId,
+    string Name,
+    string Description,
+    DateTime? RevealedAt,
+    IReadOnlyList<RevealMessageDto> Messages,
+    int PhotoCount);
+
+public sealed record TemplateResponse(
+    Guid Id,
+    string Kind,
+    string Name,
+    string Description,
+    int UseCount,
+    int Rank,
+    bool Curated);
+
+public sealed class CreateTemplateRequest
+{
+    [Required]
+    [MaxLength(20)]
+    public string Kind { get; set; } = "list";
+
+    [Required]
+    [MinLength(2)]
+    [MaxLength(120)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(500)]
+    public string? Description { get; set; }
+
+    public Guid? ListId { get; set; }
+    public Guid? ReminderId { get; set; }
+}
+
+public sealed record CalendarEventResponse(
+    Guid ReminderId,
+    string Title,
+    string Kind,
+    DateTime At,
+    bool Paused,
+    Guid? CircleId);
+
+public sealed record CalendarMonthResponse(
+    DateOnly From,
+    DateOnly To,
+    IReadOnlyList<CalendarEventResponse> Events,
+    string? FeedUrl);
+
+public sealed class LivingProfileRequest
+{
+    [Required]
+    [MinLength(2)]
+    [MaxLength(120)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(20)]
+    public string Kind { get; set; } = "person";
+
+    [MaxLength(200)]
+    public string? Context { get; set; }
+
+    public DateOnly? BirthDate { get; set; }
+    public Guid? CircleId { get; set; }
+}
+
+public sealed record LivingProfileResponse(
+    Guid Id,
+    string Kind,
+    string Name,
+    string? Context,
+    DateOnly? BirthDate,
+    Guid? CircleId,
+    bool HasPhoto,
+    bool CanEdit);
+
+public sealed record StatusResponse(string Api, string Database, string Telemetry, DateTime CheckedAt);

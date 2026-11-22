@@ -620,6 +620,128 @@ test('offline adiciona item na fila e sobe ao voltar', async ({ page }) => {
   await expect(page.getByText('Feijao', { exact: true })).toBeVisible({ timeout: 20_000 });
 });
 
+test('album de memorias no perfil e rascunho sobrevive ao rerender', async ({ page }) => {
+  await signUp(page, '-memoria');
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByRole('button', { name: 'Memorias' }).click();
+  await page.getByLabel('Titulo').fill('Primeiro dia de escola');
+  await page.getByLabel('Texto').fill('Foto da entrada');
+  await page.getByRole('button', { name: 'Guardar memoria' }).click();
+  await expect(page.getByText('Primeiro dia de escola', { exact: true })).toBeVisible();
+  await page.getByLabel('Texto de Primeiro dia de escola').fill('Texto que a pessoa digitou');
+  await page.getByLabel('Titulo').fill('outra memoria');
+  await expect(page.getByLabel('Texto de Primeiro dia de escola')).toHaveValue('Texto que a pessoa digitou');
+  await page.getByRole('button', { name: 'Salvar Primeiro dia de escola' }).click();
+  await expect(page.getByLabel('Texto de Primeiro dia de escola')).toHaveValue('Texto que a pessoa digitou');
+});
+
+test('calendario mostra lembrete e baixa ics', async ({ page }) => {
+  await signUp(page, '-cal');
+  const token = await page.evaluate(() => localStorage.getItem('circulos.token'));
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const created = await page.request.post(`${apiUrl}/api/reminders`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: {
+      title: 'Tomei o remedio',
+      startAt: new Date().toISOString(),
+      recurrence: { frequency: 'daily', interval: 1 },
+    },
+  });
+  expect(created.ok()).toBeTruthy();
+  await page.getByRole('button', { name: 'Calendario' }).first().click();
+  await expect(page.getByText('Tomei o remedio').first()).toBeVisible({ timeout: 15_000 });
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Baixar .ics' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/circulos-lembretes\.ics/);
+  await expect(page.getByText(/Assinatura: \/api\/calendar\/feed\//)).toBeVisible();
+});
+
+test('modelos prontos copiam lista em portugues', async ({ page }) => {
+  await signUp(page, '-modelo');
+  await page.getByRole('button', { name: 'Modelos' }).first().click();
+  await expect(page.getByText('Compras da semana', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Usar Compras da semana' }).click();
+  await expect(page.getByText('Lista copiada: Compras da semana. Voce pode editar os itens.')).toBeVisible();
+  await page.getByRole('button', { name: 'Perfil' }).first().click();
+  await page.getByRole('button', { name: 'Listas' }).click();
+  await expect(page.getByRole('button', { name: 'Compras da semana', exact: true })).toBeVisible();
+});
+
+test('perfil de pet no circulo', async ({ page }) => {
+  await signUp(page, '-pet');
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  const circleName = `Casa pet ${Date.now()}`;
+  await page.getByLabel('Nome', { exact: true }).fill(circleName);
+  await page.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(page.getByText('Quem esta aqui')).toBeVisible();
+  await page.getByRole('button', { name: 'Perfil' }).first().click();
+  await page.getByRole('button', { name: 'Pet e grupo' }).click();
+  await expect(page.getByText('Pet e grupo', { exact: true })).toBeVisible();
+  await page.getByPlaceholder('Luna').fill('Luna');
+  await page.getByPlaceholder('Nossa cachorra').fill('Nossa cachorra');
+  await page.getByRole('button', { name: 'So no meu perfil' }).click();
+  await expect(page.getByRole('button', { name: `Circulo: ${circleName}` })).toBeVisible();
+  await page.getByRole('button', { name: 'Criar perfil' }).click();
+  await expect(page.getByText('Luna', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  await page.getByRole('button', { name: `Abrir ${circleName}` }).click();
+  await expect(page.getByText('Luna · pet')).toBeVisible();
+});
+
+test('revelacao surpresa guarda recordacao no perfil', async ({ browser }) => {
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await signUp(owner, '-rev-dono');
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const honradoEmail = `e2e-${Date.now()}-rev-honrado@exemplo.com`;
+  const registered = await owner.request.post(`${apiUrl}/api/auth/register`, {
+    data: { email: honradoEmail, password: 'senha-segura-1', name: 'Aniversariante' },
+  });
+  expect(registered.ok()).toBeTruthy();
+  await owner.getByRole('button', { name: 'Circulos' }).click();
+  const circleName = `Festa ${Date.now()}`;
+  await owner.getByLabel('Nome', { exact: true }).fill(circleName);
+  await owner.getByRole('button', { name: 'Surpresa desligada' }).click();
+  await owner.getByLabel('E-mail de quem vai se surpreender').fill(honradoEmail);
+  await owner.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(owner.getByText('Quem esta aqui')).toBeVisible();
+  await owner.getByLabel('Nova entrada').fill('Feliz aniversario');
+  await owner.getByRole('button', { name: 'Publicar' }).click();
+  await expect(owner.getByText('Feliz aniversario').first()).toBeVisible();
+  await owner.getByRole('button', { name: 'Revelar surpresa' }).click();
+  await expect(owner.getByText('Resumo da revelacao')).toBeVisible();
+  await expect(owner.getByText('Feliz aniversario').first()).toBeVisible();
+
+  const honradoContext = await browser.newContext();
+  const honrado = await honradoContext.newPage();
+  await honrado.goto('/(auth)/login');
+  await honrado.getByLabel('E-mail').fill(honradoEmail);
+  await honrado.getByLabel('Senha').fill('senha-segura-1');
+  await honrado.getByRole('button', { name: 'Entrar' }).click();
+  await skipTourIfNeeded(honrado);
+  await honrado.getByRole('button', { name: 'Circulos' }).click();
+  await honrado.getByRole('button', { name: `Abrir ${circleName}` }).click();
+  await expect(honrado.getByText('Resumo da revelacao')).toBeVisible();
+  await honrado.getByRole('button', { name: 'Guardar recordacao no meu perfil' }).click();
+  await expect(honrado.getByText('Recordacao guardada no seu perfil. A edicao e silenciosa.')).toBeVisible();
+  await honrado.getByRole('button', { name: 'Perfil', exact: true }).click();
+  await honrado.getByRole('button', { name: 'Memorias' }).first().click();
+  await expect(honrado.getByText(`Recordacao: ${circleName}`, { exact: true })).toBeVisible();
+  await ownerContext.close();
+  await honradoContext.close();
+});
+
+test('pagina de status publica', async ({ page }) => {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const health = await page.request.get(`${apiUrl}/health`);
+  expect(health.ok()).toBeTruthy();
+  await page.goto(`${apiUrl}/status`);
+  await expect(page.getByRole('heading', { name: 'Status do Circulos' })).toBeVisible();
+  await expect(page.getByText('OpenTelemetry')).toBeVisible();
+  await expect(page.getByText('Banco')).toBeVisible();
+});
+
 test('backup do perfil e grafico de armazenamento', async ({ page }) => {
   await signUp(page, '-backup');
   await page.getByRole('button', { name: 'Ajustes' }).first().click();
