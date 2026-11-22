@@ -91,8 +91,17 @@ public sealed class RecapService(AppDbContext db)
             cancellationToken);
         await AddIfUsed(flows, "lists", "Itens que eu adicionei", myItems);
 
+        var myShared = await db.LifeEntryShares
+            .AsNoTracking()
+            .Where(share => share.CircleId == circleId && share.LifeEntry.UserId == userId)
+            .OrderBy(share => share.LifeEntry.CreatedAt)
+            .Select(share => share.LifeEntry.Title)
+            .ToListAsync(cancellationToken);
+        await AddIfUsed(flows, "shared-entries", "Minhas entradas compartilhadas", myShared.Count);
+
         var titles = myPosts
             .Concat(myMemories)
+            .Concat(myShared)
             .Where(text => !string.IsNullOrWhiteSpace(text))
             .ToList();
 

@@ -55,6 +55,11 @@ export const FAQ_ITEMS: FaqItem[] = [
       'Memorias sao a linha do tempo de fotos e textos no perfil ou no circulo, com a mesma permissao de entrada. Lembretes aparecem no calendario do app e da web. Da para baixar um arquivo .ics ou usar a assinatura. Modelos prontos de lista e lembrete estao em portugues, gratuitos, e quem copia pode editar.',
   },
   {
+    question: 'Quanto custa o plano pago?',
+    answer:
+      'Precos aprovados pelo Allan em 22/11/2026: R$ 29,90 por mes e R$ 299,00 por ano, em reais, configuraveis. O gratuito cobre 3 circulos, 5 atalhos e 100 MB. A cobranca e no Mercado Pago, sandbox por padrao.',
+  },
+  {
     question: 'Como falo com o suporte?',
     answer:
       'So por e-mail, sem prazo de resposta prometido. O contato do responsavel esta na politica de privacidade. Nao ha busca nesta FAQ: role ate achar o assunto.',

@@ -13,6 +13,7 @@ import {
   ApiError,
   downloadDocument,
   uploadNativeFile,
+  type CircleSummary,
   type DocumentItem,
   type LifeArea,
   type LifeEntry,
@@ -35,6 +36,9 @@ export default function LifeAreaScreen() {
   const [numberValue, setNumberValue] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [nativePhoto, setNativePhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [tags, setTags] = useState('');
+  const [circles, setCircles] = useState<CircleSummary[]>([]);
+  const [selectedCircleIds, setSelectedCircleIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const example = entryExample(area?.kind);
 
@@ -45,6 +49,11 @@ export default function LifeAreaScreen() {
     const areas = await api<LifeArea[]>('/api/life-areas', { token });
     setArea(areas.find((item) => item.id === id) ?? null);
     setEntries(await api<LifeEntry[]>(`/api/life-areas/${id}/entries`, { token }));
+    try {
+      setCircles(await api<CircleSummary[]>('/api/circles', { token }));
+    } catch {
+      setCircles([]);
+    }
     if (areas.find((item) => item.id === id)?.kind === 'document') {
       setDocuments(await api<DocumentItem[]>('/api/documents', { token }));
     }
@@ -86,6 +95,10 @@ export default function LifeAreaScreen() {
       return;
     }
     const parsedNumber = numberValue.trim() ? Number(numberValue.replace(',', '.')) : null;
+    const parsedTags = tags
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
     const created = await api<LifeEntry>(`/api/life-areas/${id}/entries`, {
       method: 'POST',
       token,
@@ -95,6 +108,8 @@ export default function LifeAreaScreen() {
         location: location.trim() || null,
         occurredOn: occurredOn.trim() || null,
         numberValue: parsedNumber !== null && Number.isFinite(parsedNumber) ? parsedNumber : null,
+        tags: parsedTags,
+        circleIds: selectedCircleIds,
       }),
     });
     if (photoFile) {
@@ -107,6 +122,7 @@ export default function LifeAreaScreen() {
     setLocation('');
     setOccurredOn('');
     setNumberValue('');
+    setTags('');
     setPhotoFile(null);
     setNativePhoto(null);
     await load();
@@ -170,6 +186,35 @@ export default function LifeAreaScreen() {
         keyboardType="decimal-pad"
       />
       <TextField label="Texto" value={body} onChangeText={setBody} placeholder={example.bodyPlaceholder} />
+      <TextField
+        label="Tags (opcional)"
+        value={tags}
+        onChangeText={setTags}
+        placeholder="corrida, manha"
+      />
+      {circles.length > 0 ? (
+        <View>
+          <Text style={styles.lead}>Mostrar a mesma entrada em circulos, sem duplicar.</Text>
+          {circles.map((circle) => (
+            <Button
+              key={circle.id}
+              label={
+                selectedCircleIds.includes(circle.id)
+                  ? `No circulo: ${circle.name ?? 'circulo'}`
+                  : `Fora do circulo: ${circle.name ?? 'circulo'}`
+              }
+              variant="ghost"
+              onPress={() =>
+                setSelectedCircleIds((current) =>
+                  current.includes(circle.id)
+                    ? current.filter((item) => item !== circle.id)
+                    : [...current, circle.id],
+                )
+              }
+            />
+          ))}
+        </View>
+      ) : null}
       {Platform.OS === 'web' ? (
         <View>
           <Text nativeID="foto-entrada-label" style={styles.lead}>
@@ -202,6 +247,9 @@ export default function LifeAreaScreen() {
           {entry.occurredOn ? <Text style={styles.lead}>{entry.occurredOn}</Text> : null}
           {entry.location ? <Text style={styles.lead}>{entry.location}</Text> : null}
           {entry.body ? <Text style={styles.lead}>{entry.body}</Text> : null}
+          {(entry.tags ?? []).length > 0 ? (
+            <Text style={styles.lead}>Tags: {(entry.tags ?? []).join(', ')}</Text>
+          ) : null}
           {entry.hasPhoto && token && id ? <EntryPhoto areaId={id} entryId={entry.id} token={token} /> : null}
         </View>
       ))}

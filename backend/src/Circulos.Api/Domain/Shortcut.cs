@@ -15,4 +15,5 @@ public sealed class Shortcut
     public DateTime CreatedAt { get; set; }
 
     public User User { get; set; } = null!;
+    public ICollection<ShortcutShare> Shares { get; set; } = new List<ShortcutShare>();
 }

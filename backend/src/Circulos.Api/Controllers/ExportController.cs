@@ -87,6 +87,7 @@ public sealed class ExportController(AppDbContext db, IFileStorage storage, Time
                 x.NumberValue,
                 x.OccurredOn,
                 x.Location,
+                tags = TagList.FromJson(x.TagsJson),
                 hasPhoto = x.PhotoStorageKey is not null,
                 x.CreatedAt,
             }),

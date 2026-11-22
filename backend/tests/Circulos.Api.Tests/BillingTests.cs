@@ -26,17 +26,18 @@ public sealed class BillingTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task Catalogo_MostraPropostaComPrecosConfiguraveis()
+    public async Task Catalogo_MostraPrecosAprovados()
     {
         var client = _factory.CreateClient();
         var catalog = await client.GetFromJsonAsync<JsonElement>("/api/plans", Json);
-        Assert.Equal("PROPOSTA", catalog.GetProperty("status").GetString());
+        Assert.Equal("aprovado", catalog.GetProperty("status").GetString());
         Assert.Equal(0, catalog.GetProperty("free").GetProperty("priceReais").GetDecimal());
         Assert.Equal(5, catalog.GetProperty("free").GetProperty("shortcutLimit").GetInt32());
         Assert.Equal(20, catalog.GetProperty("paidMonthly").GetProperty("shortcutLimit").GetInt32());
         Assert.True(catalog.GetProperty("sandbox").GetBoolean());
         Assert.Equal("Simulated", catalog.GetProperty("provider").GetString());
         Assert.Equal(29.90m, catalog.GetProperty("paidMonthly").GetProperty("priceReais").GetDecimal());
+        Assert.Equal(299.00m, catalog.GetProperty("paidYearly").GetProperty("priceReais").GetDecimal());
     }
 
     [Fact]

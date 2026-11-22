@@ -19,6 +19,7 @@ public sealed class Reminder
     public int AdvanceDays { get; set; }
     public string GiftIdeasJson { get; set; } = "[]";
     public string? PhotoStorageKey { get; set; }
+    public DateTime? LastEmailedFireAt { get; set; }
     public DateTime CreatedAt { get; set; }
 
     public User User { get; set; } = null!;

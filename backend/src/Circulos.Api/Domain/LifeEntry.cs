@@ -13,9 +13,11 @@ public sealed class LifeEntry
     public string? PhotoStorageKey { get; set; }
     public string? PhotoContentType { get; set; }
     public long PhotoSizeBytes { get; set; }
+    public string TagsJson { get; set; } = "[]";
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
     public LifeArea LifeArea { get; set; } = null!;
     public User User { get; set; } = null!;
+    public ICollection<LifeEntryShare> Shares { get; set; } = new List<LifeEntryShare>();
 }

@@ -59,14 +59,14 @@ export default function PricingScreen() {
       <Text style={styles.kicker}>Circulos</Text>
       <Text style={styles.title}>Precos</Text>
       <Text style={styles.lead}>
-        Proposta para o Allan aprovar. Valores em reais, configuraveis. Gateway Mercado Pago, sandbox por
-        padrao, desligado em producao ate ligar o secret.
+        Precos aprovados pelo Allan em 22/11/2026: R$ 29,90 mensal e R$ 299,00 anual. Valores em reais,
+        configuraveis. Gateway Mercado Pago, sandbox por padrao, desligado em producao ate ligar o secret.
       </Text>
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />
       {catalog ? (
         <>
-          <Text style={styles.lead}>Status da proposta: {catalog.status}. Provedor: {catalog.provider}.</Text>
+          <Text style={styles.lead}>Status dos precos: {catalog.status}. Provedor: {catalog.provider}.</Text>
           <Text style={styles.section}>{catalog.free.name}</Text>
           <Text style={styles.lead}>
             {reais(catalog.free.priceReais)} · {catalog.free.circleLimit} circulos · {catalog.free.shortcutLimit}{' '}

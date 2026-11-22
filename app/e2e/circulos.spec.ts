@@ -623,7 +623,7 @@ test('offline adiciona item na fila e sobe ao voltar', async ({ page }) => {
 test('album de memorias no perfil e rascunho sobrevive ao rerender', async ({ page }) => {
   await signUp(page, '-memoria');
   await page.getByRole('button', { name: 'Perfil' }).click();
-  await page.getByRole('button', { name: 'Memorias' }).click();
+  await page.getByRole('button', { name: 'Memorias' }).first().click();
   await page.getByLabel('Titulo').fill('Primeiro dia de escola');
   await page.getByLabel('Texto').fill('Foto da entrada');
   await page.getByRole('button', { name: 'Guardar memoria' }).click();
@@ -873,7 +873,7 @@ test('backup do perfil e grafico de armazenamento', async ({ page }) => {
 test('assinatura simulada e webhook', async ({ page }) => {
   await signUp(page, '-plano');
   await page.goto('/pricing');
-  await expect(page.getByText('Proposta para o Allan aprovar')).toBeVisible();
+  await expect(page.getByText('Precos aprovados pelo Allan em 22/11/2026')).toBeVisible();
   await page.getByRole('button', { name: 'Assinar mensal (sandbox)' }).click();
   await expect(page.getByText('Assinatura simulada no sandbox')).toBeVisible();
   const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
@@ -1053,3 +1053,117 @@ test('permissao de pet e grupo', async ({ browser }) => {
   await ownerContext.close();
   await memberContext.close();
 });
+
+test('tags opcionais na entrada e busca', async ({ page }) => {
+  await signUp(page, '-tags');
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByText('Diario', { exact: true }).click();
+  await page.getByLabel('Titulo').fill('Treino 5k');
+  await page.getByLabel('Tags (opcional)').fill('corrida, manha');
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await expect(page.getByText('Tags: corrida, manha')).toBeVisible();
+  await page.getByRole('button', { name: 'Hoje' }).click();
+  await expect(page.getByText('O que pede atencao hoje')).toBeVisible();
+  await page.getByRole('button', { name: 'Busca' }).first().click();
+  await page.getByLabel('Buscar', { exact: true }).fill('corrida');
+  await page.getByRole('button', { name: 'Buscar agora' }).click();
+  await expect(page.getByText('Treino 5k')).toBeVisible();
+});
+
+test('a mesma entrada aparece em dois circulos sem duplicar', async ({ page }) => {
+  await signUp(page, '-share-entry');
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  await page.getByLabel('Nome', { exact: true }).fill('Pessoal corrida');
+  await page.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(page.getByText('Quem esta aqui')).toBeVisible();
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  await page.getByLabel('Nome', { exact: true }).fill('Equipe corrida');
+  await page.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(page.getByText('Quem esta aqui')).toBeVisible();
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByText('Diario', { exact: true }).click();
+  await page.getByLabel('Titulo').fill('Corrida 200m');
+  await page.getByRole('button', { name: 'Fora do circulo: Pessoal corrida' }).click();
+  await page.getByRole('button', { name: 'Fora do circulo: Equipe corrida' }).click();
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await expect(page.getByText('Corrida 200m')).toBeVisible();
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  await page.getByRole('button', { name: 'Abrir Pessoal corrida' }).click();
+  await expect(page.getByText('Entradas compartilhadas', { exact: true })).toBeVisible();
+  await expect(page.getByText('Corrida 200m').first()).toBeVisible();
+  await expect(page.getByText('A mesma entrada, sem duplicar.')).toBeVisible();
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  await page.getByRole('button', { name: 'Abrir Equipe corrida' }).click();
+  await expect(page.getByText('Corrida 200m').first()).toBeVisible();
+  await expect(page.getByText('Entradas compartilhadas', { exact: true })).toHaveCount(1);
+});
+
+test('compartilhar atalho no circulo mostra de quem veio e o aviso do que mudou', async ({ browser }) => {
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await signUp(owner, '-atalho-dono');
+  const memberContext = await browser.newContext();
+  const member = await memberContext.newPage();
+  const memberEmail = await signUp(member, '-atalho-filha');
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const memberToken = await member.evaluate(() => localStorage.getItem('circulos.token'));
+  await owner.getByRole('button', { name: 'Circulos' }).click();
+  await owner.getByLabel('Nome', { exact: true }).fill('Cuidado idoso');
+  await owner.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(owner.getByText('Quem esta aqui')).toBeVisible();
+  await owner.getByLabel('Convidar por e-mail').fill(memberEmail);
+  await owner.getByRole('button', { name: 'Enviar convite' }).click();
+  const inviteText = await owner.getByText(/Convite criado/).innerText();
+  const inviteToken = inviteText.replace('Convite criado. Codigo: ', '').trim();
+  const accepted = await member.request.post(`${apiUrl}/api/circles/invites/${inviteToken}/accept`, {
+    headers: { Authorization: `Bearer ${memberToken}`, 'Content-Type': 'application/json' },
+    data: {},
+  });
+  expect(accepted.ok()).toBeTruthy();
+  await owner.getByRole('button', { name: 'Hoje' }).click();
+  await owner.getByLabel('Nome do atalho').fill('Tomei o remedio');
+  await owner.getByRole('button', { name: 'Adicionar atalho' }).click();
+  await expect(owner.getByRole('button', { name: 'Tomei o remedio', exact: true })).toBeVisible({ timeout: 15_000 });
+  await owner.getByRole('button', { name: 'Compartilhar Tomei o remedio em Cuidado idoso' }).click();
+  await member.reload();
+  await skipTourIfNeeded(member);
+  await expect(member.getByRole('button', { name: 'Tomei o remedio', exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(member.getByText('De Pessoa E2E')).toBeVisible();
+  await member.getByRole('button', { name: 'Tomei o remedio', exact: true }).click();
+  await owner.getByRole('button', { name: 'Circulos' }).click();
+  await owner.getByRole('button', { name: 'Abrir Cuidado idoso' }).click();
+  await expect(owner.getByText(/disparou Tomei o remedio/)).toBeVisible();
+  await owner.getByRole('button', { name: 'Hoje' }).click();
+  await owner.getByRole('button', { name: 'Renomear Tomei o remedio' }).click();
+  await member.reload();
+  await skipTourIfNeeded(member);
+  await expect(member.getByText('Nome: Tomei o remedio -> Tomei o remedio (editado)')).toBeVisible({
+    timeout: 15_000,
+  });
+  await ownerContext.close();
+  await memberContext.close();
+});
+
+test('lembrete por e-mail opcional dispara na caixa local', async ({ page }) => {
+  await signUp(page, '-email-lembrete');
+  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await page.getByRole('button', { name: 'Lembrete por e-mail: so no app' }).click();
+  await expect(page.getByRole('button', { name: 'Lembrete por e-mail: ligado' })).toBeVisible();
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const token = await page.evaluate(() => localStorage.getItem('circulos.token'));
+  const created = await page.request.post(`${apiUrl}/api/reminders`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: {
+      title: 'Remedio das oito',
+      startAt: new Date(Date.now() - 2 * 3600_000).toISOString(),
+      recurrence: { frequency: 'none', interval: 1 },
+    },
+  });
+  expect(created.ok()).toBeTruthy();
+  await page.getByRole('button', { name: 'Hoje' }).click();
+  await expect(page.getByText('O que pede atencao hoje')).toBeVisible();
+  await expect(page.getByText('Enviamos o lembrete Remedio das oito por e-mail')).toBeVisible({
+    timeout: 15_000,
+  });
+});
+

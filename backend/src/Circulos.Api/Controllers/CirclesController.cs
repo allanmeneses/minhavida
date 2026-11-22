@@ -174,7 +174,8 @@ public sealed class CirclesController(
         var joinRequests = member.Role >= CircleRole.Admin
             ? await PendingJoinRequests(circle.Id, cancellationToken)
             : [];
-        return Ok(ToDetail(circle, names, posts, log, joinRequests));
+        var shared = await SharedEntriesAsync(circle.Id, cancellationToken);
+        return Ok(ToDetail(circle, names, posts, log, joinRequests, shared));
     }
 
     [HttpPost("{id:guid}/invites")]
@@ -396,7 +397,8 @@ public sealed class CirclesController(
             names,
             circle.Posts.OrderByDescending(x => x.CreatedAt).Select(ToPost).ToList(),
             circle.Logs.OrderByDescending(x => x.CreatedAt).Select(ToLog).ToList(),
-            await PendingJoinRequests(circle.Id, cancellationToken)));
+            await PendingJoinRequests(circle.Id, cancellationToken),
+            await SharedEntriesAsync(circle.Id, cancellationToken)));
     }
 
     [HttpDelete("{id:guid}/membership")]
@@ -808,7 +810,8 @@ public sealed class CirclesController(
         IReadOnlyList<CircleMemberDto> names,
         IReadOnlyList<CirclePostResponse> posts,
         IReadOnlyList<CircleLogResponse> log,
-        IReadOnlyList<CircleJoinRequestDto> joinRequests) =>
+        IReadOnlyList<CircleJoinRequestDto> joinRequests,
+        IReadOnlyList<SharedLifeEntryResponse> sharedEntries) =>
         new(
             circle.Id,
             circle.Name,
@@ -824,7 +827,46 @@ public sealed class CirclesController(
             names,
             posts,
             log,
-            joinRequests);
+            joinRequests,
+            sharedEntries);
+
+    private async Task<List<SharedLifeEntryResponse>> SharedEntriesAsync(Guid circleId, CancellationToken cancellationToken)
+    {
+        var shares = await db.LifeEntryShares
+            .AsNoTracking()
+            .Include(x => x.LifeEntry)
+            .Where(x => x.CircleId == circleId)
+            .OrderByDescending(x => x.LifeEntry.UpdatedAt)
+            .ToListAsync(cancellationToken);
+        if (shares.Count == 0)
+        {
+            return [];
+        }
+
+        var authorIds = shares.Select(x => x.LifeEntry.UserId).Distinct().ToList();
+        var names = await db.Profiles.AsNoTracking()
+            .Where(x => authorIds.Contains(x.UserId))
+            .ToDictionaryAsync(x => x.UserId, cancellationToken);
+        return shares.Select(share =>
+        {
+            var entry = share.LifeEntry;
+            names.TryGetValue(entry.UserId, out var profile);
+            return new SharedLifeEntryResponse(
+                entry.Id,
+                entry.LifeAreaId,
+                entry.Title,
+                entry.Body,
+                entry.NumberValue,
+                entry.OccurredOn,
+                entry.Location,
+                entry.PhotoStorageKey is not null,
+                TagList.FromJson(entry.TagsJson),
+                entry.UserId,
+                profile?.DisplayName ?? "Pessoa",
+                entry.CreatedAt,
+                entry.UpdatedAt);
+        }).ToList();
+    }
 
     private async Task<List<CircleJoinRequestDto>> PendingJoinRequests(Guid circleId, CancellationToken cancellationToken)
     {
@@ -859,6 +901,7 @@ public sealed class CirclesController(
             EnumText.Kind(circle.Kind),
             EnumText.Status(circle.Status),
             null,
+            [],
             [],
             [],
             [],

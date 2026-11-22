@@ -12,12 +12,13 @@ namespace Circulos.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api")]
-public sealed class HomeController(AppDbContext db, TimeProvider clock, BillingService billing) : ControllerBase
+public sealed class HomeController(AppDbContext db, TimeProvider clock, BillingService billing, ReminderEmailService reminderEmails) : ControllerBase
 {
     [HttpGet("home")]
     public async Task<ActionResult<DayPanelResponse>> Home(CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
+        var emailed = await reminderEmails.DispatchDueAsync(userId, cancellationToken);
         var user = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
         var now = clock.GetUtcNow().UtcDateTime;
         var onVacation = user.VacationUntil is { } until && until > now;
@@ -58,12 +59,13 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock, BillingS
             }
         }
 
-        var shortcuts = (await db.Shortcuts.AsNoTracking()
-            .Where(x => x.UserId == userId && x.IsActive && !x.IsDeleted)
-            .OrderBy(x => x.SortOrder)
-            .ToListAsync(cancellationToken))
-            .Select(ToShortcut)
-            .ToList();
+        var shortcuts = await VisibleShortcutsAsync(userId, cancellationToken);
+        var notices = await db.ShortcutChangeNotices.AsNoTracking()
+            .Where(x => x.RecipientUserId == userId)
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(20)
+            .Select(x => new ShortcutNoticeResponse(x.Id, x.ShortcutId, x.Detail, x.CreatedAt))
+            .ToListAsync(cancellationToken);
 
         var circles = await db.CircleMembers.CountAsync(
             x => x.UserId == userId && x.Circle.Status == CircleStatus.Active,
@@ -77,7 +79,10 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock, BillingS
             circles,
             shortcuts,
             user.VacationUntil,
-            plan));
+            plan,
+            notices,
+            emailed,
+            user.EmailRemindersEnabled));
     }
 
     [HttpGet("plan")]
@@ -91,13 +96,12 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock, BillingS
     public async Task<ActionResult<IReadOnlyList<ShortcutResponse>>> Shortcuts(CancellationToken cancellationToken)
     {
         var includeDeleted = string.Equals(HttpContext.Request.Query["includeDeleted"], "true", StringComparison.OrdinalIgnoreCase);
-        var items = (await db.Shortcuts.AsNoTracking()
-            .Where(x => x.UserId == User.GetUserId() && (includeDeleted || !x.IsDeleted))
+        var userId = User.GetUserId();
+        var own = await db.Shortcuts.AsNoTracking()
+            .Where(x => x.UserId == userId && (includeDeleted || !x.IsDeleted))
             .OrderBy(x => x.SortOrder)
-            .ToListAsync(cancellationToken))
-            .Select(ToShortcut)
-            .ToList();
-        return Ok(items);
+            .ToListAsync(cancellationToken);
+        return Ok(own.Select(item => ToShortcut(item)).ToList());
     }
 
     [HttpPost("shortcuts")]
@@ -155,16 +159,37 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock, BillingS
     [HttpPost("shortcuts/{id:guid}/run")]
     public async Task<IActionResult> Run(Guid id, CancellationToken cancellationToken)
     {
+        var userId = User.GetUserId();
         var shortcut = await db.Shortcuts.FirstOrDefaultAsync(
-            x => x.Id == id && x.UserId == User.GetUserId() && x.IsActive && !x.IsDeleted,
+            x => x.Id == id && x.IsActive && !x.IsDeleted,
             cancellationToken);
         if (shortcut is null)
         {
             return NotFound(new ErrorResponse("Atalho nao encontrado."));
         }
 
-        var user = await db.Users.FirstAsync(x => x.Id == shortcut.UserId, cancellationToken);
-        if (!PlanLimits.BenefitsActive(user, clock.GetUtcNow().UtcDateTime))
+        var sharedCircleIds = await (
+            from share in db.ShortcutShares
+            join member in db.CircleMembers on share.CircleId equals member.CircleId
+            where share.ShortcutId == id && member.UserId == userId
+            select share.CircleId).Distinct().ToListAsync(cancellationToken);
+        if (shortcut.UserId != userId && sharedCircleIds.Count == 0)
+        {
+            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+        }
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, shortcut.UserId, cancellationToken);
+        shortcut = await db.Shortcuts.FirstOrDefaultAsync(
+            x => x.Id == id && x.IsActive && !x.IsDeleted,
+            cancellationToken);
+        if (shortcut is null)
+        {
+            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+        }
+
+        var owner = await db.Users.FirstAsync(x => x.Id == shortcut.UserId, cancellationToken);
+        if (!PlanLimits.BenefitsActive(owner, clock.GetUtcNow().UtcDateTime))
         {
             var allowed = await db.Shortcuts.AsNoTracking()
                 .Where(x => x.UserId == shortcut.UserId && x.IsActive && !x.IsDeleted)
@@ -206,9 +231,9 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock, BillingS
             }
         }
 
+        var now = clock.GetUtcNow().UtcDateTime;
         if (diary is not null)
         {
-            var now = clock.GetUtcNow().UtcDateTime;
             db.LifeEntries.Add(new LifeEntry
             {
                 Id = Guid.NewGuid(),
@@ -222,8 +247,169 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock, BillingS
             });
         }
 
+        if (sharedCircleIds.Count > 0)
+        {
+            var runner = await db.Profiles.AsNoTracking().FirstAsync(x => x.UserId == userId, cancellationToken);
+            foreach (var circleId in sharedCircleIds)
+            {
+                db.CircleLogs.Add(new CircleLog
+                {
+                    Id = Guid.NewGuid(),
+                    CircleId = circleId,
+                    ActorUserId = userId,
+                    Action = "shortcut-run",
+                    Detail = $"{runner.DisplayName} disparou {shortcut.Label}.",
+                    CreatedAt = now,
+                });
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Ok(new { received = true, label = shortcut.Label });
+    }
+
+    [HttpPut("shortcuts/{id:guid}")]
+    public async Task<ActionResult<ShortcutResponse>> UpdateShortcut(
+        Guid id,
+        [FromBody] ShortcutRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+        var shortcut = await db.Shortcuts.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
+        if (shortcut is null)
+        {
+            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+        }
+
+        if (shortcut.UserId != userId)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("So quem criou o atalho pode editar."));
+        }
+
+        var kind = string.IsNullOrWhiteSpace(request.ActionKind)
+            ? shortcut.ActionKind
+            : ShortcutPalette.Parse(request.ActionKind);
+        var color = string.IsNullOrWhiteSpace(request.Color) ? shortcut.Color : request.Color;
+        var label = request.Label.Trim();
+        Guid? reminderId = shortcut.ReminderId;
+        if (request.ReminderId is Guid linkedReminder)
+        {
+            var exists = await db.Reminders.AnyAsync(x => x.Id == linkedReminder && x.UserId == userId, cancellationToken);
+            if (!exists)
+            {
+                return BadRequest(new ErrorResponse("Lembrete nao encontrado."));
+            }
+
+            reminderId = linkedReminder;
+        }
+
+        var changes = new List<string>();
+        if (!string.Equals(shortcut.Label, label, StringComparison.Ordinal))
+        {
+            changes.Add($"Nome: {shortcut.Label} -> {label}");
+        }
+
+        if (!string.Equals(shortcut.Color, color, StringComparison.OrdinalIgnoreCase))
+        {
+            changes.Add($"Cor: {shortcut.Color} -> {color}");
+        }
+
+        if (shortcut.ActionKind != kind)
+        {
+            changes.Add($"Tipo: {ShortcutPalette.Text(shortcut.ActionKind)} -> {ShortcutPalette.Text(kind)}");
+        }
+
+        if (shortcut.ReminderId != reminderId)
+        {
+            changes.Add("Lembrete ligado mudou.");
+        }
+
+        shortcut.Label = label;
+        shortcut.Color = color;
+        shortcut.ActionKind = kind;
+        shortcut.ReminderId = reminderId;
+        shortcut.SortOrder = request.SortOrder;
+        var sharedCircleIds = await db.ShortcutShares.AsNoTracking()
+            .Where(x => x.ShortcutId == shortcut.Id)
+            .Select(x => x.CircleId)
+            .ToListAsync(cancellationToken);
+        if (changes.Count > 0 && sharedCircleIds.Count > 0)
+        {
+            var recipients = await db.CircleMembers.AsNoTracking()
+                .Where(x => sharedCircleIds.Contains(x.CircleId) && x.UserId != userId)
+                .Select(x => x.UserId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+            var detail = string.Join(". ", changes);
+            if (detail.Length > 500)
+            {
+                detail = detail[..500];
+            }
+
+            var stamped = clock.GetUtcNow().UtcDateTime;
+            foreach (var recipient in recipients)
+            {
+                db.ShortcutChangeNotices.Add(new ShortcutChangeNotice
+                {
+                    Id = Guid.NewGuid(),
+                    ShortcutId = shortcut.Id,
+                    RecipientUserId = recipient,
+                    Detail = detail,
+                    CreatedAt = stamped,
+                });
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Ok(ToShortcut(shortcut));
+    }
+
+    [HttpPost("shortcuts/{id:guid}/share")]
+    public async Task<ActionResult<ShortcutResponse>> ShareShortcut(
+        Guid id,
+        [FromBody] ShareShortcutRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+        var shortcut = await db.Shortcuts.FirstOrDefaultAsync(
+            x => x.Id == id && x.UserId == userId && !x.IsDeleted,
+            cancellationToken);
+        if (shortcut is null)
+        {
+            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+        }
+
+        var member = await db.CircleMembers.AnyAsync(
+            x => x.CircleId == request.CircleId && x.UserId == userId && x.Circle.Status == CircleStatus.Active,
+            cancellationToken);
+        if (!member)
+        {
+            return BadRequest(new ErrorResponse("Voce precisa participar do circulo."));
+        }
+
+        var already = await db.ShortcutShares.AnyAsync(
+            x => x.ShortcutId == shortcut.Id && x.CircleId == request.CircleId,
+            cancellationToken);
+        if (!already)
+        {
+            db.ShortcutShares.Add(new ShortcutShare
+            {
+                Id = Guid.NewGuid(),
+                ShortcutId = shortcut.Id,
+                CircleId = request.CircleId,
+                CreatedAt = clock.GetUtcNow().UtcDateTime,
+            });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return Ok(ToShortcut(shortcut, userId, null, request.CircleId));
     }
 
     [HttpPost("shortcuts/{id:guid}/deactivate")]
@@ -317,7 +503,39 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock, BillingS
         return NoContent();
     }
 
-    private static ShortcutResponse ToShortcut(Shortcut shortcut) =>
+    private async Task<List<ShortcutResponse>> VisibleShortcutsAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var own = await db.Shortcuts.AsNoTracking()
+            .Where(x => x.UserId == userId && x.IsActive && !x.IsDeleted)
+            .OrderBy(x => x.SortOrder)
+            .ToListAsync(cancellationToken);
+        var sharedRows = await (
+            from share in db.ShortcutShares.AsNoTracking()
+            join member in db.CircleMembers.AsNoTracking() on share.CircleId equals member.CircleId
+            join shortcut in db.Shortcuts.AsNoTracking() on share.ShortcutId equals shortcut.Id
+            where member.UserId == userId && shortcut.IsActive && !shortcut.IsDeleted && shortcut.UserId != userId
+            select new { shortcut, share.CircleId, shortcut.UserId }).ToListAsync(cancellationToken);
+        var ownerIds = sharedRows.Select(x => x.UserId).Distinct().ToList();
+        var names = ownerIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await db.Profiles.AsNoTracking()
+                .Where(x => ownerIds.Contains(x.UserId))
+                .ToDictionaryAsync(x => x.UserId, x => x.DisplayName, cancellationToken);
+        var result = own.Select(item => ToShortcut(item)).ToList();
+        foreach (var row in sharedRows.GroupBy(item => item.shortcut.Id).Select(group => group.First()))
+        {
+            names.TryGetValue(row.UserId, out var name);
+            result.Add(ToShortcut(row.shortcut, row.UserId, name, row.CircleId));
+        }
+
+        return result;
+    }
+
+    private static ShortcutResponse ToShortcut(
+        Shortcut shortcut,
+        Guid? sharedByUserId = null,
+        string? sharedByName = null,
+        Guid? circleId = null) =>
         new(
             shortcut.Id,
             shortcut.Label,
@@ -326,6 +544,9 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock, BillingS
             shortcut.IsActive,
             shortcut.ReminderId,
             ShortcutPalette.Text(shortcut.ActionKind),
-            shortcut.IsDeleted);
+            shortcut.IsDeleted,
+            sharedByUserId,
+            sharedByName,
+            circleId);
 }
 

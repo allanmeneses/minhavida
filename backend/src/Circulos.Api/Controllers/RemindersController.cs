@@ -3,6 +3,7 @@ using Circulos.Api.Contracts;
 using Circulos.Api.Data;
 using Circulos.Api.Domain;
 using Circulos.Api.Reminders;
+using Circulos.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -139,6 +140,28 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock) : C
         user.VacationUntil = request.Until is null ? null : DateTime.SpecifyKind(request.Until.Value, DateTimeKind.Utc);
         await db.SaveChangesAsync(cancellationToken);
         return NoContent();
+    }
+
+    [HttpGet("email-preference")]
+    public async Task<ActionResult<EmailPreferenceResponse>> EmailPreference(CancellationToken cancellationToken)
+    {
+        var user = await db.Users.AsNoTracking().FirstAsync(x => x.Id == User.GetUserId(), cancellationToken);
+        return Ok(new EmailPreferenceResponse(user.EmailRemindersEnabled));
+    }
+
+    [HttpPut("email-preference")]
+    public async Task<ActionResult<EmailPreferenceResponse>> SetEmailPreference(
+        [FromBody] EmailPreferenceRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+        var user = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
+        user.EmailRemindersEnabled = request.Enabled;
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Ok(new EmailPreferenceResponse(user.EmailRemindersEnabled));
     }
 
     private async Task<ActionResult<ReminderResponse>> SetPaused(Guid id, bool paused, CancellationToken cancellationToken)

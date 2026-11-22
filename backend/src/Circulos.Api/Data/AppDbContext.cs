@@ -10,6 +10,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<PersonalDocument> Documents => Set<PersonalDocument>();
     public DbSet<LifeArea> LifeAreas => Set<LifeArea>();
     public DbSet<LifeEntry> LifeEntries => Set<LifeEntry>();
+    public DbSet<LifeEntryShare> LifeEntryShares => Set<LifeEntryShare>();
     public DbSet<Circle> Circles => Set<Circle>();
     public DbSet<CircleMember> CircleMembers => Set<CircleMember>();
     public DbSet<CircleInvite> CircleInvites => Set<CircleInvite>();
@@ -18,6 +19,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<CircleLog> CircleLogs => Set<CircleLog>();
     public DbSet<Reminder> Reminders => Set<Reminder>();
     public DbSet<Shortcut> Shortcuts => Set<Shortcut>();
+    public DbSet<ShortcutShare> ShortcutShares => Set<ShortcutShare>();
+    public DbSet<ShortcutChangeNotice> ShortcutChangeNotices => Set<ShortcutChangeNotice>();
     public DbSet<SearchQuery> SearchQueries => Set<SearchQuery>();
     public DbSet<SharedList> SharedLists => Set<SharedList>();
     public DbSet<SharedListItem> SharedListItems => Set<SharedListItem>();
@@ -143,8 +146,26 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Location).HasMaxLength(200);
             entity.Property(x => x.PhotoStorageKey).HasMaxLength(260);
             entity.Property(x => x.PhotoContentType).HasMaxLength(120);
+            entity.Property(x => x.TagsJson).HasMaxLength(800).IsRequired();
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.HasMany(x => x.Shares)
+                .WithOne(x => x.LifeEntry)
+                .HasForeignKey(x => x.LifeEntryId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LifeEntryShare>(entity =>
+        {
+            entity.ToTable("life_entry_shares");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.LifeEntryId, x.CircleId }).IsUnique();
+            entity.HasIndex(x => x.CircleId);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.Circle)
+                .WithMany()
+                .HasForeignKey(x => x.CircleId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Circle>(entity =>
@@ -264,6 +285,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.StartAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.NextFireAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.UntilAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.LastEmailedFireAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
         });
 
@@ -280,6 +302,37 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 .WithMany()
                 .HasForeignKey(x => x.ReminderId)
                 .OnDelete(DeleteBehavior.SetNull);
+            entity.HasMany(x => x.Shares)
+                .WithOne(x => x.Shortcut)
+                .HasForeignKey(x => x.ShortcutId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ShortcutShare>(entity =>
+        {
+            entity.ToTable("shortcut_shares");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.ShortcutId, x.CircleId }).IsUnique();
+            entity.HasIndex(x => x.CircleId);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.Circle)
+                .WithMany()
+                .HasForeignKey(x => x.CircleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ShortcutChangeNotice>(entity =>
+        {
+            entity.ToTable("shortcut_change_notices");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.RecipientUserId);
+            entity.HasIndex(x => x.ShortcutId);
+            entity.Property(x => x.Detail).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.Shortcut)
+                .WithMany()
+                .HasForeignKey(x => x.ShortcutId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<SearchQuery>(entity =>

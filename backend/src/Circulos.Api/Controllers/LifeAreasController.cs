@@ -52,7 +52,10 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
     }
 
     [HttpGet("{id:guid}/entries")]
-    public async Task<ActionResult<IReadOnlyList<LifeEntryResponse>>> Entries(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<LifeEntryResponse>>> Entries(
+        Guid id,
+        [FromQuery] string? tag,
+        CancellationToken cancellationToken)
     {
         var area = await OwnedArea(id, cancellationToken);
         if (area is null)
@@ -62,9 +65,18 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
 
         var items = await db.LifeEntries
             .AsNoTracking()
+            .Include(x => x.Shares)
             .Where(x => x.LifeAreaId == id)
             .OrderByDescending(x => x.UpdatedAt)
             .ToListAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(tag))
+        {
+            var needle = tag.Trim();
+            items = items
+                .Where(x => TagList.FromJson(x.TagsJson).Any(item => string.Equals(item, needle, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+        }
+
         return Ok(items.Select(ToEntry).ToList());
     }
 
@@ -80,6 +92,9 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
             return NotFound(new ErrorResponse("Area nao encontrada."));
         }
 
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
         var now = DateTime.UtcNow;
         var entry = new LifeEntry
         {
@@ -91,11 +106,25 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
             NumberValue = request.NumberValue,
             OccurredOn = request.OccurredOn,
             Location = request.Location?.Trim(),
+            TagsJson = TagList.ToJson(request.Tags),
             CreatedAt = now,
             UpdatedAt = now,
         };
         db.LifeEntries.Add(entry);
         await db.SaveChangesAsync(cancellationToken);
+        if (request.CircleIds is { Length: > 0 })
+        {
+            var shareError = await ReplaceSharesAsync(entry, request.CircleIds, userId, now, cancellationToken);
+            if (shareError is not null)
+            {
+                return BadRequest(new ErrorResponse(shareError));
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        await db.Entry(entry).Collection(x => x.Shares).LoadAsync(cancellationToken);
         return Created($"/api/life-areas/{id}/entries/{entry.Id}", ToEntry(entry));
     }
 
@@ -112,13 +141,56 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
             return NotFound(new ErrorResponse("Entrada nao encontrada."));
         }
 
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
         entry.Title = request.Title.Trim();
         entry.Body = request.Body?.Trim();
         entry.NumberValue = request.NumberValue;
         entry.OccurredOn = request.OccurredOn;
         entry.Location = request.Location?.Trim();
+        entry.TagsJson = TagList.ToJson(request.Tags);
         entry.UpdatedAt = DateTime.UtcNow;
+        if (request.CircleIds is not null)
+        {
+            var shareError = await ReplaceSharesAsync(entry, request.CircleIds, userId, entry.UpdatedAt, cancellationToken);
+            if (shareError is not null)
+            {
+                return BadRequest(new ErrorResponse(shareError));
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        await db.Entry(entry).Collection(x => x.Shares).LoadAsync(cancellationToken);
+        return Ok(ToEntry(entry));
+    }
+
+    [HttpPost("{id:guid}/entries/{entryId:guid}/share")]
+    public async Task<ActionResult<LifeEntryResponse>> ShareEntry(
+        Guid id,
+        Guid entryId,
+        [FromBody] ShareEntryRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+        var entry = await OwnedEntry(id, entryId, cancellationToken);
+        if (entry is null)
+        {
+            return NotFound(new ErrorResponse("Entrada nao encontrada."));
+        }
+
+        var shareError = await ReplaceSharesAsync(entry, request.CircleIds ?? [], userId, DateTime.UtcNow, cancellationToken);
+        if (shareError is not null)
+        {
+            return BadRequest(new ErrorResponse(shareError));
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        await db.Entry(entry).Collection(x => x.Shares).LoadAsync(cancellationToken);
         return Ok(ToEntry(entry));
     }
 
@@ -254,6 +326,62 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
             x => x.Id == entryId && x.LifeAreaId == areaId && x.UserId == User.GetUserId(),
             cancellationToken);
 
+    private async Task<string?> ReplaceSharesAsync(
+        LifeEntry entry,
+        Guid[] circleIds,
+        Guid userId,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var wanted = circleIds.Distinct().ToArray();
+        if (wanted.Length > 0)
+        {
+            var allowed = await db.CircleMembers
+                .AsNoTracking()
+                .Where(x => x.UserId == userId && wanted.Contains(x.CircleId) && x.Circle.Status == CircleStatus.Active)
+                .Select(x => x.CircleId)
+                .ToListAsync(cancellationToken);
+            if (allowed.Count != wanted.Length)
+            {
+                return "Voce precisa participar do circulo para mostrar a entrada la.";
+            }
+        }
+
+        var current = await db.LifeEntryShares
+            .Where(x => x.LifeEntryId == entry.Id)
+            .ToListAsync(cancellationToken);
+        foreach (var share in current.Where(x => !wanted.Contains(x.CircleId)))
+        {
+            db.LifeEntryShares.Remove(share);
+        }
+
+        var already = current.Select(x => x.CircleId).ToHashSet();
+        foreach (var circleId in wanted.Where(id => !already.Contains(id)))
+        {
+            db.LifeEntryShares.Add(new LifeEntryShare
+            {
+                Id = Guid.NewGuid(),
+                LifeEntryId = entry.Id,
+                CircleId = circleId,
+                CreatedAt = now,
+            });
+        }
+
+        return null;
+    }
+
     private static LifeEntryResponse ToEntry(LifeEntry entry) =>
-        new(entry.Id, entry.LifeAreaId, entry.Title, entry.Body, entry.NumberValue, entry.OccurredOn, entry.Location, entry.PhotoStorageKey is not null, entry.CreatedAt, entry.UpdatedAt);
+        new(
+            entry.Id,
+            entry.LifeAreaId,
+            entry.Title,
+            entry.Body,
+            entry.NumberValue,
+            entry.OccurredOn,
+            entry.Location,
+            entry.PhotoStorageKey is not null,
+            entry.CreatedAt,
+            entry.UpdatedAt,
+            TagList.FromJson(entry.TagsJson),
+            entry.Shares.Select(x => x.CircleId).OrderBy(x => x).ToList());
 }

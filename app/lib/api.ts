@@ -77,6 +77,8 @@ export type LifeEntry = {
   hasPhoto: boolean;
   createdAt: string;
   updatedAt: string;
+  tags: string[];
+  circleIds: string[];
 };
 export type CircleSummary = {
   id: string;
@@ -115,6 +117,22 @@ export type CircleDetail = {
   posts: { id: string; body: string; createdAt: string }[];
   log: { id: string; action: string; detail: string; createdAt: string; actorUserId: string | null }[];
   joinRequests: CircleJoinRequest[];
+  sharedEntries: SharedLifeEntry[];
+};
+export type SharedLifeEntry = {
+  id: string;
+  lifeAreaId: string;
+  title: string;
+  body: string | null;
+  numberValue: number | null;
+  occurredOn: string | null;
+  location: string | null;
+  hasPhoto: boolean;
+  tags: string[];
+  authorUserId: string;
+  authorName: string;
+  createdAt: string;
+  updatedAt: string;
 };
 export type SuccessionVote = {
   id: string;
@@ -239,6 +257,15 @@ export type ShortcutItem = {
   reminderId: string | null;
   actionKind: string;
   isDeleted: boolean;
+  sharedByUserId: string | null;
+  sharedByName: string | null;
+  circleId: string | null;
+};
+export type ShortcutNotice = {
+  id: string;
+  shortcutId: string;
+  detail: string;
+  createdAt: string;
 };
 export type SearchHit = { type: string; id: string; title: string; detail: string | null };
 export type SearchResponse = {
@@ -309,6 +336,9 @@ export type DayPanel = {
   shortcuts: ShortcutItem[];
   vacationUntil: string | null;
   plan: PlanInfo;
+  shortcutNotices: ShortcutNotice[];
+  reminderEmailsSent: string[];
+  emailRemindersEnabled: boolean;
 };
 export type DocumentItem = {
   id: string;

@@ -25,6 +25,8 @@ export default function SettingsScreen() {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [emailReminders, setEmailReminders] = useState(false);
+  const [emailRemindersLoaded, setEmailRemindersLoaded] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -36,6 +38,12 @@ export default function SettingsScreen() {
     void api<{ enabled: boolean }>('/api/auth/2fa', { token })
       .then((status) => setTwoFactor(status.enabled))
       .catch(() => undefined);
+    void api<{ enabled: boolean }>('/api/reminders/email-preference', { token })
+      .then((status) => {
+        setEmailReminders(status.enabled);
+        setEmailRemindersLoaded(true);
+      })
+      .catch(() => setEmailRemindersLoaded(true));
   }, [token]);
 
   async function vacation() {
@@ -214,6 +222,28 @@ export default function SettingsScreen() {
             disabled={!password || !code.trim()}
           />
         </>
+      ) : null}
+
+      <Text style={styles.section}>Lembretes por e-mail</Text>
+      <Text style={styles.lead}>Opcional. Padrao: so no aplicativo. O envio usa a caixa local, sem SMTP real.</Text>
+      {emailRemindersLoaded ? (
+        <Button
+          label={emailReminders ? 'Lembrete por e-mail: ligado' : 'Lembrete por e-mail: so no app'}
+          variant="ghost"
+          onPress={() => {
+            if (!token) {
+              return;
+            }
+            const next = !emailReminders;
+            void api<{ enabled: boolean }>('/api/reminders/email-preference', {
+              method: 'PUT',
+              token,
+              body: JSON.stringify({ enabled: next }),
+            })
+              .then((status) => setEmailReminders(status.enabled))
+              .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel salvar a preferencia.'));
+          }}
+        />
       ) : null}
 
       <Text style={styles.section}>Ferias</Text>

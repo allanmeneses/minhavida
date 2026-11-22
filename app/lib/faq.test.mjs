@@ -16,6 +16,8 @@ describe('faq', () => {
     assert.match(blob, /recap/);
     assert.match(blob, /perfil nasce privado/);
     assert.match(blob, /So por e-mail/);
+    assert.match(blob, /29,90/);
+    assert.match(blob, /299,00/);
     assert.equal(
       FAQ_ITEMS.some((item) => item.question.toLowerCase().includes('busca')),
       false,

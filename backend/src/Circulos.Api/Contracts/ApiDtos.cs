@@ -195,6 +195,10 @@ public sealed class LifeEntryRequest
 
     [MaxLength(200)]
     public string? Location { get; set; }
+
+    public string[]? Tags { get; set; }
+
+    public Guid[]? CircleIds { get; set; }
 }
 
 public sealed record LifeEntryResponse(
@@ -206,6 +210,28 @@ public sealed record LifeEntryResponse(
     DateOnly? OccurredOn,
     string? Location,
     bool HasPhoto,
+    DateTime CreatedAt,
+    DateTime UpdatedAt,
+    IReadOnlyList<string> Tags,
+    IReadOnlyList<Guid> CircleIds);
+
+public sealed class ShareEntryRequest
+{
+    public Guid[] CircleIds { get; set; } = [];
+}
+
+public sealed record SharedLifeEntryResponse(
+    Guid Id,
+    Guid LifeAreaId,
+    string Title,
+    string? Body,
+    decimal? NumberValue,
+    DateOnly? OccurredOn,
+    string? Location,
+    bool HasPhoto,
+    IReadOnlyList<string> Tags,
+    Guid AuthorUserId,
+    string AuthorName,
     DateTime CreatedAt,
     DateTime UpdatedAt);
 
@@ -283,7 +309,8 @@ public sealed record CircleDetailResponse(
     IReadOnlyList<CircleMemberDto> Members,
     IReadOnlyList<CirclePostResponse> Posts,
     IReadOnlyList<CircleLogResponse> Log,
-    IReadOnlyList<CircleJoinRequestDto> JoinRequests);
+    IReadOnlyList<CircleJoinRequestDto> JoinRequests,
+    IReadOnlyList<SharedLifeEntryResponse> SharedEntries);
 
 public sealed record CirclePostResponse(Guid Id, Guid? AuthorUserId, string Body, bool HasPhoto, DateTime CreatedAt);
 public sealed record CircleLogResponse(Guid Id, Guid? ActorUserId, string Action, string Detail, DateTime CreatedAt);
@@ -347,6 +374,14 @@ public sealed class ReorderShortcutsRequest
     public Guid[] Ids { get; set; } = [];
 }
 
+public sealed class ShareShortcutRequest
+{
+    [Required]
+    public Guid CircleId { get; set; }
+}
+
+public sealed record ShortcutNoticeResponse(Guid Id, Guid ShortcutId, string Detail, DateTime CreatedAt);
+
 public sealed record ShortcutResponse(
     Guid Id,
     string Label,
@@ -355,7 +390,17 @@ public sealed record ShortcutResponse(
     bool IsActive,
     Guid? ReminderId,
     string ActionKind,
-    bool IsDeleted);
+    bool IsDeleted,
+    Guid? SharedByUserId = null,
+    string? SharedByName = null,
+    Guid? CircleId = null);
+
+public sealed class EmailPreferenceRequest
+{
+    public bool Enabled { get; set; }
+}
+
+public sealed record EmailPreferenceResponse(bool Enabled);
 
 public sealed record SearchHit(string Type, Guid Id, string Title, string? Detail);
 public sealed record SearchHistoryResponse(IReadOnlyList<string> Recent, IReadOnlyList<string> Frequent);
@@ -564,7 +609,10 @@ public sealed record DayPanelResponse(
     int ActiveCircleCount,
     IReadOnlyList<ShortcutResponse> Shortcuts,
     DateTime? VacationUntil,
-    PlanResponse Plan);
+    PlanResponse Plan,
+    IReadOnlyList<ShortcutNoticeResponse> ShortcutNotices,
+    IReadOnlyList<string> ReminderEmailsSent,
+    bool EmailRemindersEnabled);
 
 public static class EnumText
 {
