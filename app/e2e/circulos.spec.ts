@@ -182,6 +182,38 @@ test('remover foto de perfil', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Remover foto' })).toHaveCount(0);
 });
 
+test('transferir dono do circulo em vida', async ({ page }) => {
+  await signUp(page, '-dono-vida');
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  await expect(page.getByText('Descobrir circulos')).toBeVisible();
+  await page.getByLabel('Nome', { exact: true }).fill('Cuidado');
+  await page.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(page.getByText('Quem esta aqui')).toBeVisible();
+
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const memberEmail = `e2e-${Date.now()}-sucessor@exemplo.com`;
+  const registered = await page.request.post(`${apiUrl}/api/auth/register`, {
+    data: { email: memberEmail, password: 'senha-segura-1', name: 'Sucessor' },
+  });
+  expect(registered.ok()).toBeTruthy();
+  const member = (await registered.json()) as { token: string };
+  await page.getByLabel('Convidar por e-mail').fill(memberEmail);
+  await page.getByRole('button', { name: 'Enviar convite' }).click();
+  await expect(page.getByText(/Convite criado/)).toBeVisible();
+  const inviteText = await page.getByText(/Convite criado/).innerText();
+  const inviteToken = inviteText.replace('Convite criado. Codigo: ', '').trim();
+  const accepted = await page.request.post(`${apiUrl}/api/circles/invites/${inviteToken}/accept`, {
+    headers: { Authorization: `Bearer ${member.token}`, 'Content-Type': 'application/json' },
+    data: {},
+  });
+  expect(accepted.ok()).toBeTruthy();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Transferir dono para Sucessor' })).toBeVisible();
+  await page.getByRole('button', { name: 'Transferir dono para Sucessor' }).click();
+  await expect(page.getByText('Dono transferido. Historico e permissoes ficam com o circulo.')).toBeVisible();
+  await expect(page.getByText(/Sucessor · owner/)).toBeVisible();
+});
+
 test('modo escuro troca a paleta na hora', async ({ page }) => {
   await signUp(page, '-tema');
   await page.getByRole('button', { name: 'Ajustes' }).first().click();

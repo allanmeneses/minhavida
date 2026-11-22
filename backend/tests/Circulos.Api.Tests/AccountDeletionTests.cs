@@ -76,6 +76,27 @@ public sealed class AccountDeletionTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Exclusao_SemAdminNemSucessor_TravaCirculo()
+    {
+        var dono = _factory.CreateClient();
+        var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono", password: "senha-segura-1");
+        dono.WithToken(donoAuth.Token);
+        var created = await dono.PostAsJsonAsync("/api/circles", new { name = "Sozinho" });
+        var circle = await created.Content.ReadFromJsonAsync<CircleDto>();
+
+        (await dono.PostAsJsonAsync("/api/account/deletion-requests", new { password = "senha-segura-1" })).EnsureSuccessStatusCode();
+        var token = await LastEmailToken(donoAuth.Email, "Para apagar seus dados, use este codigo: ");
+        (await dono.PostAsJsonAsync("/api/account/deletion-requests/confirm", new { token })).EnsureSuccessStatusCode();
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var stored = await db.Circles.Include(x => x.Logs).SingleAsync(x => x.Id == circle!.Id);
+        Assert.Null(stored.OwnerUserId);
+        Assert.Equal(CircleStatus.LockedNoOwner, stored.Status);
+        Assert.Contains(stored.Logs, x => x.Action == "locked");
+    }
+
+    [Fact]
     public async Task ExclusaoSobrepostaAoUpload_NaoDeixaAContaPelaMetade()
     {
         var client = _factory.CreateClient();

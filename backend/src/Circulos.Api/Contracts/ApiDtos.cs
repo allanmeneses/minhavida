@@ -169,6 +169,12 @@ public sealed class InviteCircleRequest
     public string Role { get; set; } = "viewer";
 }
 
+public sealed class TransferCircleRequest
+{
+    [Required]
+    public Guid MemberUserId { get; set; }
+}
+
 public sealed class CirclePostRequest
 {
     [MaxLength(8000)]

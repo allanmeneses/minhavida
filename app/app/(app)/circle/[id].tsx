@@ -33,6 +33,7 @@ export default function CircleDetailScreen() {
   }, [load]);
 
   const isMember = Boolean(detail?.members.some((member) => member.userId === user?.id));
+  const isOwner = Boolean(detail?.members.some((member) => member.userId === user?.id && member.role === 'owner'));
   const isAdmin = Boolean(
     detail?.members.some((member) => member.userId === user?.id && (member.role === 'admin' || member.role === 'owner')),
   );
@@ -93,6 +94,19 @@ export default function CircleDetailScreen() {
     }
   }
 
+  async function transferTo(memberUserId: string) {
+    if (!token || !id) {
+      return;
+    }
+    await api(`/api/circles/${id}/transfer`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ memberUserId }),
+    });
+    setOk('Dono transferido. Historico e permissoes ficam com o circulo.');
+    await load();
+  }
+
   async function acceptJoin(requestId: string) {
     if (!token || !id) {
       return;
@@ -118,9 +132,14 @@ export default function CircleDetailScreen() {
 
       <Text style={styles.section}>Quem esta aqui</Text>
       {detail?.members.map((member) => (
-        <Text key={member.userId} style={styles.item}>
-          {member.name} · {member.role}
-        </Text>
+        <View key={member.userId} style={styles.card}>
+          <Text style={styles.item}>
+            {member.name} · {member.role}
+          </Text>
+          {isOwner && member.userId !== user?.id ? (
+            <Button label={`Transferir dono para ${member.name}`} onPress={() => void transferTo(member.userId)} />
+          ) : null}
+        </View>
       ))}
 
       {isAdmin && (detail?.joinRequests?.length ?? 0) > 0 ? (

@@ -336,6 +336,68 @@ public sealed class CirclesController(
         return NoContent();
     }
 
+    [HttpPost("{id:guid}/transfer")]
+    public async Task<ActionResult<CircleDetailResponse>> Transfer(
+        Guid id,
+        [FromBody] TransferCircleRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+
+        var circle = await LoadCircle(id, cancellationToken);
+        var owner = circle?.Members.FirstOrDefault(x => x.UserId == userId);
+        if (circle is null || HiddenSurprise(circle, userId) || owner is null || owner.Role != CircleRole.Owner || circle.OwnerUserId != userId)
+        {
+            return BadRequest(new ErrorResponse("So o dono atual pode transferir o circulo."));
+        }
+
+        if (request.MemberUserId == userId)
+        {
+            return BadRequest(new ErrorResponse("Escolha outra pessoa do circulo."));
+        }
+
+        var target = circle.Members.FirstOrDefault(x => x.UserId == request.MemberUserId);
+        if (target is null)
+        {
+            return BadRequest(new ErrorResponse("A pessoa precisa ja fazer parte do circulo."));
+        }
+
+        owner.Role = CircleRole.Admin;
+        target.Role = CircleRole.Owner;
+        circle.OwnerUserId = target.UserId;
+        db.CircleLogs.Add(Log(circle.Id, userId, "transferred", "Dono transferiu o circulo em vida. Historico e permissoes ficam."));
+
+        var oldOwner = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
+        var newOwner = await db.Users.FirstAsync(x => x.Id == target.UserId, cancellationToken);
+        if (oldOwner.OwnedCircleCount > 0)
+        {
+            oldOwner.OwnedCircleCount -= 1;
+        }
+
+        newOwner.OwnedCircleCount += 1;
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        var names = await MemberNames(circle, cancellationToken);
+        return Ok(new CircleDetailResponse(
+            circle.Id,
+            circle.Name,
+            circle.Description,
+            EnumText.Visibility(circle.Visibility),
+            circle.Discoverable,
+            circle.IsSurprise,
+            circle.RevealedAt is not null,
+            EnumText.Kind(circle.Kind),
+            EnumText.Status(circle.Status),
+            circle.OwnerUserId,
+            names,
+            circle.Posts.OrderByDescending(x => x.CreatedAt).Select(ToPost).ToList(),
+            circle.Logs.OrderByDescending(x => x.CreatedAt).Select(ToLog).ToList(),
+            await PendingJoinRequests(circle.Id, cancellationToken)));
+    }
+
     [HttpDelete("{id:guid}/membership")]
     public async Task<IActionResult> Leave(Guid id, CancellationToken cancellationToken)
     {
