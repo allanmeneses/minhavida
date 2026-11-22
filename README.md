@@ -98,5 +98,6 @@ docker-compose.yml          Postgres local
 - Cada linha em `personal_documents` tem `UserId`. Listar, baixar e apagar filtram por esse id.
 - Se o id nao e da pessoa autenticada, a API responde 404. Nao confirma que o arquivo existe.
 - A chave de armazenamento nunca vai para o cliente.
+- Documentos e fotos entram cifrados em AES-256-GCM. A chave fica em `Encryption:Key` (configuracao), fora do banco.
 - Download e foto usam `Cache-Control: private, no-store`.
 - Sem bucket publico e sem URL assinada de longa duracao nesta versao.

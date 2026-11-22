@@ -15,7 +15,12 @@ builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<JwtTokenService>();
-builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
+builder.Services.AddSingleton<IEncryptionKeyProvider, ConfigurationEncryptionKeyProvider>();
+builder.Services.AddSingleton<LocalFileStorage>();
+builder.Services.AddSingleton<IFileStorage>(sp =>
+    new EncryptedFileStorage(
+        sp.GetRequiredService<LocalFileStorage>(),
+        sp.GetRequiredService<IEncryptionKeyProvider>()));
 
 builder.Services.Configure<FormOptions>(options =>
 {
