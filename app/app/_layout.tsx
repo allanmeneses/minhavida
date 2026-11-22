@@ -1,7 +1,9 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '@/context/AuthContext';
+import { OfflineProvider } from '@/context/OfflineContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { TourProvider } from '@/context/TourContext';
 
 function ThemedStack() {
   const { colors, resolved } = useTheme();
@@ -22,7 +24,11 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ThemedStack />
+        <OfflineProvider>
+          <TourProvider>
+            <ThemedStack />
+          </TourProvider>
+        </OfflineProvider>
       </AuthProvider>
     </ThemeProvider>
   );

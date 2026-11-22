@@ -7,12 +7,15 @@ import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { ApiError } from '@/lib/api';
+import { ApiError, TwoFactorRequiredError } from '@/lib/api';
 
 export default function LoginScreen() {
-  const { login } = useAuth();
+  const { login, verifyTwoFactor } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [challenge, setChallenge] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [recovery, setRecovery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -20,10 +23,19 @@ export default function LoginScreen() {
     setError(null);
     setBusy(true);
     try {
-      await login(email.trim(), password);
+      if (challenge) {
+        await verifyTwoFactor(challenge, code.trim() || undefined, recovery.trim() || undefined);
+      } else {
+        await login(email.trim(), password);
+      }
       router.replace('/(app)/home');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel entrar.');
+      if (err instanceof TwoFactorRequiredError) {
+        setChallenge(err.twoFactorToken);
+        setError('Informe o codigo do autenticador ou um codigo de recuperacao.');
+      } else {
+        setError(err instanceof ApiError ? err.message : 'Nao foi possivel entrar.');
+      }
     } finally {
       setBusy(false);
     }
@@ -47,8 +59,30 @@ export default function LoginScreen() {
         secureTextEntry
         autoComplete="password"
       />
+      {challenge ? (
+        <>
+          <TextField
+            label="Codigo do autenticador"
+            value={code}
+            onChangeText={setCode}
+            placeholder="000000"
+            keyboardType="number-pad"
+          />
+          <TextField
+            label="Codigo de recuperacao"
+            value={recovery}
+            onChangeText={setRecovery}
+            placeholder="opcional"
+          />
+        </>
+      ) : null}
       <Feedback message={error} />
-      <Button label="Entrar" onPress={onSubmit} loading={busy} disabled={!email || !password} />
+      <Button
+        label={challenge ? 'Confirmar codigo' : 'Entrar'}
+        onPress={onSubmit}
+        loading={busy}
+        disabled={!email || !password || (Boolean(challenge) && !code.trim() && !recovery.trim())}
+      />
       <Text style={styles.hint}>
         <Link href="/(auth)/forgot" style={styles.link}>
           Esqueci a senha

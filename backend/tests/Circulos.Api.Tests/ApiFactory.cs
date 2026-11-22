@@ -132,7 +132,11 @@ internal sealed class OverlapSaveInterceptor : SaveChangesInterceptor
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        if (eventData.Context?.ChangeTracker.Entries<User>().Any(entry => entry.State == EntityState.Added) == true)
+        var addedUser = eventData.Context?.ChangeTracker.Entries<User>().Any(entry => entry.State == EntityState.Added) == true;
+        var addedRefresh = eventData.Context?.ChangeTracker.Entries<RefreshToken>().Any(entry => entry.State == EntityState.Added) == true;
+        var enablingTwoFactor = eventData.Context?.ChangeTracker.Entries<User>()
+            .Any(entry => entry.State == EntityState.Modified && entry.Property(nameof(User.TwoFactorEnabled)).IsModified) == true;
+        if (addedUser || (addedRefresh && !addedUser) || enablingTwoFactor)
         {
             await Task.Delay(80, cancellationToken);
         }

@@ -17,6 +17,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<JwtTokenService>();
+builder.Services.AddScoped<SessionService>();
 builder.Services.AddSingleton<IEncryptionKeyProvider, ConfigurationEncryptionKeyProvider>();
 builder.Services.AddSingleton<LocalFileStorage>();
 builder.Services.AddSingleton<IFileStorage>(sp =>
@@ -64,7 +65,7 @@ builder.Services
             ValidIssuer = jwtSection["Issuer"],
             ValidAudience = jwtSection["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-            ClockSkew = TimeSpan.FromMinutes(1),
+            ClockSkew = TimeSpan.Zero,
             NameClaimType = System.Security.Claims.ClaimTypes.NameIdentifier,
         };
     });

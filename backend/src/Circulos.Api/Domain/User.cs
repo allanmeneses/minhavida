@@ -10,6 +10,8 @@ public sealed class User
     public long StorageUsedBytes { get; set; }
     public int OwnedCircleCount { get; set; }
     public DateTime? VacationUntil { get; set; }
+    public bool TwoFactorEnabled { get; set; }
+    public string? TwoFactorSecret { get; set; }
 
     public Profile Profile { get; set; } = null!;
     public ICollection<PersonalDocument> Documents { get; set; } = new List<PersonalDocument>();

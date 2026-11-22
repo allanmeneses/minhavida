@@ -30,10 +30,11 @@ public sealed class AuthTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var payload = await response.Content.ReadFromJsonAsync<AuthHelper.AuthResponseDto>(Json);
         Assert.False(string.IsNullOrWhiteSpace(payload?.Token));
-        Assert.Equal(email, payload!.User.Email);
+        Assert.False(string.IsNullOrWhiteSpace(payload!.RefreshToken));
+        Assert.Equal(email, payload.User!.Email);
         Assert.Equal("Ana Costa", payload.User.Name);
 
-        client.WithToken(payload.Token);
+        client.WithToken(payload.Token!);
         var me = await client.GetAsync("/api/auth/me");
         Assert.Equal(HttpStatusCode.OK, me.StatusCode);
 

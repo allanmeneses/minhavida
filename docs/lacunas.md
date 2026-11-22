@@ -12,6 +12,26 @@ Legenda:
 
 Numero da pergunta: transcricao. A segunda serie 60-69 aparece como `N (reinicio)`.
 
+## Rodada 5 (JWT, 2FA, offline, FAQ, backup, Dependabot)
+
+Pedido desta rodada, com o que a especificacao/lacunas sustentam. O que nao estava cravado nao foi inventado.
+
+| Item | Status | Origem | Evidencia |
+| --- | --- | --- | --- |
+| JWT access curto + refresh com rotacao e revogacao no logout | feito e testado | 69 reinicio; 70 e 71 (sugestao; esta rodada pede) | `Jwt:AccessTokenMinutes` 15, `RefreshTokenDays` 7. `SessionService.RotateAsync` com `UserRowLock`. Logout `RevokeAsync`. Reset de senha `RevokeAllAsync`. Testes `Login_DevolveAccessERefresh_AccessExpiraERefreshRenova`, `RefreshSobreposto_SoUmaRotacaoVence`, `Logout_RevogaRefresh_NaoRenovaMais`, `LogoutSobrepostoComRefresh_NaoDeixaDoisRefreshValidos`, `ResetSenha_RevogaRefresh`. Playwright `access expirado renova com refresh; logout revoga`. App: `AuthContext` + `api` 401. |
+| Cookie httpOnly | nao feito | 72 (sugestao sem Ok/Beleza) | nao cravado. Cliente Expo usa Bearer no JSON e `circulos.refresh` no storage. |
+| 2FA TOTP opcional (QR, recuperacao, login) | feito e testado | 34 (fora do inicio; esta rodada pede) | `Totp` RFC 6238 SHA1 6 digitos, `TotpQr` PNG, 8 codigos de recuperacao com hash. Testes `AtivarComQr_ExigeCodigoNoLogin_RecuperacaoEntraUmaVez`, `EnableSobrepostoComLogin_NaoEntregaSessaoSemSegundoFator`, `Desativar_PedeSenhaECodigo`, `npm test` `bate no vetor RFC 6238`. Playwright `segundo fator com QR exige codigo no login`. |
+| Offline: cache de leitura + fila de listas | feito e testado | 261 a 266 | Cache: perfil, painel, lembretes, listas. Fila: adicionar item e marcar feito. 403 descarta e avisa (`applySyncResult`). Icone Online/Offline. Testes `guarda leitura...`, `403 descarta a acao e avisa`. Playwright `offline le o cache, enfileira item e 403 descarta com aviso` e `offline adiciona item na fila e sobe ao voltar`. |
+| Conflito ultima sincronizada vence entre aparelhos | nao cravado | 262 | A fila no mesmo aparelho e serial (a ultima da fila sobe por ultimo). Dois aparelhos ao mesmo tempo nao tem merge. Nao inventar. |
+| FAQ e tour inicial pt-BR | feito e testado | 288 a 299 | `FAQ_ITEMS` e `TOUR_SCREENS` no app e na web. Sem busca. Tour pulavel, reaparece em Ajustes, so avanca. Testes `cobre perfil...`, `so avanca e cobre o app`. Playwright `tour na primeira abertura e FAQ no menu`. |
+| Backup JSON + arquivos, so com permissao | feito e testado | 7, 58, 59 | `GET /api/export/me` e `/api/export/circles/{id}` zip `dados.json` + `files/`. Membro exporta o circulo; visitante 404. Teste `Perfil_ExportaJsonEArquivo`, `Circulo_MembroExporta_VisitanteNao`. Playwright `backup do perfil e grafico de armazenamento`. Dump cifrado para a pessoa abrir continua fora (58, 59). |
+| Grafico de armazenamento sem separar tipo | feito e testado | 279, 280, 275 | Barra em Ajustes, `Uso de armazenamento`, texto "Sem separar por tipo". 100 MB / 1 GB ja em `PlanLimits`. Playwright no teste de backup. |
+| Dependabot nuget, npm, github-actions | feito e testado | 82 | `.github/dependabot.yml`. `npm test` `Dependabot cobre nuget, npm e github-actions`. |
+| CodeQL no GitHub Actions | parcial | 82 | `.github/workflows/codeql.yml` csharp e javascript. Analise rodou no run [45054514009](https://github.com/allanmeneses/minhavida/actions/runs/45054514009): 56 TS + 11 JS, 90 C#. Upload para code scanning falhou com "Code scanning is not enabled for this repository". Nao da para ligar o recurso daqui. O workflow grava o SARIF como artefato (`upload: false`). `npm test` `CodeQL analisa csharp e javascript`. |
+| Billing, SMTP real, Azure, iOS, votacao, WebSocket | nao feito | pedido desta rodada | Fora do escopo. |
+
+CI do main no squash `38ae79f` (run [45052962465](https://github.com/allanmeneses/minhavida/actions/runs/45052962465)): job `backend` conclusion `success`; job `app` conclusion `success`. Job `android` ainda estava em `Gerar APK` (status `in_progress`) na leitura desta rodada; nao falhou.
+
 ## Postgres e biblioteca de imagem (esta rodada)
 
 ### Postgres
@@ -62,7 +82,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Padrao de preenchimento simples com exemplo | parcial | 98 | Vacina tem Quando/Onde (`life/[id].tsx`). Sem exemplo por tipo alem dos placeholders. |
 | Ao entrar num circulo, ver quem esta envolvido | parcial | 1 | Detalhe lista membros (`CirclesController.Get`, `circle/[id].tsx` "Quem esta aqui"). Nao ha tela de descoberta com feed de pessoas antes de entrar. |
 | Metricas do perfil acompanham o uso | nao feito | 36 | Sem recap por uso. |
-| Diario estilo Notion no solo, sem busca, sem versao, sem PDF, sync ao abrir, exporta texto | parcial | 243 a 250 | Area Diario com texto e export `.txt` (`LifeAreasController` export, `Diario_ExportaTextoCorrido`). Sem sessoes tipo Notion, sem sync offline. Export no app so dispara download se `document` existir (web). |
+| Diario estilo Notion no solo, sem busca, sem versao, sem PDF, sync ao abrir, exporta texto | parcial | 243 a 250 | Area Diario com texto e export `.txt` (`LifeAreasController` export, `Diario_ExportaTextoCorrido`). Sem sessoes tipo Notion. Cache offline cobre o perfil; o diario em si nao tem fila propria. Export no app so dispara download se `document` existir (web). |
 | Identidade (nome, foto) | feito e testado | abertura, 1 | Perfil + foto. Testes de auth/perfil/foto. Camera e galeria no perfil (`profile.tsx`); Playwright nao exercita esses botoes. |
 | Tipo pet ou grupo no perfil | nao feito | abertura (fala do entrevistador) | `Profile` e de usuario pessoa. |
 | A mesma entrada em varios circulos sem duplicar | nao feito | abertura | `LifeEntry` e do perfil; `CirclePost` e outro objeto. |
@@ -75,27 +95,28 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Documentos no perfil solo | feito e testado | 31 | `/api/documents`, `documents.tsx`. `Dono_EnviaListaBaixaEApagaDocumento`. |
 | Criptografados no servidor, chave do app | feito e testado | 31 reformulada, 57, 57 reformulada | `EncryptedFileStorage` AES-256-GCM. `ArquivoNoDisco_NaoContemOTextoOriginal`, `ChaveVemDaConfiguracao_NaoDeUmCampoDeBanco`, `ChaveDeCifra_NaoFicaNoBanco`. |
 | Recuperacao: login em qualquer aparelho, esqueci senha | feito e testado | 32, 33 | `forgot-password` / `reset-password`. `EsqueciSenha_SempreNoContentENaoVazaSeOEmailExiste`, `TokenDoEmail_RedefineASenhaUmaVez`. Playwright `esqueci a senha avisa que o email saiu`. E-mail vai para `sent_emails`, nao SMTP. |
-| 2FA fora do inicio | nao feito (de proposito) | 34 | Sem TOTP/SMS. |
+| 2FA fora do inicio | feito e testado (rodada 5) | 34; pedido da rodada 5 | TOTP opcional. Ver secao Rodada 5. SMS nao existe. |
 | Sem exportar cifrado para a pessoa abrir | feito sem teste da negativa | 58, 59 | Download autenticado devolve o arquivo em claro para o dono (`DocumentsController`). Nao ha endpoint de dump cifrado. |
-| Backup pessoal do que e da pessoa num circulo | parcial | 7 | Export do diario (`/api/life-areas/{id}/export`). Sem export do circulo (posts, membros, log). |
+| Backup pessoal do que e da pessoa num circulo | feito e testado | 7 | `GET /api/export/me` e `/api/export/circles/{id}`. Diario `.txt` segue existindo. Ver secao Rodada 5. |
 | Foto comprime, cifra, substitui original | feito e testado | 56, 57, 273, 274 | `ImageCompressor` + `EncryptedFileStorage`. `Foto_ComprimeSubstituiOriginalEFicaCifrada`. Qualidade 82 e o valor no codigo. |
 | Sem limite de tamanho no upload | nao feito | 272 | `FileRules.MaxIncomingBytes = 80 MB`. |
 | Entradas: foto, texto, numero; sem video | feito e testado | 53, 54, 55 | `life/[id].tsx` tem numero e foto. Playwright `entrada guarda numero e o log do circulo mostra data`. Video nao aparece. |
 | Foto por camera, galeria ou arquivo | feito e testado | 54, 55 | Perfil: camera e galeria. Documentos: `DocumentPicker`. Entrada: camera, galeria e arquivo na web. |
-| 100 MB gratis / 1 GB pago; aviso a 90% | parcial | 275, 277 a 283 | `PlanLimits`. `Plano_MostraLimitesSemGateway`, `Armazenamento_DoisEnviosSobrepostosRespeitamOTeto`. Home mostra aviso de storage. Sem grafico (279). Sem limpeza em lote (281; dono pediu para sair do escopo). Excluir foto: `DELETE /api/profile/photo` e botao `Remover foto` em `profile.tsx`. Playwright `remover foto de perfil`. |
+| 100 MB gratis / 1 GB pago; aviso a 90% | parcial | 275, 277 a 283 | `PlanLimits`. `Plano_MostraLimitesSemGateway`, `Armazenamento_DoisEnviosSobrepostosRespeitamOTeto`. Home mostra aviso de storage. Grafico de uso sem tipo: Ajustes + Playwright `backup do perfil e grafico de armazenamento` (279, 280). Sem limpeza em lote (281; dono pediu para sair do escopo). Excluir foto: `DELETE /api/profile/photo` e botao `Remover foto` em `profile.tsx`. Playwright `remover foto de perfil`. |
 
 ## Seguranca, auth e pipeline
 
 | Decisao | Status | Origem | Evidencia |
 | --- | --- | --- | --- |
 | JWT | feito e testado | 69 reinicio | `JwtTokenService`, testes de login/me. |
-| Access 15 min + refresh 7 dias + cookie httpOnly | nao feito | 70, 71, 72 (sugestao sem Ok/Beleza) | `ExpiresHours: 12` em `appsettings.json`. Token no corpo JSON. Sem refresh. App guarda em `expo-secure-store`. |
+| Access 15 min + refresh 7 dias | feito e testado | 70, 71 (sugestao; rodada 5 pede) | `AccessTokenMinutes: 15`, `RefreshTokenDays: 7`. Ver secao Rodada 5. |
+| Cookie httpOnly | nao feito | 72 (sugestao sem Ok/Beleza) | nao cravado. Bearer + storage. |
 | WebSocket com TLS | nao feito | 73, 74 | Grep em `backend/src`: zero `UseWebSockets` / `SignalR`. |
 | Estatisticas anonimas so internas, nunca vendidas | nao feito | 43, 44 | Sem coleta. |
 | Repositorio privado | feito sem teste | 83 | API GitHub desta rodada: `private: true` em `allanmeneses/minhavida`. |
 | GitHub Actions: build, unit, integracao | feito e testado | 79, 80, 81, 84 | `.github/workflows/ci.yml`: `dotnet test`, `npm test`, `tsc --noEmit`, Playwright. Jobs `backend` e `app` verdes no run desta branch. |
-| Checagem de seguranca / Dependabot | nao feito | 82 | Sem `dependabot.yml`. Workflow nao roda `dotnet list --vulnerable`. |
-| Testes desde o inicio; nada sobe sem teste | parcial | 79, 80 | Ha xUnit (49 `[Fact]`), `npm test` (6 casos em `lib/*.test.mjs`) e Playwright (5). Nao ha gate de deploy. Deploy nao foi feito. |
+| Checagem de seguranca / Dependabot | parcial | 82 | `.github/dependabot.yml` nuget/npm/github-actions. CodeQL analisa; upload de code scanning nao ligado no repo. Ver secao Rodada 5. `dotnet list --vulnerable` nao entra no CI. |
+| Testes desde o inicio; nada sobe sem teste | parcial | 79, 80 | xUnit 86 `[Fact]`, `npm test` 18 casos, Playwright 26. Nao ha gate de deploy. Deploy nao foi feito. |
 | Edicao substitui de vez, sem versao | feito sem teste | 68, 67 | PUT da entrada sobrescreve (`LifeAreasController.UpdateEntry`). Sem tabela de versoes. Sem teste do PUT. |
 | Tags opcionais nas entradas | nao feito | abertura | |
 
@@ -133,7 +154,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Painel do dia primeiro: vence, atrasado, em seguida, quantos circulos | feito e testado | 251 a 254 | `GET /api/home`, `home.tsx`. Poll a cada 5s e ao voltar o foco (sem WebSocket; 73 e 74 nao feitos). Playwright `painel do dia atualiza sozinho`. |
 | Botao + no painel sugerindo contexto | nao feito | 255, 256 (sem Ok) | |
 | Busca unificada + historico sincronizado | feito e testado | 257 a 260 | `GET /api/search` e `/api/search/history`. Tela `search.tsx`. Teste `Busca_UnificadaComHistoricoSincronizadoETermosFrequentes`. Playwright `busca unificada com historico`. |
-| Offline: guarda local, ultima sync vence, icone online/offline | nao feito | 261 a 266 | Sem fila local. |
+| Offline: guarda local, ultima sync vence, icone online/offline | parcial | 261 a 266 | Cache + fila de listas + icone. Conflito entre aparelhos (262) nao cravado. Ver secao Rodada 5. |
 
 ## Lembretes e recorrencia
 
@@ -200,7 +221,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Pagina de precos em reais | nao feito | 307, 308 | Valor mensal nao cravado (309, 310). |
 | So cartao recorrente; recusa suspende; historico so em dia ou nao; sem NF; cancelar visivel | nao feito | 311 a 324 | Pix foi tirado pelo dono; nao ha Pix no codigo. |
 | Sem indicacao, sem selo feito no Brasil, sem blog, redes depois, sem onboarding e-mail, sem beta fechado | feito (por ausencia) | 300 a 306 | Nao ha esses produtos. |
-| FAQ no menu, tour na primeira abertura | nao feito | 288 a 299 | |
+| FAQ no menu, tour na primeira abertura | feito e testado | 288 a 299 | Telas `faq.tsx` e `TourGuide`. Ver secao Rodada 5. |
 
 ## Tecnologia
 
@@ -252,3 +273,7 @@ Nao some "feito por ausencia" com entrega de produto. Os buracos que ainda imped
 - WebSocket (73, 74); o painel usa poll de 5s.
 - Botao + no painel (255, 256; sugestao sem Ok).
 - Arrastar atalho para qualquer ponto da tela (103).
+- Cookie httpOnly (72; sugestao sem Ok). Bearer no app.
+- Conflito offline entre dois aparelhos (262; ultima sincronizada vence, sem regra de merge).
+- SMS para 2FA (34 cobriu so o recorte inicial; esta rodada fez TOTP).
+- Billing/gateway, SMTP real, deploy Azure, iOS nativo.

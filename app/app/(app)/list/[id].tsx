@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
+import { useOffline } from '@/context/OfflineContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type SharedListDetail, type SharedListItem } from '@/lib/api';
 import { LIST_ACCESS, LIST_ACCESS_LABEL, LIST_KIND_LABEL, nextOf, type ListAccess, type ListKind } from '@/lib/listKinds';
@@ -14,6 +15,7 @@ export default function ListDetailScreen() {
   const params = useLocalSearchParams<{ id: string | string[] }>();
   const listId = Array.isArray(params.id) ? params.id[0] : params.id;
   const { token } = useAuth();
+  const { online, warning, enqueueAdd, enqueueComplete, syncQueue, clearWarning } = useOffline();
   const { colors } = useTheme();
   const styles = screenStyles(colors);
   const [detail, setDetail] = useState<SharedListDetail | null>(null);
@@ -41,11 +43,49 @@ export default function ListDetailScreen() {
     if (!token || !listId || !text.trim()) {
       return;
     }
-    await api(`/api/lists/${listId}/items`, {
-      method: 'POST',
-      token,
-      body: JSON.stringify({ text: text.trim(), quantity: quantity.trim() || null, note: note.trim() || null }),
-    });
+    const payload = { text: text.trim(), quantity: quantity.trim() || null, note: note.trim() || null };
+    if (!online) {
+      const action = enqueueAdd(listId, payload);
+      setDetail((current) =>
+        current
+          ? {
+              ...current,
+              items: [
+                ...current.items,
+                {
+                  id: action.id,
+                  text: payload.text,
+                  quantity: payload.quantity,
+                  note: payload.note,
+                  isDone: false,
+                  sortOrder: current.items.length,
+                  addedByUserId: null,
+                  addedByName: 'voce',
+                  doneByUserId: null,
+                  doneByName: null,
+                },
+              ],
+            }
+          : current,
+      );
+      setText('');
+      setQuantity('');
+      setNote('');
+      return;
+    }
+    try {
+      await api(`/api/lists/${listId}/items`, {
+        method: 'POST',
+        token,
+        body: JSON.stringify(payload),
+      });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        enqueueAdd(listId, payload);
+      } else {
+        throw err;
+      }
+    }
     setText('');
     setQuantity('');
     setNote('');
@@ -56,7 +96,31 @@ export default function ListDetailScreen() {
     if (!token || !listId) {
       return;
     }
-    await api(`/api/lists/${listId}/items/${item.id}/done`, { method: 'POST', token });
+    if (!online) {
+      enqueueComplete(listId, item.id);
+      setDetail((current) =>
+        current
+          ? {
+              ...current,
+              items: current.items.map((entry) =>
+                entry.id === item.id
+                  ? { ...entry, isDone: !entry.isDone, doneByName: entry.isDone ? null : 'voce' }
+                  : entry,
+              ),
+            }
+          : current,
+      );
+      return;
+    }
+    try {
+      await api(`/api/lists/${listId}/items/${item.id}/done`, { method: 'POST', token });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 0) {
+        enqueueComplete(listId, item.id);
+        return;
+      }
+      throw err;
+    }
     await load();
   }
 
@@ -126,7 +190,15 @@ export default function ListDetailScreen() {
       <Text style={styles.lead}>
         {kindLabel}. {accessLabel}. Quem adicionou e quem marcou ficam no item.
       </Text>
+      <Text style={styles.lead}>{online ? 'Online' : 'Offline'}</Text>
       <Feedback message={error} />
+      <Feedback message={warning} />
+      {warning ? <Button label="Esconder aviso da fila" variant="ghost" onPress={clearWarning} /> : null}
+      {!online ? (
+        <Button label="Sincronizar ao voltar" variant="ghost" onPress={() => void syncQueue()} />
+      ) : (
+        <Button label="Sincronizar fila" variant="ghost" onPress={() => void syncQueue()} />
+      )}
       {detail?.canChangeAccess ? (
         <Button label={`Permissao dos membros: ${accessLabel}`} variant="ghost" onPress={() => void cycleAccess()} />
       ) : null}

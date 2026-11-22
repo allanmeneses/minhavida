@@ -25,6 +25,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<PasswordReset> PasswordResets => Set<PasswordReset>();
     public DbSet<AccountDeletionRequest> AccountDeletionRequests => Set<AccountDeletionRequest>();
     public DbSet<SentEmail> SentEmails => Set<SentEmail>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<TwoFactorChallenge> TwoFactorChallenges => Set<TwoFactorChallenge>();
+    public DbSet<TwoFactorRecoveryCode> TwoFactorRecoveryCodes => Set<TwoFactorRecoveryCode>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,6 +40,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.PasswordHash).HasMaxLength(512).IsRequired();
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.VacationUntil).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.TwoFactorSecret).HasMaxLength(64);
             entity.HasOne(x => x.Profile)
                 .WithOne(x => x.User)
                 .HasForeignKey<Profile>(x => x.UserId)
@@ -62,6 +66,18 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasMany<SearchQuery>()
+                .WithOne(x => x.User)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany<RefreshToken>()
+                .WithOne(x => x.User)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany<TwoFactorChallenge>()
+                .WithOne(x => x.User)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany<TwoFactorRecoveryCode>()
                 .WithOne(x => x.User)
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -322,6 +338,39 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.ToTable("refresh_tokens");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.TokenHash).IsUnique();
+            entity.HasIndex(x => x.UserId);
+            entity.HasIndex(x => x.FamilyId);
+            entity.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ExpiresAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.RevokedAt).HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<TwoFactorChallenge>(entity =>
+        {
+            entity.ToTable("two_factor_challenges");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.TokenHash).IsUnique();
+            entity.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.ExpiresAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.UsedAt).HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<TwoFactorRecoveryCode>(entity =>
+        {
+            entity.ToTable("two_factor_recovery_codes");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.UserId, x.CodeHash }).IsUnique();
+            entity.Property(x => x.CodeHash).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.UsedAt).HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<SentEmail>(entity =>
