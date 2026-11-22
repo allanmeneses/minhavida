@@ -29,10 +29,19 @@ export default function HomeScreen() {
     }
     try {
       setPanel(await api<DayPanel>('/api/home', { token }));
-      setAllShortcuts(await api<ShortcutItem[]>('/api/shortcuts', { token }));
-      setReminders(await api<ReminderItem[]>('/api/reminders', { token }));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Nao foi possivel abrir o dia.');
+      return;
+    }
+    try {
+      setAllShortcuts(await api<ShortcutItem[]>('/api/shortcuts', { token }));
+    } catch {
+      // atalho nao entra no cache de leitura desta rodada
+    }
+    try {
+      setReminders(await api<ReminderItem[]>('/api/reminders', { token }));
+    } catch {
+      // lembretes usam cache quando a rede some
     }
   }, [token]);
 
@@ -214,6 +223,7 @@ export default function HomeScreen() {
 
       <Button label="Lembretes" variant="ghost" onPress={() => router.push('/(app)/reminders')} />
       <Button label="Busca" variant="ghost" onPress={() => router.push('/(app)/search' as Href)} />
+      <Button label="FAQ" variant="ghost" onPress={() => router.push('/(app)/faq' as Href)} />
       <Button label="Ajustes" variant="ghost" onPress={() => router.push('/(app)/settings')} />
     </ScrollView>
   );

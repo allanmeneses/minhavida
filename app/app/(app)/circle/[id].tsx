@@ -6,7 +6,7 @@ import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { api, ApiError, type CircleDetail, type SharedListSummary } from '@/lib/api';
+import { api, ApiError, downloadNamedBlob, type CircleDetail, type SharedListSummary } from '@/lib/api';
 import { formatPersonTime } from '@/lib/formatPersonTime';
 import {
   LIST_ACCESS,
@@ -250,6 +250,20 @@ export default function CircleDetailScreen() {
         </Text>
       ))}
 
+      {detail ? (
+        <Button
+          label="Exportar este circulo"
+          variant="ghost"
+          onPress={() => {
+            if (!token || !circleId) {
+              return;
+            }
+            void downloadNamedBlob(`/api/export/circles/${circleId}`, `circulos-${circleId}.zip`, token)
+              .then(() => setOk('Backup do circulo baixado.'))
+              .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel exportar.'));
+          }}
+        />
+      ) : null}
       {detail?.members.some((member) => member.userId === user?.id && member.role !== 'owner') ? (
         <Button label="Sair do circulo" variant="danger" onPress={() => void leave()} />
       ) : null}

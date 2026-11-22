@@ -18,8 +18,9 @@ namespace Circulos.Api.Controllers;
 public sealed class AuthController(
     AppDbContext db,
     IPasswordHasher<User> passwordHasher,
-    JwtTokenService tokens,
-    IEmailSender email) : ControllerBase
+    SessionService sessions,
+    IEmailSender email,
+    TimeProvider clock) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
@@ -36,7 +37,7 @@ public sealed class AuthController(
                 return Conflict(new ErrorResponse("Ja existe uma conta com este e-mail."));
             }
 
-            var now = DateTime.UtcNow;
+            var now = clock.GetUtcNow().UtcDateTime;
             var user = new User
             {
                 Id = Guid.NewGuid(),
@@ -57,7 +58,7 @@ public sealed class AuthController(
 
             db.Users.Add(user);
             await db.SaveChangesAsync(cancellationToken);
-            return Created("/api/auth/me", ToResponse(user));
+            return Created("/api/auth/me", await sessions.IssueAsync(user, cancellationToken));
         }
         catch (Exception ex) when (IsEmailUniqueViolation(ex) || IsBusyWrite(ex))
         {
@@ -87,7 +88,51 @@ public sealed class AuthController(
             return Unauthorized(new ErrorResponse("E-mail ou senha incorretos."));
         }
 
-        return Ok(ToResponse(user));
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, user.Id, cancellationToken);
+        await db.Entry(user).ReloadAsync(cancellationToken);
+        if (user.TwoFactorEnabled)
+        {
+            var now = clock.GetUtcNow().UtcDateTime;
+            var challenge = TokenHash.NewToken();
+            db.TwoFactorChallenges.Add(new TwoFactorChallenge
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                TokenHash = TokenHash.Hash(challenge),
+                ExpiresAt = now.AddMinutes(5),
+                CreatedAt = now,
+            });
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return Ok(new AuthResponse(null, null, null, true, challenge));
+        }
+
+        var issued = await sessions.IssueAsync(user, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Ok(issued);
+    }
+
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthResponse>> Refresh(
+        [FromBody] RefreshRequest request,
+        CancellationToken cancellationToken)
+    {
+        var rotated = await sessions.RotateAsync(request.RefreshToken, cancellationToken);
+        return rotated is null
+            ? Unauthorized(new ErrorResponse("Sessao expirada. Entre de novo."))
+            : Ok(rotated);
+    }
+
+    [HttpPost("logout")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Logout(
+        [FromBody] LogoutRequest request,
+        CancellationToken cancellationToken)
+    {
+        await sessions.RevokeAsync(request.RefreshToken, cancellationToken);
+        return NoContent();
     }
 
     [HttpPost("forgot-password")]
@@ -106,8 +151,8 @@ public sealed class AuthController(
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 TokenHash = TokenHash.Hash(token),
-                ExpiresAt = DateTime.UtcNow.AddHours(2),
-                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = clock.GetUtcNow().UtcDateTime.AddHours(2),
+                CreatedAt = clock.GetUtcNow().UtcDateTime,
             });
             await db.SaveChangesAsync(cancellationToken);
             await email.SendAsync(
@@ -130,17 +175,21 @@ public sealed class AuthController(
         var reset = await db.PasswordResets
             .Include(x => x.User)
             .FirstOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
-        if (reset is null || reset.UsedAt is not null || reset.ExpiresAt < DateTime.UtcNow)
+        if (reset is null || reset.UsedAt is not null || reset.ExpiresAt < clock.GetUtcNow().UtcDateTime)
         {
             return BadRequest(new ErrorResponse("Este link de redefinicao nao e valido."));
         }
 
-        reset.UsedAt = DateTime.UtcNow;
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, reset.UserId, cancellationToken);
+        reset.UsedAt = clock.GetUtcNow().UtcDateTime;
         reset.User.PasswordHash = passwordHasher.HashPassword(reset.User, request.Password);
         await db.PasswordResets
             .Where(x => x.UserId == reset.UserId && x.Id != reset.Id && x.UsedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.UsedAt, DateTime.UtcNow), cancellationToken);
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.UsedAt, clock.GetUtcNow().UtcDateTime), cancellationToken);
+        await sessions.RevokeAllAsync(reset.UserId, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return NoContent();
     }
 
@@ -161,8 +210,182 @@ public sealed class AuthController(
         return Ok(new AuthUserDto(user.Id, user.Email, user.Profile.DisplayName));
     }
 
-    private AuthResponse ToResponse(User user) =>
-        new(tokens.Create(user), new AuthUserDto(user.Id, user.Email, user.Profile.DisplayName));
+    [HttpGet("2fa")]
+    [Authorize]
+    public async Task<ActionResult<TwoFactorStatusResponse>> TwoFactorStatus(CancellationToken cancellationToken)
+    {
+        var user = await db.Users.FirstAsync(x => x.Id == User.GetUserId(), cancellationToken);
+        return Ok(new TwoFactorStatusResponse(user.TwoFactorEnabled));
+    }
+
+    [HttpPost("2fa/setup")]
+    [Authorize]
+    public async Task<ActionResult<TwoFactorSetupResponse>> SetupTwoFactor(CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+        var user = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
+        if (user.TwoFactorEnabled)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return BadRequest(new ErrorResponse("O segundo fator ja esta ativo."));
+        }
+
+        var secret = Totp.NewSecret();
+        var codes = Totp.NewRecoveryCodes();
+        user.TwoFactorSecret = secret;
+        await db.TwoFactorRecoveryCodes.Where(x => x.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+        foreach (var code in codes)
+        {
+            db.TwoFactorRecoveryCodes.Add(new TwoFactorRecoveryCode
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                CodeHash = TokenHash.Hash(Totp.NormalizeCode(code)),
+            });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        var uri = Totp.OtpauthUri(user.Email, secret);
+        return Ok(new TwoFactorSetupResponse(secret, uri, Convert.ToBase64String(TotpQr.Png(uri)), codes));
+    }
+
+    [HttpPost("2fa/enable")]
+    [Authorize]
+    public async Task<IActionResult> EnableTwoFactor(
+        [FromBody] TwoFactorCodeRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+        var user = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
+        if (user.TwoFactorEnabled)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return BadRequest(new ErrorResponse("O segundo fator ja esta ativo."));
+        }
+
+        if (string.IsNullOrWhiteSpace(user.TwoFactorSecret)
+            || string.IsNullOrWhiteSpace(request.Code)
+            || !Totp.Verify(user.TwoFactorSecret, request.Code, clock.GetUtcNow()))
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return BadRequest(new ErrorResponse("Codigo do autenticador invalido."));
+        }
+
+        user.TwoFactorEnabled = true;
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("2fa/disable")]
+    [Authorize]
+    public async Task<IActionResult> DisableTwoFactor(
+        [FromBody] TwoFactorDisableRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+        var user = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
+        var password = passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+        if (password == PasswordVerificationResult.Failed)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return Unauthorized(new ErrorResponse("Senha incorreta."));
+        }
+
+        if (!user.TwoFactorEnabled)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return NoContent();
+        }
+
+        if (!await AcceptFactorAsync(user, request.Code, request.RecoveryCode, cancellationToken))
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return BadRequest(new ErrorResponse("Codigo do autenticador invalido."));
+        }
+
+        user.TwoFactorEnabled = false;
+        user.TwoFactorSecret = null;
+        await db.TwoFactorRecoveryCodes.Where(x => x.UserId == userId).ExecuteDeleteAsync(cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("2fa/verify")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthResponse>> VerifyTwoFactor(
+        [FromBody] TwoFactorVerifyRequest request,
+        CancellationToken cancellationToken)
+    {
+        var hash = TokenHash.Hash(request.TwoFactorToken);
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var challenge = await db.TwoFactorChallenges
+            .Include(x => x.User)
+            .ThenInclude(x => x.Profile)
+            .FirstOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
+        if (challenge is null || challenge.UsedAt is not null || challenge.ExpiresAt < clock.GetUtcNow().UtcDateTime)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return Unauthorized(new ErrorResponse("Codigo expirado. Entre de novo."));
+        }
+
+        await UserRowLock.AcquireAsync(db, challenge.UserId, cancellationToken);
+        await db.Entry(challenge).ReloadAsync(cancellationToken);
+        if (challenge.UsedAt is not null)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return Unauthorized(new ErrorResponse("Codigo expirado. Entre de novo."));
+        }
+
+        if (!await AcceptFactorAsync(challenge.User, request.Code, request.RecoveryCode, cancellationToken))
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return Unauthorized(new ErrorResponse("Codigo do autenticador invalido."));
+        }
+
+        challenge.UsedAt = clock.GetUtcNow().UtcDateTime;
+        var issued = await sessions.IssueAsync(challenge.User, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Ok(issued);
+    }
+
+    private async Task<bool> AcceptFactorAsync(
+        User user,
+        string? code,
+        string? recoveryCode,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(code)
+            && !string.IsNullOrWhiteSpace(user.TwoFactorSecret)
+            && Totp.Verify(user.TwoFactorSecret, code, clock.GetUtcNow()))
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(recoveryCode))
+        {
+            return false;
+        }
+
+        var hash = TokenHash.Hash(Totp.NormalizeCode(recoveryCode));
+        var stored = await db.TwoFactorRecoveryCodes
+            .FirstOrDefaultAsync(x => x.UserId == user.Id && x.CodeHash == hash && x.UsedAt == null, cancellationToken);
+        if (stored is null)
+        {
+            return false;
+        }
+
+        stored.UsedAt = clock.GetUtcNow().UtcDateTime;
+        return true;
+    }
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 

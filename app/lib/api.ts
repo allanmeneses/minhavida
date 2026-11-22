@@ -11,10 +11,44 @@ export class ApiError extends Error {
   }
 }
 
-type Options = RequestInit & { token?: string | null };
+export class TwoFactorRequiredError extends Error {
+  constructor(readonly twoFactorToken: string) {
+    super('Informe o codigo do autenticador.');
+  }
+}
+
+type Options = RequestInit & { token?: string | null; skipRefresh?: boolean };
+
+let refreshAccess: (() => Promise<string | null>) | null = null;
+let readCacheHandler: ((path: string) => unknown | undefined) | null = null;
+let writeCacheHandler: ((path: string, value: unknown) => void) | null = null;
+
+export function setRefreshAccess(handler: (() => Promise<string | null>) | null): void {
+  refreshAccess = handler;
+}
+
+export function setReadCache(handler: ((path: string) => unknown | undefined) | null): void {
+  readCacheHandler = handler;
+}
+
+export function setWriteCache(handler: ((path: string, value: unknown) => void) | null): void {
+  writeCacheHandler = handler;
+}
 
 export type AuthUser = { id: string; email: string; name: string };
-export type AuthResponse = { token: string; user: AuthUser };
+export type AuthResponse = {
+  token: string | null;
+  refreshToken: string | null;
+  user: AuthUser | null;
+  requiresTwoFactor: boolean;
+  twoFactorToken: string | null;
+};
+export type TwoFactorSetup = {
+  secret: string;
+  otpauthUri: string;
+  qrPngBase64: string;
+  recoveryCodes: string[];
+};
 export type Profile = {
   displayName: string;
   birthDate: string | null;
@@ -175,6 +209,7 @@ function isFormDataBody(body: unknown): boolean {
 }
 
 export async function api<T>(path: string, options: Options = {}): Promise<T> {
+  const method = (options.method ?? 'GET').toUpperCase();
   const headerInit: Record<string, string> = {};
   if (options.token) {
     headerInit.Authorization = `Bearer ${options.token}`;
@@ -183,8 +218,33 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
     headerInit['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers: headerInit });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, { ...options, headers: headerInit });
+  } catch {
+    if (method === 'GET') {
+      const cached = readCacheHandler?.(path);
+      if (cached !== undefined) {
+        return cached as T;
+      }
+    }
+    throw new ApiError('Sem conexao.', 0);
+  }
+
+  if (response.status === 401 && !options.skipRefresh && refreshAccess) {
+    const next = await refreshAccess();
+    if (next) {
+      return api<T>(path, { ...options, token: next, skipRefresh: true });
+    }
+  }
+
   if (!response.ok) {
+    if (method === 'GET' && response.status >= 500) {
+      const cached = readCacheHandler?.(path);
+      if (cached !== undefined) {
+        return cached as T;
+      }
+    }
     throw new ApiError(await readError(response), response.status);
   }
   if (response.status === 204) {
@@ -192,7 +252,11 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
   }
 
   const text = await response.text();
-  return text ? (JSON.parse(text) as T) : (undefined as T);
+  const parsed = text ? (JSON.parse(text) as T) : (undefined as T);
+  if (method === 'GET' && parsed !== undefined) {
+    writeCacheHandler?.(path, parsed);
+  }
+  return parsed;
 }
 
 export type NativeUploadFile = {
@@ -311,5 +375,40 @@ function messageFromErrorBody(body: string, status: number): string {
   if (status === 401) {
     return 'Entre novamente para continuar.';
   }
+  if (status === 0) {
+    return 'Sem conexao.';
+  }
   return 'Nao foi possivel concluir o pedido.';
+}
+
+export async function downloadNamedBlob(path: string, fileName: string, token: string): Promise<void> {
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    throw new ApiError(await readError(response), response.status);
+  }
+
+  if (Platform.OS === 'web') {
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  const FileSystem = await import('expo-file-system/legacy');
+  const Sharing = await import('expo-sharing');
+  const target = `${FileSystem.cacheDirectory ?? FileSystem.documentDirectory}${fileName}`;
+  const result = await FileSystem.downloadAsync(`${API_URL}${path}`, target, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(result.uri, { dialogTitle: fileName, mimeType: response.headers.get('Content-Type') ?? undefined });
+  }
 }

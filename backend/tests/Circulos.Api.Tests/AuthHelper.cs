@@ -34,7 +34,7 @@ internal static class AuthHelper
         var parsed = JsonSerializer.Deserialize<AuthResponseDto>(body, JsonOptions)
             ?? throw new InvalidOperationException("Resposta de cadastro invalida.");
 
-        return new AuthResult(parsed.Token, parsed.User.Id, parsed.User.Email, parsed.User.Name);
+        return new AuthResult(parsed.Token!, parsed.RefreshToken, parsed.User!.Id, parsed.User.Email, parsed.User.Name);
     }
 
     public static HttpClient WithToken(this HttpClient client, string token)
@@ -45,7 +45,12 @@ internal static class AuthHelper
 
     public sealed record AuthUserDto(Guid Id, string Email, string Name);
 
-    public sealed record AuthResponseDto(string Token, AuthUserDto User);
+    public sealed record AuthResponseDto(
+        string? Token,
+        string? RefreshToken,
+        AuthUserDto? User,
+        bool RequiresTwoFactor,
+        string? TwoFactorToken);
 
-    public sealed record AuthResult(string Token, Guid UserId, string Email, string Name);
+    public sealed record AuthResult(string Token, string? RefreshToken, Guid UserId, string Email, string Name);
 }

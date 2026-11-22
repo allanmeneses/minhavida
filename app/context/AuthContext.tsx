@@ -1,6 +1,18 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, type AuthUser, type Profile } from '@/lib/api';
-import { clearToken, readToken, writeToken } from '@/lib/auth-storage';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  api,
+  setRefreshAccess,
+  TwoFactorRequiredError,
+  type AuthResponse,
+  type AuthUser,
+  type Profile,
+} from '@/lib/api';
+import {
+  clearToken,
+  readRefreshToken,
+  readToken,
+  writeSession,
+} from '@/lib/auth-storage';
 
 type AuthContextValue = {
   loading: boolean;
@@ -10,6 +22,7 @@ type AuthContextValue = {
   photoRevision: number;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
+  verifyTwoFactor: (twoFactorToken: string, code?: string, recoveryCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   setProfile: (profile: Profile) => void;
@@ -24,13 +37,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [photoRevision, setPhotoRevision] = useState(0);
+  const refreshRef = useRef<string | null>(null);
+  const tokenRef = useRef<string | null>(null);
 
   const applySession = useCallback(async (nextToken: string) => {
-    const me = await api<AuthUser>('/api/auth/me', { token: nextToken });
-    const nextProfile = await api<Profile>('/api/profile', { token: nextToken });
+    const me = await api<AuthUser>('/api/auth/me', { token: nextToken, skipRefresh: true });
+    const nextProfile = await api<Profile>('/api/profile', { token: nextToken, skipRefresh: true });
+    tokenRef.current = nextToken;
     setToken(nextToken);
     setUser(me);
     setProfile(nextProfile);
+  }, []);
+
+  const storeSession = useCallback(async (result: AuthResponse) => {
+    if (!result.token || !result.refreshToken) {
+      throw new Error('Sessao incompleta.');
+    }
+    await writeSession(result.token, result.refreshToken);
+    refreshRef.current = result.refreshToken;
+    await applySession(result.token);
+  }, [applySession]);
+
+  useEffect(() => {
+    setRefreshAccess(async () => {
+      const stored = refreshRef.current ?? (await readRefreshToken());
+      if (!stored) {
+        return null;
+      }
+      try {
+        const result = await api<AuthResponse>('/api/auth/refresh', {
+          method: 'POST',
+          body: JSON.stringify({ refreshToken: stored }),
+          skipRefresh: true,
+        });
+        if (!result.token || !result.refreshToken) {
+          return null;
+        }
+        await writeSession(result.token, result.refreshToken);
+        refreshRef.current = result.refreshToken;
+        tokenRef.current = result.token;
+        setToken(result.token);
+        return result.token;
+      } catch {
+        await clearToken();
+        refreshRef.current = null;
+        tokenRef.current = null;
+        setToken(null);
+        setUser(null);
+        setProfile(null);
+        return null;
+      }
+    });
+    return () => setRefreshAccess(null);
   }, []);
 
   useEffect(() => {
@@ -38,11 +96,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         const stored = await readToken();
+        const refresh = await readRefreshToken();
+        refreshRef.current = refresh;
         if (!stored || !active) {
           return;
         }
         await applySession(stored);
       } catch {
+        const refresh = refreshRef.current ?? (await readRefreshToken());
+        if (refresh) {
+          try {
+            const result = await api<AuthResponse>('/api/auth/refresh', {
+              method: 'POST',
+              body: JSON.stringify({ refreshToken: refresh }),
+              skipRefresh: true,
+            });
+            if (result.token && result.refreshToken && active) {
+              await writeSession(result.token, result.refreshToken);
+              refreshRef.current = result.refreshToken;
+              await applySession(result.token);
+              return;
+            }
+          } catch {
+            // cai no limpar sessao
+          }
+        }
         await clearToken();
         if (active) {
           setToken(null);
@@ -61,25 +139,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applySession]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const result = await api<{ token: string; user: AuthUser }>('/api/auth/login', {
+    const result = await api<AuthResponse>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+      skipRefresh: true,
     });
-    await writeToken(result.token);
-    await applySession(result.token);
-  }, [applySession]);
+    if (result.requiresTwoFactor && result.twoFactorToken) {
+      throw new TwoFactorRequiredError(result.twoFactorToken);
+    }
+    await storeSession(result);
+  }, [storeSession]);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
-    const result = await api<{ token: string; user: AuthUser }>('/api/auth/register', {
+    const result = await api<AuthResponse>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({ name, email, password }),
+      skipRefresh: true,
     });
-    await writeToken(result.token);
-    await applySession(result.token);
-  }, [applySession]);
+    await storeSession(result);
+  }, [storeSession]);
+
+  const verifyTwoFactor = useCallback(async (twoFactorToken: string, code?: string, recoveryCode?: string) => {
+    const result = await api<AuthResponse>('/api/auth/2fa/verify', {
+      method: 'POST',
+      body: JSON.stringify({ twoFactorToken, code, recoveryCode }),
+      skipRefresh: true,
+    });
+    await storeSession(result);
+  }, [storeSession]);
 
   const logout = useCallback(async () => {
+    const refresh = refreshRef.current ?? (await readRefreshToken());
+    if (refresh) {
+      try {
+        await api('/api/auth/logout', {
+          method: 'POST',
+          body: JSON.stringify({ refreshToken: refresh }),
+          skipRefresh: true,
+        });
+      } catch {
+        // mesmo se a rede falhar, limpa o aparelho
+      }
+    }
     await clearToken();
+    refreshRef.current = null;
+    tokenRef.current = null;
     setToken(null);
     setUser(null);
     setProfile(null);
@@ -104,12 +208,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       photoRevision,
       login,
       register,
+      verifyTwoFactor,
       logout,
       refreshProfile,
       setProfile,
       bumpPhoto: () => setPhotoRevision((value) => value + 1),
     }),
-    [loading, token, user, profile, photoRevision, login, register, logout, refreshProfile],
+    [loading, token, user, profile, photoRevision, login, register, verifyTwoFactor, logout, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

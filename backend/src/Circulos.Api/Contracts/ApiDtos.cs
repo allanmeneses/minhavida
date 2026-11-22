@@ -66,7 +66,65 @@ public sealed class ConfirmTokenRequest
 
 public sealed record AuthUserDto(Guid Id, string Email, string Name);
 
-public sealed record AuthResponse(string Token, AuthUserDto User);
+public sealed record AuthResponse(
+    string? Token,
+    string? RefreshToken,
+    AuthUserDto? User,
+    bool RequiresTwoFactor,
+    string? TwoFactorToken);
+
+public sealed class RefreshRequest
+{
+    [Required(ErrorMessage = "Informe o refresh token.")]
+    public string RefreshToken { get; set; } = string.Empty;
+}
+
+public sealed class LogoutRequest
+{
+    [Required(ErrorMessage = "Informe o refresh token.")]
+    public string RefreshToken { get; set; } = string.Empty;
+}
+
+public sealed class TwoFactorCodeRequest
+{
+    [MaxLength(16)]
+    public string? Code { get; set; }
+
+    [MaxLength(16)]
+    public string? RecoveryCode { get; set; }
+}
+
+public sealed class TwoFactorVerifyRequest
+{
+    [Required]
+    public string TwoFactorToken { get; set; } = string.Empty;
+
+    [MaxLength(16)]
+    public string? Code { get; set; }
+
+    [MaxLength(16)]
+    public string? RecoveryCode { get; set; }
+}
+
+public sealed class TwoFactorDisableRequest
+{
+    [Required(ErrorMessage = "Informe a senha.")]
+    public string Password { get; set; } = string.Empty;
+
+    [MaxLength(16)]
+    public string? Code { get; set; }
+
+    [MaxLength(16)]
+    public string? RecoveryCode { get; set; }
+}
+
+public sealed record TwoFactorStatusResponse(bool Enabled);
+
+public sealed record TwoFactorSetupResponse(
+    string Secret,
+    string OtpauthUri,
+    string QrPngBase64,
+    IReadOnlyList<string> RecoveryCodes);
 
 public sealed class UpdateProfileRequest
 {

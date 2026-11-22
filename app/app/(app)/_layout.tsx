@@ -2,17 +2,25 @@ import { Redirect, Tabs } from 'expo-router';
 import { Platform, Pressable, Text } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { TourGuide } from '@/components/TourGuide';
 import { useAuth } from '@/context/AuthContext';
+import { useOffline } from '@/context/OfflineContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useTour } from '@/context/TourContext';
 
 export default function AppLayout() {
   const { loading, user, logout } = useAuth();
   const { colors } = useTheme();
-  if (loading) {
+  const { online } = useOffline();
+  const tour = useTour();
+  if (loading || !tour.ready) {
     return <LoadingScreen />;
   }
   if (!user) {
     return <Redirect href="/(auth)/login" />;
+  }
+  if (!tour.done) {
+    return <TourGuide onSkip={() => void tour.finish()} onFinish={() => void tour.finish()} />;
   }
 
   return (
@@ -24,6 +32,14 @@ export default function AppLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line },
+        headerLeft: () => (
+          <Text
+            accessibilityRole="text"
+            accessibilityLabel={online ? 'Online' : 'Offline'}
+            style={{ marginLeft: 12, color: colors.muted, fontWeight: '700' }}>
+            {online ? 'Online' : 'Offline'}
+          </Text>
+        ),
         headerRight: () => (
           <Pressable
             accessibilityRole="button"
@@ -96,6 +112,10 @@ export default function AppLayout() {
       <Tabs.Screen
         name="settings"
         options={{ title: 'Ajustes', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
+        name="faq"
+        options={{ title: 'FAQ', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
       <Tabs.Screen
         name="life/[id]"

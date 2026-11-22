@@ -1,10 +1,22 @@
 import { expect, test, type Page } from '@playwright/test';
+import { createHmac } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
+import { totpCode } from '../lib/totp';
 
 const artifacts =
   process.env.E2E_ARTIFACTS ??
   (existsSync('/opt/cursor') ? '/opt/cursor/artifacts' : 'test-results/e2e');
+
+async function skipTourIfNeeded(page: Page): Promise<void> {
+  const skip = page.getByRole('button', { name: 'Pular tour' });
+  const home = page.getByText('O que pede atencao hoje');
+  await expect(skip.or(home)).toBeVisible({ timeout: 20_000 });
+  if (await skip.isVisible()) {
+    await skip.click();
+  }
+  await expect(home).toBeVisible({ timeout: 20_000 });
+}
 
 async function signUp(page: Page, suffix = ''): Promise<string> {
   const email = `e2e-${Date.now()}${suffix}@exemplo.com`;
@@ -13,8 +25,34 @@ async function signUp(page: Page, suffix = ''): Promise<string> {
   await page.getByLabel('E-mail').fill(email);
   await page.getByLabel('Senha').fill('senha-segura-1');
   await page.getByRole('button', { name: 'Criar conta' }).click();
-  await expect(page.getByText('O que pede atencao hoje')).toBeVisible({ timeout: 20_000 });
+  await skipTourIfNeeded(page);
   return email;
+}
+
+async function waitTotpWindow(): Promise<void> {
+  const remaining = 30 - (Math.floor(Date.now() / 1000) % 30);
+  if (remaining <= 3) {
+    await new Promise((resolve) => setTimeout(resolve, (remaining + 1) * 1000));
+  }
+}
+
+function expiredAccess(userId: string): string {
+  const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const now = Math.floor(Date.now() / 1000);
+  const header = encode({ alg: 'HS256', typ: 'JWT' });
+  const payload = encode({
+    'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier': userId,
+    sub: userId,
+    typ: 'access',
+    nbf: now - 1200,
+    exp: now - 60,
+    iss: 'Circulos',
+    aud: 'Circulos',
+  });
+  const signature = createHmac('sha256', 'troque-esta-chave-local-de-desenvolvimento-32')
+    .update(`${header}.${payload}`)
+    .digest('base64url');
+  return `${header}.${payload}.${signature}`;
 }
 
 test.beforeAll(async () => {
@@ -383,7 +421,7 @@ test('permissao da lista: so ver e depois marcar feito', async ({ browser }) => 
   await memberPage.getByLabel('E-mail').fill(memberEmail);
   await memberPage.getByLabel('Senha').fill('senha-segura-1');
   await memberPage.getByRole('button', { name: 'Entrar' }).click();
-  await expect(memberPage.getByText('O que pede atencao hoje')).toBeVisible({ timeout: 20_000 });
+  await skipTourIfNeeded(memberPage);
   await memberPage.getByRole('button', { name: 'Circulos' }).click();
   await memberPage.getByRole('button', { name: `Abrir ${circleName}` }).click();
   await memberPage.getByRole('button', { name: 'Compras da casa', exact: true }).click();
@@ -409,4 +447,195 @@ test('modo escuro troca a paleta na hora', async ({ page }) => {
   await page.getByRole('button', { name: 'Escuro' }).click();
   await expect(page.getByText('Agora: dark')).toBeVisible();
   await page.screenshot({ path: `${artifacts}/tema-escuro.png`, fullPage: true });
+});
+
+test('tour na primeira abertura e FAQ no menu', async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const email = `e2e-${Date.now()}-tour@exemplo.com`;
+  await page.goto('/(auth)/register');
+  await page.getByLabel('Nome', { exact: true }).fill('Pessoa Tour');
+  await page.getByLabel('E-mail').fill(email);
+  await page.getByLabel('Senha').fill('senha-segura-1');
+  await page.getByRole('button', { name: 'Criar conta' }).click();
+  await expect(page.getByText('Seu perfil solo')).toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'Avancar' }).click();
+  await expect(page.getByText('Painel do dia')).toBeVisible();
+  await page.getByRole('button', { name: 'Pular tour' }).click();
+  await expect(page.getByText('O que pede atencao hoje')).toBeVisible({ timeout: 20_000 });
+  await page.getByRole('button', { name: 'FAQ' }).first().click();
+  await expect(page.getByText('O que e o Circulos?')).toBeVisible();
+  await expect(page.getByText('Role ate achar o assunto. Nao ha busca nesta lista.')).toBeVisible();
+  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await page.getByRole('button', { name: 'Ver tour de novo' }).click();
+  await expect(page.getByText('Seu perfil solo')).toBeVisible();
+  await page.getByRole('button', { name: 'Pular tour' }).click();
+  await expect(page.getByText('O que pede atencao hoje')).toBeVisible({ timeout: 20_000 });
+  await context.close();
+});
+
+test('access expirado renova com refresh; logout revoga', async ({ page }) => {
+  await signUp(page, '-refresh');
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const access = await page.evaluate(() => localStorage.getItem('circulos.token'));
+  const refresh = await page.evaluate(() => localStorage.getItem('circulos.refresh'));
+  expect(access).toBeTruthy();
+  expect(refresh).toBeTruthy();
+  const me = await page.request.get(`${apiUrl}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${access}` },
+  });
+  expect(me.ok()).toBeTruthy();
+  const user = (await me.json()) as { id: string };
+  await page.evaluate((jwt) => localStorage.setItem('circulos.token', jwt), expiredAccess(user.id));
+  await page.reload();
+  await expect(page.getByText('O que pede atencao hoje')).toBeVisible({ timeout: 20_000 });
+  const rotated = await page.evaluate(() => localStorage.getItem('circulos.refresh'));
+  expect(rotated).toBeTruthy();
+  const reuse = await page.request.post(`${apiUrl}/api/auth/refresh`, {
+    data: { refreshToken: refresh },
+  });
+  expect(reuse.status()).toBe(401);
+  await page.getByRole('button', { name: 'Sair' }).click();
+  await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible({ timeout: 20_000 });
+  const afterLogout = await page.request.post(`${apiUrl}/api/auth/refresh`, {
+    data: { refreshToken: rotated },
+  });
+  expect(afterLogout.status()).toBe(401);
+});
+
+test('segundo fator com QR exige codigo no login', async ({ page }) => {
+  const email = await signUp(page, '-2fa');
+  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await page.getByRole('button', { name: 'Ativar segundo fator' }).click();
+  await expect(page.getByLabel('QR do autenticador')).toBeVisible({ timeout: 15_000 });
+  const secretLine = await page.getByText(/^Segredo: /).innerText();
+  const secret = secretLine.replace('Segredo: ', '').trim();
+  await waitTotpWindow();
+  await page.getByLabel('Codigo do autenticador').fill(await totpCode(secret));
+  await page.getByRole('button', { name: 'Confirmar segundo fator' }).click();
+  await expect(page.getByText('Segundo fator ativo. Guarde os codigos de recuperacao.')).toBeVisible();
+  await page.getByRole('button', { name: 'Sair' }).first().click();
+  await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible({ timeout: 20_000 });
+  await page.getByLabel('E-mail').fill(email);
+  await page.getByLabel('Senha').fill('senha-segura-1');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await expect(page.getByText(/Informe o codigo do autenticador/)).toBeVisible();
+  await waitTotpWindow();
+  await page.getByLabel('Codigo do autenticador').fill(await totpCode(secret));
+  await page.getByRole('button', { name: 'Confirmar codigo' }).click();
+  await skipTourIfNeeded(page);
+});
+
+test('offline le o cache, enfileira item e 403 descarta com aviso', async ({ browser }) => {
+  test.setTimeout(90_000);
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await signUp(owner, '-off-dono');
+  await owner.getByRole('button', { name: 'Circulos' }).click();
+  const circleName = `Casa off ${Date.now()}`;
+  await owner.getByLabel('Nome', { exact: true }).fill(circleName);
+  await owner.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(owner.getByText('Listas do circulo')).toBeVisible();
+
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const memberEmail = `e2e-${Date.now()}-off-membro@exemplo.com`;
+  const registered = await owner.request.post(`${apiUrl}/api/auth/register`, {
+    data: { email: memberEmail, password: 'senha-segura-1', name: 'Membro Off' },
+  });
+  expect(registered.ok()).toBeTruthy();
+  const member = (await registered.json()) as { token: string };
+  await owner.getByLabel('Convidar por e-mail').fill(memberEmail);
+  await owner.getByRole('button', { name: 'Enviar convite' }).click();
+  await expect(owner.getByText(/Convite criado/)).toBeVisible();
+  const inviteText = await owner.getByText(/Convite criado/).innerText();
+  const inviteToken = inviteText.replace('Convite criado. Codigo: ', '').trim();
+  const accepted = await owner.request.post(`${apiUrl}/api/circles/invites/${inviteToken}/accept`, {
+    headers: { Authorization: `Bearer ${member.token}`, 'Content-Type': 'application/json' },
+    data: {},
+  });
+  expect(accepted.ok()).toBeTruthy();
+
+  await owner.getByLabel('Nome da lista').fill('Compras off');
+  await owner.getByRole('button', { name: 'Criar lista' }).click();
+  await expect(owner.getByRole('button', { name: 'Compras off', exact: true })).toBeVisible({ timeout: 15_000 });
+  await owner.getByRole('button', { name: 'Compras off', exact: true }).click();
+  await owner.getByLabel('Item', { exact: true }).fill('Leite');
+  await owner.getByRole('button', { name: 'Adicionar item' }).click();
+  await expect(owner.getByText('Leite', { exact: true })).toBeVisible();
+  await owner.getByRole('button', { name: /^Permissao dos membros:/ }).click();
+  await owner.getByRole('button', { name: /^Permissao dos membros:/ }).click();
+  await expect(owner.getByRole('button', { name: 'Permissao dos membros: membros marcam feito' })).toBeVisible();
+
+  const memberContext = await browser.newContext();
+  const memberPage = await memberContext.newPage();
+  await memberPage.goto('/(auth)/login');
+  await memberPage.getByLabel('E-mail').fill(memberEmail);
+  await memberPage.getByLabel('Senha').fill('senha-segura-1');
+  await memberPage.getByRole('button', { name: 'Entrar' }).click();
+  await skipTourIfNeeded(memberPage);
+  await memberPage.getByRole('button', { name: 'Circulos' }).click();
+  await memberPage.getByRole('button', { name: `Abrir ${circleName}` }).click();
+  await memberPage.getByRole('button', { name: 'Compras off', exact: true }).click();
+  await expect(memberPage.getByRole('button', { name: 'Marcar Leite' })).toBeVisible({ timeout: 15_000 });
+
+  await memberPage.context().setOffline(true);
+  await expect(memberPage.getByLabel('Offline')).toBeVisible();
+  await memberPage.getByRole('button', { name: 'Marcar Leite' }).click();
+  await expect(memberPage.getByText(/feito por/)).toBeVisible();
+
+  await owner.getByRole('button', { name: /^Permissao dos membros:/ }).click();
+  await owner.getByRole('button', { name: /^Permissao dos membros:/ }).click();
+  await expect(owner.getByRole('button', { name: 'Permissao dos membros: so o dono edita' })).toBeVisible();
+
+  await memberPage.context().setOffline(false);
+  await memberPage.getByRole('button', { name: 'Sincronizar fila' }).click();
+  await expect(memberPage.getByText('Esta lista nao permite marcar itens.')).toBeVisible({ timeout: 15_000 });
+
+  await ownerContext.close();
+  await memberContext.close();
+});
+
+test('offline adiciona item na fila e sobe ao voltar', async ({ page }) => {
+  await signUp(page, '-off-add');
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByRole('button', { name: 'Listas' }).click();
+  await page.getByLabel('Nome da lista').fill('Feira off');
+  await page.getByRole('button', { name: 'Criar lista' }).click();
+  await page.getByRole('button', { name: 'Feira off', exact: true }).click();
+  await page.getByLabel('Item', { exact: true }).fill('Arroz');
+  await page.getByRole('button', { name: 'Adicionar item' }).click();
+  await expect(page.getByText('Arroz', { exact: true })).toBeVisible();
+  await page.context().setOffline(true);
+  await expect(page.getByLabel('Offline')).toBeVisible();
+  await page.getByLabel('Item', { exact: true }).fill('Feijao');
+  await page.getByRole('button', { name: 'Adicionar item' }).click();
+  await expect(page.getByText('Feijao', { exact: true })).toBeVisible();
+  await page.context().setOffline(false);
+  await page.getByRole('button', { name: 'Sincronizar fila' }).click();
+  await expect(page.getByLabel('Online')).toBeVisible();
+  await page.reload();
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByRole('button', { name: 'Listas' }).click();
+  await page.getByRole('button', { name: 'Feira off', exact: true }).click();
+  await expect(page.getByText('Feijao', { exact: true })).toBeVisible({ timeout: 20_000 });
+});
+
+test('backup do perfil e grafico de armazenamento', async ({ page }) => {
+  await signUp(page, '-backup');
+  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await expect(page.getByText('Uso de armazenamento')).toBeVisible();
+  await expect(page.getByLabel(/Uso de armazenamento/)).toBeVisible();
+  await expect(page.getByText(/Sem separar por tipo/)).toBeVisible();
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exportar meu perfil' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/circulos-perfil/);
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  await page.getByLabel('Nome', { exact: true }).fill('Casa backup');
+  await page.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(page.getByText('Quem esta aqui')).toBeVisible();
+  const circleDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Exportar este circulo' }).click();
+  const circleFile = await circleDownload;
+  expect(circleFile.suggestedFilename()).toMatch(/circulos-/);
 });
