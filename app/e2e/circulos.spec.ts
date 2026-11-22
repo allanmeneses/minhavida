@@ -90,7 +90,7 @@ test('entrada guarda numero e o log do circulo mostra data', async ({ page }) =>
   await page.getByRole('button', { name: 'Circulos' }).click();
   await page.getByLabel('Nome', { exact: true }).fill('Familia log');
   await page.getByRole('button', { name: 'Criar circulo' }).click();
-  await expect(page.getByText('Log')).toBeVisible();
+  await expect(page.getByText('Log', { exact: true })).toBeVisible();
   await expect(page.getByText(/created:/)).toBeVisible();
   await expect(page.getByText(/\d{2}\/\d{2}\/\d{4}/)).toBeVisible();
 });
