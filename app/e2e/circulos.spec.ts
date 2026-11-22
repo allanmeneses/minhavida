@@ -742,6 +742,114 @@ test('pagina de status publica', async ({ page }) => {
   await expect(page.getByText('Banco')).toBeVisible();
 });
 
+test('recap de uso no perfil so mostra fluxo usado', async ({ page }) => {
+  await signUp(page, '-recap');
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByRole('button', { name: 'Resumo de uso' }).click();
+  await expect(page.getByText('Ainda nao ha uso para resumir.')).toBeVisible();
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByText('Vacinas', { exact: true }).click();
+  await page.getByLabel('Titulo').fill('Hepatite B');
+  await page.getByLabel('Quando').fill('2024-03-10');
+  await page.getByLabel('Onde').fill('UBS Centro');
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await expect(page.getByText('Hepatite B')).toBeVisible();
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByRole('button', { name: 'Resumo de uso' }).click();
+  await expect(page.getByText('Vacinas · 1')).toBeVisible();
+  await expect(page.getByText('Diario', { exact: true })).toHaveCount(0);
+  await page.context().setOffline(true);
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByRole('button', { name: 'Resumo de uso' }).click();
+  await expect(page.getByText('Vacinas · 1')).toBeVisible();
+  await page.context().setOffline(false);
+});
+
+test('circulo temporario arquiva e compartilha a historia', async ({ browser }) => {
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await signUp(owner, '-recap-circulo');
+  await owner.getByRole('button', { name: 'Circulos' }).click();
+  const circleName = `Curso recap ${Date.now()}`;
+  await owner.getByLabel('Nome', { exact: true }).fill(circleName);
+  await owner.getByRole('button', { name: 'Tipo: Duradouro' }).click();
+  await expect(owner.getByRole('button', { name: 'Tipo: Temporario' })).toBeVisible();
+  await owner.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(owner.getByText('Temporario · active')).toBeVisible();
+  await owner.getByLabel('Nova entrada').fill('Terminei o modulo');
+  await owner.getByRole('button', { name: 'Publicar' }).click();
+  await expect(owner.getByText('Terminei o modulo').first()).toBeVisible();
+  await expect(owner.getByText('Minha retrospectiva')).toBeVisible();
+  await expect(owner.getByText('Minhas entradas · 1')).toBeVisible();
+  await owner.getByRole('button', { name: 'Encerrar ciclo e arquivar' }).click();
+  await expect(owner.getByText('Ciclo encerrado. A retrospectiva fica para consulta.', { exact: true })).toBeVisible();
+  await expect(owner.getByText('Temporario · archived')).toBeVisible();
+  await owner.getByRole('button', { name: 'Compartilhar minha historia' }).click();
+  await expect(owner.getByText(/Historia compartilhada: \/r\//)).toBeVisible();
+  const shareLine = await owner.getByText(/Historia compartilhada: \/r\//).innerText();
+  const sharePath = shareLine.replace('Historia compartilhada: ', '').trim();
+
+  const visitorContext = await browser.newContext();
+  const visitor = await visitorContext.newPage();
+  await visitor.goto(sharePath);
+  await expect(visitor.getByText('Historia compartilhada')).toBeVisible();
+  await expect(visitor.getByText('Terminei o modulo')).toBeVisible();
+  await expect(visitor.getByText('Pessoa E2E')).toBeVisible();
+  await ownerContext.close();
+  await visitorContext.close();
+});
+
+test('perfil publico compartilhavel com privacidade', async ({ browser }) => {
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await signUp(owner, '-publico');
+  await owner.getByRole('button', { name: 'Perfil' }).click();
+  await expect(owner.getByText('O perfil esta privado. Ninguem de fora ve nome nem foto.')).toBeVisible();
+  await owner.getByRole('button', { name: 'Perfil privado' }).click();
+  await owner.getByRole('button', { name: 'Salvar perfil' }).click();
+  await expect(owner.getByText('Perfil atualizado.')).toBeVisible();
+  await expect(owner.getByText(/Link publico: \/p\//)).toBeVisible();
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const token = await owner.evaluate(() => localStorage.getItem('circulos.token'));
+  const me = await owner.request.get(`${apiUrl}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(me.ok()).toBeTruthy();
+  const user = (await me.json()) as { id: string; name: string };
+
+  const visitorContext = await browser.newContext();
+  const visitor = await visitorContext.newPage();
+  await visitor.goto(`/p/${user.id}`);
+  await expect(visitor.getByText('Perfil publico')).toBeVisible();
+  await expect(visitor.getByText('Pessoa E2E', { exact: true })).toBeVisible();
+  await expect(visitor.getByText('Quem visita ve so nome e foto. Telefone, e-mail e diario ficam fora.')).toBeVisible();
+  await expect(visitor.getByLabel('Telefone')).toHaveCount(0);
+
+  await owner.getByRole('button', { name: 'Perfil publico' }).click();
+  await owner.getByRole('button', { name: 'Salvar perfil' }).click();
+  await expect(owner.getByText('O perfil esta privado. Ninguem de fora ve nome nem foto.')).toBeVisible();
+  await visitor.reload();
+  await expect(visitor.getByText('Perfil nao encontrado.')).toBeVisible();
+  await ownerContext.close();
+  await visitorContext.close();
+});
+
+test('contraste alto troca a paleta na hora', async ({ page }) => {
+  await signUp(page, '-contraste');
+  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await page.getByRole('button', { name: 'Contraste alto' }).click();
+  await expect(page.getByText('Contraste: alto.')).toBeVisible();
+  await page.screenshot({ path: `${artifacts}/contraste-alto.png`, fullPage: true });
+});
+
+test('diario mostra exemplo de preenchimento', async ({ page }) => {
+  await signUp(page, '-exemplo');
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByText('Diario', { exact: true }).click();
+  await expect(page.getByText('Exemplo: um paragrafo do dia. Sem busca e sem versao.')).toBeVisible();
+  await expect(page.getByPlaceholder('Corrida de manha')).toBeVisible();
+});
+
 test('backup do perfil e grafico de armazenamento', async ({ page }) => {
   await signUp(page, '-backup');
   await page.getByRole('button', { name: 'Ajustes' }).first().click();

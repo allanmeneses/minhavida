@@ -4,11 +4,25 @@ updates:
     directory: /backend
     schedule:
       interval: weekly
+    groups:
+      dotnet-minors:
+        update-types:
+          - patch
+          - minor
   - package-ecosystem: npm
     directory: /app
     schedule:
       interval: weekly
+    groups:
+      app-minors:
+        update-types:
+          - patch
+          - minor
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"

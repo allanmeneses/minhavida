@@ -523,6 +523,40 @@ public sealed class CirclesController(
         return Ok(ToReveal(circle));
     }
 
+    [HttpPost("{id:guid}/archive")]
+    public async Task<ActionResult<CircleSummaryResponse>> Archive(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+        var circle = await LoadCircle(id, cancellationToken);
+        var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
+        if (circle is null || HiddenSurprise(circle, userId) || member is null)
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        if (member.Role < CircleRole.Admin)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("So administrador ou dono arquiva o ciclo."));
+        }
+
+        if (circle.Kind != CircleKind.Temporary && circle.Kind != CircleKind.Daily)
+        {
+            return BadRequest(new ErrorResponse("So circulos temporarios ou diarios arquivam no fim do ciclo."));
+        }
+
+        if (circle.Status != CircleStatus.Archived)
+        {
+            circle.Status = CircleStatus.Archived;
+            db.CircleLogs.Add(Log(circle.Id, userId, "archived", "Ciclo encerrado. A retrospectiva fica para consulta."));
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return Ok(ToSummary(circle, member.Role, userId));
+    }
+
     [HttpGet("{id:guid}/reveal-summary")]
     public async Task<ActionResult<RevealSummaryResponse>> RevealSummary(Guid id, CancellationToken cancellationToken)
     {

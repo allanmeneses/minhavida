@@ -6,7 +6,7 @@ export type TourScreen = {
 export const TOUR_SCREENS: TourScreen[] = [
   {
     title: 'Seu perfil solo',
-    body: 'O Circulos comeca pela sua vida, sem exigir um circulo. Vacinas, diario, documentos e listas ficam no perfil, que nasce privado.',
+    body: 'O Circulos comeca pela sua vida, sem exigir um circulo. Vacinas, diario, documentos e listas ficam no perfil, que nasce privado. Se virar publico, quem visita ve so nome e foto.',
   },
   {
     title: 'Painel do dia',
@@ -14,7 +14,7 @@ export const TOUR_SCREENS: TourScreen[] = [
   },
   {
     title: 'Circulos',
-    body: 'Familia, amizade, cuidado ou evento. Voce cria o seu. Para entrar no de outra pessoa, peca ou aceite um convite. Quem ainda nao entrou num circulo publico ve so nome e descricao.',
+    body: 'Familia, amizade, cuidado ou evento. Voce escolhe se e duradouro, temporario ou diario. Temporario e diario arquivam no fim do ciclo, com a retrospectiva da sua historia. Para entrar no de outra pessoa, peca ou aceite um convite.',
   },
   {
     title: 'Lembretes e atalhos',

@@ -149,6 +149,10 @@ export default function AppLayout() {
         name="living"
         options={{ title: 'Pet e grupo', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
+      <Tabs.Screen
+        name="recap"
+        options={{ title: 'Resumo de uso', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
     </Tabs>
   );
 }

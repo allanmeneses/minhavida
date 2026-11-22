@@ -200,6 +200,16 @@ export default function ProfileScreen() {
         ))}
         <Feedback message={null} />
         <AreaComposer value={newArea} onChange={setNewArea} onCreate={() => void createArea()} />
+        {profile?.isPublic && user?.id ? (
+          <Text style={[styles.lead, { color: colors.muted }]}>
+            Link publico: /p/{user.id}. Quem visita ve so nome e foto.
+          </Text>
+        ) : (
+          <Text style={[styles.lead, { color: colors.muted }]}>
+            O perfil esta privado. Ninguem de fora ve nome nem foto.
+          </Text>
+        )}
+        <Button label="Resumo de uso" variant="ghost" onPress={() => router.push('/(app)/recap' as Href)} />
         <Button label="Listas" variant="ghost" onPress={() => router.push('/(app)/lists' as Href)} />
         <Button label="Memorias" variant="ghost" onPress={() => router.push('/(app)/memories' as Href)} />
         <Button label="Pet e grupo" variant="ghost" onPress={() => router.push('/(app)/living' as Href)} />

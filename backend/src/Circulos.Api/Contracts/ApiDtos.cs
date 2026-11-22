@@ -659,3 +659,20 @@ public sealed record LivingProfileResponse(
     bool CanEdit);
 
 public sealed record StatusResponse(string Api, string Database, string Telemetry, DateTime CheckedAt);
+
+public sealed record RecapFlowDto(string Key, string Label, int Count);
+
+public sealed record ProfileRecapResponse(IReadOnlyList<RecapFlowDto> Flows);
+
+public sealed record CircleRecapResponse(
+    Guid CircleId,
+    string Name,
+    string Kind,
+    string Status,
+    string DisplayName,
+    IReadOnlyList<RecapFlowDto> Flows,
+    IReadOnlyList<string> MyTitles);
+
+public sealed record RecapShareCreatedResponse(string Token, string Path);
+
+public sealed record PublicProfileResponse(Guid UserId, string DisplayName, bool HasPhoto);

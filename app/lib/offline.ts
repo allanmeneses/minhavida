@@ -16,6 +16,8 @@ export type ReadCache = {
   home?: unknown;
   reminders?: unknown;
   listsSolo?: unknown;
+  recapMe?: unknown;
+  circles?: unknown;
   listById: Record<string, unknown>;
 };
 
@@ -36,6 +38,12 @@ export function writeCache(cache: ReadCache, path: string, value: unknown): Read
   if (path === '/api/lists' || path.startsWith('/api/lists?')) {
     return { ...cache, listsSolo: value };
   }
+  if (path === '/api/recap/me') {
+    return { ...cache, recapMe: value };
+  }
+  if (path === '/api/circles') {
+    return { ...cache, circles: value };
+  }
   const list = path.match(/^\/api\/lists\/([^/?]+)$/);
   if (list) {
     return { ...cache, listById: { ...cache.listById, [list[1]]: value } };
@@ -55,6 +63,12 @@ export function readCache<T>(cache: ReadCache, path: string): T | undefined {
   }
   if (path === '/api/lists' || path.startsWith('/api/lists?')) {
     return cache.listsSolo as T | undefined;
+  }
+  if (path === '/api/recap/me') {
+    return cache.recapMe as T | undefined;
+  }
+  if (path === '/api/circles') {
+    return cache.circles as T | undefined;
   }
   const list = path.match(/^\/api\/lists\/([^/?]+)$/);
   if (list) {

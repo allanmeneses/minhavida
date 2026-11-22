@@ -6,7 +6,19 @@ import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { api, ApiError, downloadNamedBlob, type CircleDetail, type LivingProfileItem, type MemoryItem, type RevealSummary, type SharedListSummary } from '@/lib/api';
+import {
+  api,
+  ApiError,
+  downloadNamedBlob,
+  type CircleDetail,
+  type CircleRecap,
+  type LivingProfileItem,
+  type MemoryItem,
+  type RecapShareCreated,
+  type RevealSummary,
+  type SharedListSummary,
+} from '@/lib/api';
+import { canArchiveKind, CIRCLE_KIND_LABEL, type CircleKind } from '@/lib/circleKinds';
 import { formatPersonTime } from '@/lib/formatPersonTime';
 import {
   LIST_ACCESS,
@@ -37,6 +49,8 @@ export default function CircleDetailScreen() {
   const [listName, setListName] = useState('');
   const [listKind, setListKind] = useState<ListKind>('shopping');
   const [listAccess, setListAccess] = useState<ListAccess>('view');
+  const [recap, setRecap] = useState<CircleRecap | null>(null);
+  const [sharePath, setSharePath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
@@ -64,6 +78,11 @@ export default function CircleDetailScreen() {
       setReveal(await api<RevealSummary>(`/api/circles/${circleId}/reveal-summary`, { token }));
     } catch {
       setReveal(null);
+    }
+    try {
+      setRecap(await api<CircleRecap>(`/api/circles/${circleId}/recap`, { token }));
+    } catch {
+      setRecap(null);
     }
   }, [token, circleId]);
 
@@ -196,6 +215,34 @@ export default function CircleDetailScreen() {
     await load();
   }
 
+  async function archive() {
+    if (!token || !circleId) {
+      return;
+    }
+    setError(null);
+    try {
+      await api(`/api/circles/${circleId}/archive`, { method: 'POST', token });
+      setOk('Ciclo encerrado. A retrospectiva fica para consulta.');
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Nao foi possivel arquivar.');
+    }
+  }
+
+  async function shareRecap() {
+    if (!token || !circleId) {
+      return;
+    }
+    setError(null);
+    try {
+      const created = await api<RecapShareCreated>(`/api/circles/${circleId}/recap/share`, { method: 'POST', token });
+      setSharePath(created.path);
+      setOk(`Historia compartilhada: ${created.path}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Nao foi possivel compartilhar.');
+    }
+  }
+
   async function acceptJoin(requestId: string) {
     if (!token || !circleId) {
       return;
@@ -209,6 +256,11 @@ export default function CircleDetailScreen() {
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>{detail?.name ?? 'Circulo'}</Text>
       <Text style={styles.lead}>{detail?.description}</Text>
+      {detail ? (
+        <Text style={styles.lead}>
+          {CIRCLE_KIND_LABEL[detail.kind as CircleKind] ?? detail.kind} · {detail.status}
+        </Text>
+      ) : null}
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />
       {isAdmin && detail?.isSurprise && !detail.revealed ? (
@@ -336,6 +388,30 @@ export default function CircleDetailScreen() {
           {formatPersonTime(item.createdAt)} · {item.action}: {item.detail}
         </Text>
       ))}
+
+      {isMember && recap ? (
+        <>
+          <Text style={styles.section}>Minha retrospectiva</Text>
+          <Text style={styles.lead}>So a sua historia neste circulo. Os dados dos outros nao entram.</Text>
+          {recap.flows.length === 0 ? <Text style={styles.lead}>Voce ainda nao registrou nada aqui.</Text> : null}
+          {recap.flows.map((flow) => (
+            <Text key={flow.key} style={styles.lead}>
+              {flow.label} · {flow.count}
+            </Text>
+          ))}
+          {recap.myTitles.map((title, index) => (
+            <Text key={`${title}-${index}`} style={styles.item}>
+              {title}
+            </Text>
+          ))}
+          <Button label="Compartilhar minha historia" onPress={() => void shareRecap()} />
+          {sharePath ? <Text style={styles.lead}>Link: {sharePath}</Text> : null}
+        </>
+      ) : null}
+
+      {isAdmin && detail && canArchiveKind(detail.kind) && detail.status !== 'archived' ? (
+        <Button label="Encerrar ciclo e arquivar" variant="ghost" onPress={() => void archive()} />
+      ) : null}
 
       {detail ? (
         <Button

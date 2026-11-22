@@ -17,5 +17,7 @@ describe('tour', () => {
     assert.match(blob, /backup/);
     assert.match(blob, /calendario/);
     assert.match(blob, /recordacoes/);
+    assert.match(blob, /nome e foto/);
+    assert.match(blob, /temporario/);
   });
 });
