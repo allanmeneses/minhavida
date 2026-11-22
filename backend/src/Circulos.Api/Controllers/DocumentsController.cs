@@ -45,31 +45,26 @@ public sealed class DocumentsController(AppDbContext db, IFileStorage storage, Q
         }
 
         var userId = User.GetUserId();
-        string? quotaError;
-        try
-        {
-            quotaError = await quota.TryAddStorageAsync(userId, file.Length, cancellationToken);
-        }
-        catch (Exception ex) when (ex is DbUpdateException or System.Data.Common.DbException)
-        {
-            return BadRequest(new ErrorResponse("Conta nao encontrada."));
-        }
-
-        if (quotaError is not null)
-        {
-            return BadRequest(new ErrorResponse(quotaError));
-        }
-
         var documentId = Guid.NewGuid();
         var key = $"{userId:N}/docs/{documentId:N}";
-
+        var stored = false;
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         try
         {
+            await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+            var quotaError = await quota.TryAddStorageAsync(userId, file.Length, cancellationToken);
+            if (quotaError is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return BadRequest(new ErrorResponse(quotaError));
+            }
+
             await using (var stream = file.OpenReadStream())
             {
                 await storage.SaveAsync(key, stream, cancellationToken);
             }
 
+            stored = true;
             var document = new PersonalDocument
             {
                 Id = documentId,
@@ -83,12 +78,25 @@ public sealed class DocumentsController(AppDbContext db, IFileStorage storage, Q
 
             db.Documents.Add(document);
             await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             return Created($"/api/documents/{document.Id}/download", ToResponse(document));
+        }
+        catch (Exception ex) when (UserRowLock.IsMissingUser(ex))
+        {
+            if (stored)
+            {
+                await storage.DeleteAsync(key, cancellationToken);
+            }
+
+            return BadRequest(new ErrorResponse("Conta nao encontrada."));
         }
         catch
         {
-            await quota.ReleaseStorageAsync(userId, file.Length, cancellationToken);
-            await storage.DeleteAsync(key, cancellationToken);
+            if (stored)
+            {
+                await storage.DeleteAsync(key, cancellationToken);
+            }
+
             throw;
         }
     }

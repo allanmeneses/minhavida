@@ -3,21 +3,26 @@ using Circulos.Api.Domain;
 using Circulos.Api.Storage;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 
 namespace Circulos.Api.Tests;
 
 public sealed class ApiFactory : WebApplicationFactory<Program>
 {
-    private SqliteConnection? _connection;
+    private string? _databaseName;
+    private string? _adminConnectionString;
+    private string? _connectionString;
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        CreateDatabase();
         builder.UseEnvironment("Testing");
         builder.UseSetting("Encryption:Key", TestEncryptionKey.Base64);
+        builder.UseSetting("Database:Provider", "Postgres");
+        builder.UseSetting("ConnectionStrings:Default", _connectionString);
         builder.ConfigureServices(services =>
         {
             RemoveService(services, typeof(DbContextOptions<AppDbContext>));
@@ -36,12 +41,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
                 services.Remove(descriptor);
             }
 
-            _connection = new SqliteConnection("DataSource=:memory:");
-            _connection.Open();
-
             services.AddDbContext<AppDbContext>(options =>
             {
-                options.UseSqlite(_connection);
+                options.UseNpgsql(_connectionString);
                 options.AddInterceptors(new OverlapSaveInterceptor());
             });
             var inspectable = new InspectableMemoryFileStorage();
@@ -56,7 +58,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     {
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        db.Database.EnsureCreated();
+        db.Database.Migrate();
         base.ConfigureClient(client);
     }
 
@@ -65,8 +67,49 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         base.Dispose(disposing);
         if (disposing)
         {
-            _connection?.Dispose();
+            DropDatabase();
         }
+    }
+
+    private void CreateDatabase()
+    {
+        var host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "127.0.0.1";
+        var port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
+        var user = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "circulos";
+        var password = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "circulos";
+        _databaseName = "circulos_test_" + Guid.NewGuid().ToString("N");
+        _adminConnectionString = $"Host={host};Port={port};Database=postgres;Username={user};Password={password}";
+        _connectionString = $"Host={host};Port={port};Database={_databaseName};Username={user};Password={password}";
+
+        using var connection = new NpgsqlConnection(_adminConnectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"CREATE DATABASE \"{_databaseName}\" TEMPLATE template0";
+        command.ExecuteNonQuery();
+    }
+
+    private void DropDatabase()
+    {
+        if (_databaseName is null || _adminConnectionString is null)
+        {
+            return;
+        }
+
+        NpgsqlConnection.ClearAllPools();
+        using var connection = new NpgsqlConnection(_adminConnectionString);
+        connection.Open();
+        using (var terminate = connection.CreateCommand())
+        {
+            terminate.CommandText =
+                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = @name AND pid <> pg_backend_pid()";
+            terminate.Parameters.AddWithValue("name", _databaseName);
+            terminate.ExecuteNonQuery();
+        }
+
+        using var drop = connection.CreateCommand();
+        drop.CommandText = $"DROP DATABASE IF EXISTS \"{_databaseName}\"";
+        drop.ExecuteNonQuery();
+        _databaseName = null;
     }
 
     private static void RemoveService(IServiceCollection services, Type serviceType)
@@ -97,4 +140,3 @@ internal sealed class OverlapSaveInterceptor : SaveChangesInterceptor
         return result;
     }
 }
-

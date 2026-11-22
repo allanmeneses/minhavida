@@ -5,8 +5,8 @@ const webUrl = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:43123';
 const connectionString =
   process.env.ConnectionStrings__Default ??
   process.env.CONNECTION_STRING ??
-  'Data Source=/tmp/circulos-e2e.db';
-const databaseProvider = process.env.Database__Provider ?? 'Sqlite';
+  'Host=127.0.0.1;Port=5432;Database=circulos;Username=circulos;Password=circulos';
+const databaseProvider = process.env.Database__Provider ?? 'Postgres';
 
 function envWith(extra: Record<string, string>): Record<string, string> {
   const env: Record<string, string> = {};

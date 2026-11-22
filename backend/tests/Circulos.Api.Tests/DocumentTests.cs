@@ -160,7 +160,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var dump = await DumpSqliteAsync(db);
+        var dump = await DumpDatabaseAsync(db);
         Assert.DoesNotContain(TestEncryptionKey.Base64, dump, StringComparison.Ordinal);
         Assert.DoesNotContain("Encryption:Key", dump, StringComparison.Ordinal);
         var document = await db.Documents.AsNoTracking().SingleAsync(x => x.UserId == auth.UserId);
@@ -223,7 +223,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         return form;
     }
 
-    private static async Task<string> DumpSqliteAsync(AppDbContext db)
+    private static async Task<string> DumpDatabaseAsync(AppDbContext db)
     {
         var connection = db.Database.GetDbConnection();
         if (connection.State != System.Data.ConnectionState.Open)
@@ -234,7 +234,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         var builder = new StringBuilder();
         await using (var tables = connection.CreateCommand())
         {
-            tables.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'";
+            tables.CommandText = "SELECT tablename FROM pg_tables WHERE schemaname = 'public'";
             await using var reader = await tables.ExecuteReaderAsync();
             var names = new List<string>();
             while (await reader.ReadAsync())
@@ -245,6 +245,11 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
             await reader.DisposeAsync();
             foreach (var name in names)
             {
+                if (name.Any(ch => !char.IsLetterOrDigit(ch) && ch != '_'))
+                {
+                    continue;
+                }
+
                 await using var rows = connection.CreateCommand();
                 rows.CommandText = $"SELECT * FROM \"{name}\"";
                 await using var data = await rows.ExecuteReaderAsync();

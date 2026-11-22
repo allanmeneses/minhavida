@@ -13,10 +13,30 @@ concurrency:
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: '1'
   DOTNET_NOLOGO: '1'
+  Database__Provider: Postgres
+  ConnectionStrings__Default: Host=127.0.0.1;Port=5432;Database=circulos;Username=circulos;Password=circulos
+  POSTGRES_HOST: 127.0.0.1
+  POSTGRES_PORT: '5432'
+  POSTGRES_USER: circulos
+  POSTGRES_PASSWORD: circulos
 
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: circulos
+          POSTGRES_PASSWORD: circulos
+          POSTGRES_DB: circulos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U circulos -d circulos"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -28,6 +48,20 @@ jobs:
 
   app:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: circulos
+          POSTGRES_PASSWORD: circulos
+          POSTGRES_DB: circulos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U circulos -d circulos"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -54,8 +88,6 @@ jobs:
         working-directory: app
         env:
           CI: '1'
-          Database__Provider: Sqlite
-          ConnectionStrings__Default: Data Source=/tmp/circulos-ci.db
           EXPO_PUBLIC_API_URL: http://127.0.0.1:5288
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:43123
           E2E_ARTIFACTS: test-results/e2e
