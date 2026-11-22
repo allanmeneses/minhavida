@@ -4,6 +4,15 @@ Este documento consolida as decisoes de produto visiveis na transcricao `docs/li
 
 A v1 atual do repositorio (README e codigo em `main`) e a base da secao final.
 
+## Confirmacoes posteriores do dono
+
+Fora da transcricao original, o dono fechou estas ambiguidades:
+
+- So o app / So web: o produto deve funcionar como app e como web.
+- Somos sem raca: o correto e Sem rastro.
+- E definitiva? e So uma?: sem contexto, nao confirmadas. Nenhuma regra de produto parte delas.
+- Pergunta 229 primeira formula: cortada. Nao inventar a resposta.
+
 ## Visao
 
 O Circulos e um hub da vida pessoal. A unidade central e um perfil vivo (pessoa, e tambem pet ou grupo na fala inicial do entrevistador). Em volta dele existem entradas (numero, texto, foto, lembrete) e circulos (familia, amizade, interesse, evento, cuidado). Uma pessoa pode ter um ou milhares de circulos. A mesma entrada pode aparecer em varios circulos, com permissoes diferentes, sem duplicar o dado. (abertura; perguntas 1, 16, 28)
@@ -63,6 +72,7 @@ Comecar pelo perfil solo, nao pelo circulo. (95)
 - Entrada apagada deixa rastro de que existiu, com quem apagou e quando. (5, 6)
 - Log de atividades visivel para todos do circulo, para sempre, com data/hora no fuso da pessoa. Filtro por pessoa e por tipo foi sugestao sem Beleza/Ok. (267 a 271)
 - Circulo surpresa (aniversario): o aniversariante nao ve nome nem descricao. Na revelacao, resumo com mensagens e fotos. Cada participante pode guardar a recordacao no proprio perfil, editavel em silencio. Sair de um circulo e direito de esquecer para si; o circulo segue para os outros. (229 reformulada a 236)
+- Pergunta 229 primeira formula (quando a lista de ideias e compartilhada, a outra pessoa pode adicionar ideias ou so [cortado]): sem resposta. Nao inventar se quem recebe a lista pode incluir ideias.
 - Templates de rotina: opcao aceita, gratuitos, editaveis por quem copiou, curadoria inicial do dono do produto, ranqueamento e contagem de uso, criador anonimo. Sem nota obrigatoria no comeco; depois o dono aceitou ranqueamento. (47 a 52)
 
 ## Papeis e convites
@@ -71,7 +81,8 @@ Comecar pelo perfil solo, nao pelo circulo. (95)
 - Cadastro da conta e livre para criar o proprio circulo. Participar de circulo alheio e por pedido ou convite. (8)
 - Denuncia interna no circulo. Quem decide: dono/admins e tambem a equipe do app, que pode bloquear o circulo e tira-lo do radar. Aviso ao dono no bloqueio. Recurso existe, com revisao humana, sem prazo definido (fala: Fica aberto 100 prazo). (21, 21 reformulada, 22, 23, 24, 25)
 - Exclusao da conta: so apaga o que e da pessoa. Circulos que ela criou transferem para administradores ou sucessor que ela definiu. (325 a 329)
-- Sucessao sem sucessor: votacao. 10% dos envolvidos concordando com uma pessoa, ela vira administrador. Candidaturas abertas durante o processo. Fica aberta ate bater 10%. Pode indicar um membro se ninguem se candidatar. Votos visiveis. Resultado no log. Um voto por membro (fala: So uma?). Dono que ja excluiu a conta nao cancela. Circulo segue funcionando na votacao. Empate pede nova votacao; se o empate se repetir, aceita novas candidaturas. Historico de votacoes anteriores nao fica visivel. Perdedor pode se candidatar de novo. (331 a 344)
+- Sucessao sem sucessor: votacao. 10% dos envolvidos concordando com uma pessoa, ela vira administrador. Candidaturas abertas durante o processo. Fica aberta ate bater 10%. Pode indicar um membro se ninguem se candidatar. Votos visiveis. Resultado no log. Dono que ja excluiu a conta nao cancela. Circulo segue funcionando na votacao. Empate pede nova votacao; se o empate se repetir, aceita novas candidaturas. Historico de votacoes anteriores nao fica visivel. Perdedor pode se candidatar de novo. (331 a 344)
+- Pergunta 336 (um membro vota mais de uma vez ou so uma): a fala visivel e So uma?, sem contexto. O dono marcou como nao confirmada. Nao cravar se o voto e unico. Sem essa regra, a votacao de sucessao nao entra no codigo.
 - Pergunta 345 (remover admin recem-eleito) nao teve decisao: o dono encerrou com Cansar esse pedido.
 
 ## Publicacoes
@@ -120,9 +131,10 @@ Comecar pelo perfil solo, nao pelo circulo. (95)
 - Consentimento geral no comeco; depois o dono mudou: precisa estar adequado a LGPD (revogacao/exclusao). (61, 62, 63)
 - Exclusao: dono do dado, confirmacao por e-mail, rastro anonimo permanece. (64, 65, 66)
 - Sem painel de transparencia do que foi coletado. (69)
-- Circulos invisíveis por padrao se nao quiserem ser encontrados. (12)
+- Circulos invisiveis por padrao se nao quiserem ser encontrados. (12)
 - Circulo surpresa com zero vazamento para o aniversariante. (229 reformulada)
-- Sair de um circulo: sem rastro para os outros, na interpretacao do entrevistador da fala Somos sem raca. (238)
+- Sair de um circulo: sem rastro para os outros. Confirmado pelo dono: Sem rastro. (238)
+- Pergunta 237 (exclusao do circulo na vida da pessoa e reversivel ou definitiva): a fala visivel e E definitiva?, sem contexto. O dono marcou como nao confirmada. Nao cravar reversibilidade.
 - Estatisticas anonimas so internamente. (43, 44)
 - Excluir conta pede senha, apaga o que e da pessoa, manda e-mail de confirmacao do cancelamento de assinatura, sem link de reativacao nesse e-mail. (323 a 326)
 
@@ -143,7 +155,7 @@ Comecar pelo perfil solo, nao pelo circulo. (95)
 ## Plataformas
 
 - Abertura: o dono tem tabu de app nativo (muitos aparelhos, lojas, versoes). Entrevistador sugeriu web com PWA e atalho na tela inicial, sem loja. O dono perguntou se o proprio site pode oferecer o atalho: sim.
-- Pergunta 305: fala do dono So o app. O entrevistador registrou So web. Nao ha confirmacao posterior. Nao tratar como fechado.
+- Pergunta 305: fala do dono So o app; o entrevistador registrou So web. Confirmacao posterior do dono: o produto deve funcionar como app e como web, nas duas plataformas. O cliente Expo cobre iOS, Android e o navegador.
 - Dark mode desde o lancamento, automatico com o tema do aparelho, com override nas configuracoes. (41, 284)
 - Acessibilidade: leitor de tela e contraste alto podem entrar. (42)
 - Uma lingua no lancamento, estrutura pronta para multilingue. (35)
@@ -181,7 +193,7 @@ A v1 em `main` (README e codigo conferidos neste repositorio) entrega so conta, 
 5. **Sem recuperacao de senha e sem refresh token.** v1: cadastro e login e-mail/senha, JWT de 12 horas (`ExpiresHours`), sem refresh, sem esqueci senha, sem 2FA. Ligacao: esqueci senha so e-mail (33), 2FA fora do inicio (34), JWT com refresh sugerido em 15 min + 7 dias (70 a 72, sem Ok).
 6. **Sem circulos, convites, papeis, votacao, denuncia ou feed.** README da v1 coloca circulos na v3. Ligacao trata circulo, dono, convite, publico/privado, surpresa, log, sucessao e votacao como produto. Nada disso esta no modelo (`User`, `Profile`, `PersonalDocument`).
 7. **Sem lembretes, recorrencia, atalhos ou painel do dia.** README coloca lembretes na v2. Ligacao exige atalhos de um toque, recorrencia tipo Teams, aniversarios, modo ferias e painel inicial (98, 100, 215, 216, 222, 239, 251).
-8. **Cliente e Expo (iOS, Android e web), nao Nuxt nem PWA.** Ligacao: dono citou Nuxt (63 reinicio) e, na abertura, web/PWA para fugir de loja. v1: Expo SDK 58 + Expo Router, um cliente para as tres plataformas, sem manifesto PWA nem service worker no app. Nao ha `.github/workflows`. Ligacao pede GitHub Actions, Dependabot e testes ja no pipeline (81, 82, 84). Testes xUnit da API existem; nao ha Actions.
+8. **Cliente e Expo (iOS, Android e web), nao Nuxt nem PWA.** Ligacao: dono citou Nuxt (63 reinicio) e, na abertura, web/PWA para fugir de loja. Confirmacao posterior: precisa ser app e web. v1: Expo SDK 58 + Expo Router, um cliente para as tres plataformas, sem manifesto PWA nem service worker no app. Nao ha `.github/workflows`. Ligacao pede GitHub Actions, Dependabot e testes ja no pipeline (81, 82, 84). Testes xUnit da API existem; nao ha Actions.
 9. **Sem plano, pagamento, Azure de producao ou WebSocket.** v1 e local (Docker Postgres, JWT de desenvolvimento). Ligacao: pago desde o inicio, cartao recorrente, pagina de precos em reais, deploy Azure, WebSocket+TLS, fila, status page (15, 64 reinicio, 73, 87, 307, 313).
 10. **Privacidade da v1 e isolamento por `UserId`, nao cifra.** README: listar/baixar/apagar filtram por dono, 404 se nao for o dono, chave de storage nao vai ao cliente, `Cache-Control: private, no-store`. Isso nao substitui a criptografia no servidor nem o fluxo LGPD (confirmacao por e-mail, rastro anonimo, exclusao de conta com senha) da ligacao (63 a 66, 325, 326).
 11. **Nome ja existe.** Ligacao: nem vou batizar agora (91). v1 ja se chama Circulos no README, `app.json` e JWT Issuer.
