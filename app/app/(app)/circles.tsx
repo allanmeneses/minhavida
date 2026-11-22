@@ -7,6 +7,8 @@ import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary } from '@/lib/api';
+import { CIRCLE_KIND_LABEL, CIRCLE_KINDS, type CircleKind } from '@/lib/circleKinds';
+import { nextOf } from '@/lib/listKinds';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function CirclesScreen() {
@@ -21,6 +23,7 @@ export default function CirclesScreen() {
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<'private' | 'public'>('private');
   const [discoverable, setDiscoverable] = useState(false);
+  const [kind, setKind] = useState<CircleKind>('lasting');
   const [surprise, setSurprise] = useState(false);
   const [surpriseEmail, setSurpriseEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +54,7 @@ export default function CirclesScreen() {
           description: description.trim(),
           visibility,
           discoverable,
+          kind,
           isSurprise: surprise,
           surpriseSubjectEmail: surprise ? surpriseEmail.trim() || null : null,
         }),
@@ -90,6 +94,11 @@ export default function CirclesScreen() {
         onPress={() => setDiscoverable(!discoverable)}
       />
       <Button
+        label={`Tipo: ${CIRCLE_KIND_LABEL[kind]}`}
+        variant="ghost"
+        onPress={() => setKind(nextOf(CIRCLE_KINDS, kind))}
+      />
+      <Button
         label={surprise ? 'Surpresa ligada' : 'Surpresa desligada'}
         variant="ghost"
         onPress={() => setSurprise(!surprise)}
@@ -127,7 +136,7 @@ export default function CirclesScreen() {
           style={styles.card}>
           <Text style={styles.item}>{item.name ?? 'Circulo oculto'}</Text>
           <Text style={styles.lead}>
-            {item.visibility} · {item.memberCount} pessoa(s)
+            {item.visibility} · {CIRCLE_KIND_LABEL[item.kind as CircleKind] ?? item.kind} · {item.status} · {item.memberCount} pessoa(s)
           </Text>
         </Pressable>
       ))}

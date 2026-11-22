@@ -81,6 +81,11 @@ export function ProfileForm({ initial, error, ok, busy, accountEmail, onSave }: 
         variant="ghost"
         onPress={() => patch({ isPublic: !shown.isPublic })}
       />
+      <Text style={[styles.account, { color: colors.muted }]}>
+        {shown.isPublic
+          ? 'Quem visita ve so nome e foto. Telefone, e-mail e diario ficam fora.'
+          : 'O perfil nasce privado. Ninguem de fora ve seus dados.'}
+      </Text>
       {accountEmail ? <Text style={[styles.account, { color: colors.muted }]}>Conta: {accountEmail}</Text> : null}
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />

@@ -14,6 +14,10 @@ describe('pipeline de seguranca', () => {
     assert.match(text, /package-ecosystem:\s*npm/);
     assert.match(text, /directory:\s*\/app/);
     assert.match(text, /package-ecosystem:\s*github-actions/);
+    assert.match(text, /groups:/);
+    assert.match(text, /dotnet-minors:/);
+    assert.match(text, /app-minors:/);
+    assert.match(text, /github-actions:/);
   });
 
   it('CodeQL analisa csharp e javascript', () => {

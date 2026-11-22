@@ -104,12 +104,27 @@ export type CircleDetail = {
   discoverable: boolean;
   isSurprise: boolean;
   revealed: boolean;
+  kind: string;
+  status: string;
   ownerUserId: string | null;
   members: { userId: string; name: string; role: string }[];
   posts: { id: string; body: string; createdAt: string }[];
   log: { id: string; action: string; detail: string; createdAt: string; actorUserId: string | null }[];
   joinRequests: CircleJoinRequest[];
 };
+export type RecapFlow = { key: string; label: string; count: number };
+export type ProfileRecap = { flows: RecapFlow[] };
+export type CircleRecap = {
+  circleId: string;
+  name: string;
+  kind: string;
+  status: string;
+  displayName: string;
+  flows: RecapFlow[];
+  myTitles: string[];
+};
+export type RecapShareCreated = { token: string; path: string };
+export type PublicProfile = { userId: string; displayName: string; hasPhoto: boolean };
 export type MemoryItem = {
   id: string;
   authorUserId: string;

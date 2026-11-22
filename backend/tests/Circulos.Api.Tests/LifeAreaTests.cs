@@ -112,6 +112,35 @@ public sealed class LifeAreaTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Entrada_EdicaoSubstituiDeVez()
+    {
+        var client = _factory.CreateClient();
+        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        var areas = await client.GetFromJsonAsync<List<AreaDto>>("/api/life-areas", Json);
+        var diario = areas!.Single(x => x.Kind == "diary");
+        var created = await client.PostAsJsonAsync($"/api/life-areas/{diario.Id}/entries", new
+        {
+            title = "Rascunho",
+            body = "Texto antigo",
+        });
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        using var createdDoc = JsonDocument.Parse(await created.Content.ReadAsStringAsync());
+        var entryId = createdDoc.RootElement.GetProperty("id").GetGuid();
+
+        var updated = await client.PutAsJsonAsync($"/api/life-areas/{diario.Id}/entries/{entryId}", new
+        {
+            title = "Final",
+            body = "Texto novo",
+        });
+        Assert.Equal(HttpStatusCode.OK, updated.StatusCode);
+        var list = await client.GetFromJsonAsync<List<JsonElement>>($"/api/life-areas/{diario.Id}/entries", Json);
+        Assert.Single(list!);
+        Assert.Equal("Final", list[0].GetProperty("title").GetString());
+        Assert.Equal("Texto novo", list[0].GetProperty("body").GetString());
+        Assert.DoesNotContain(list, x => x.GetProperty("title").GetString() == "Rascunho");
+    }
+
+    [Fact]
     public async Task Perfil_PodeVirarPublico()
     {
         var client = _factory.CreateClient();

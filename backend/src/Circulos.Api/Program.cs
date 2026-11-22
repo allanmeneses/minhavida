@@ -29,6 +29,7 @@ builder.Services.AddScoped<QuotaService>();
 builder.Services.AddScoped<IEmailSender, OutboxEmailSender>();
 builder.Services.AddScoped<AccountDeletionService>();
 builder.Services.AddScoped<StatusPage>();
+builder.Services.AddScoped<RecapService>();
 builder.Services.AddCirculosObservability(builder.Configuration);
 
 builder.Services.Configure<FormOptions>(options =>

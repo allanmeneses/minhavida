@@ -54,3 +54,40 @@ export const space = {
 };
 
 export type ThemePreference = 'system' | 'light' | 'dark';
+
+export const highContrastLight: ColorPalette = {
+  bg: '#FFFFFF',
+  surface: '#FFFFFF',
+  ink: '#000000',
+  muted: '#111111',
+  primary: '#004D40',
+  primaryDark: '#000000',
+  primarySoft: '#D7EBE8',
+  accent: '#7A2E00',
+  danger: '#7A0000',
+  dangerSoft: '#FFE8E8',
+  line: '#000000',
+  white: '#FFFFFF',
+};
+
+export const highContrastDark: ColorPalette = {
+  bg: '#000000',
+  surface: '#000000',
+  ink: '#FFFFFF',
+  muted: '#F2F2F2',
+  primary: '#5CFFEA',
+  primaryDark: '#FFFFFF',
+  primarySoft: '#00332C',
+  accent: '#FFB86A',
+  danger: '#FF8A80',
+  dangerSoft: '#3A0000',
+  line: '#FFFFFF',
+  white: '#000000',
+};
+
+export function paletteFor(resolved: 'light' | 'dark', highContrast: boolean): ColorPalette {
+  if (highContrast) {
+    return resolved === 'dark' ? highContrastDark : highContrastLight;
+  }
+  return resolved === 'dark' ? darkColors : lightColors;
+}

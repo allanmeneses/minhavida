@@ -11,18 +11,22 @@ import {
 } from './offline.ts';
 
 describe('offline cache e fila', () => {
-  it('guarda leitura de perfil, lembretes, listas e painel', () => {
+  it('guarda leitura de perfil, lembretes, listas, painel, recap e circulos', () => {
     let cache = emptyCache();
     cache = writeCache(cache, '/api/profile', { displayName: 'Ana' });
     cache = writeCache(cache, '/api/home', { activeCircleCount: 2 });
     cache = writeCache(cache, '/api/reminders', [{ title: 'Remedio' }]);
     cache = writeCache(cache, '/api/lists', [{ name: 'Feira' }]);
     cache = writeCache(cache, '/api/lists/abc', { name: 'Feira', items: [] });
+    cache = writeCache(cache, '/api/recap/me', { flows: [{ key: 'vaccine', count: 1 }] });
+    cache = writeCache(cache, '/api/circles', [{ name: 'Familia' }]);
     assert.equal(readCache(cache, '/api/profile').displayName, 'Ana');
     assert.equal(readCache(cache, '/api/home').activeCircleCount, 2);
     assert.equal(readCache(cache, '/api/reminders')[0].title, 'Remedio');
     assert.equal(readCache(cache, '/api/lists')[0].name, 'Feira');
     assert.equal(readCache(cache, '/api/lists/abc').name, 'Feira');
+    assert.equal(readCache(cache, '/api/recap/me').flows[0].key, 'vaccine');
+    assert.equal(readCache(cache, '/api/circles')[0].name, 'Familia');
   });
 
   it('403 descarta a acao e avisa; a fila nao some num rerender da funcao', () => {

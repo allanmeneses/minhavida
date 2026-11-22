@@ -4,10 +4,11 @@ import { hydrateIfPristine } from './formDraft.ts';
 
 describe('hydrateIfPristine', () => {
   it('keeps typed text when the parent only swaps the save function identity', () => {
-    const typed = { displayName: 'texto que a pessoa digitou' };
-    const incoming = { displayName: 'Ana' };
+    const typed = { displayName: 'texto que a pessoa digitou', isPublic: true };
+    const incoming = { displayName: 'Ana', isPublic: false };
     const afterRerender = hydrateIfPristine(true, typed, incoming);
     assert.equal(afterRerender.displayName, 'texto que a pessoa digitou');
+    assert.equal(afterRerender.isPublic, true);
   });
 
   it('loads server values while the form is still empty', () => {

@@ -45,6 +45,11 @@ export const FAQ_ITEMS: FaqItem[] = [
       '100 MB no plano gratuito e 1 GB no pago. O app avisa quando chega a 90% e mostra um grafico de uso, sem separar por tipo.',
   },
   {
+    question: 'O recap e o perfil publico mostram o que?',
+    answer:
+      'O recap do perfil so lista o que voce ja usou. No circulo, a retrospectiva e a historia sua, nao os dados dos outros. O perfil nasce privado; se virar publico, quem visita ve so nome e foto. Telefone, e-mail e diario ficam fora.',
+  },
+  {
     question: 'Onde ficam as memorias e o calendario?',
     answer:
       'Memorias sao a linha do tempo de fotos e textos no perfil ou no circulo, com a mesma permissao de entrada. Lembretes aparecem no calendario do app e da web. Da para baixar um arquivo .ics ou usar a assinatura. Modelos prontos de lista e lembrete estao em portugues, gratuitos, e quem copia pode editar.',

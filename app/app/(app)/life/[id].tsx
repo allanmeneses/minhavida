@@ -17,6 +17,7 @@ import {
   type LifeArea,
   type LifeEntry,
 } from '@/lib/api';
+import { entryExample } from '@/lib/entryExamples';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function LifeAreaScreen() {
@@ -35,6 +36,7 @@ export default function LifeAreaScreen() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [nativePhoto, setNativePhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const example = entryExample(area?.kind);
 
   const load = useCallback(async () => {
     if (!token || !id) {
@@ -151,19 +153,23 @@ export default function LifeAreaScreen() {
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>{area?.name ?? 'Area'}</Text>
-      <Text style={styles.lead}>
-        {area?.kind === 'vaccine' ? 'Exemplo: vacina, quando e onde.' : 'Texto, numero ou foto. Sem video.'}
-      </Text>
+      <Text style={styles.lead}>{example.hint}</Text>
       <Feedback message={error} />
-      <TextField label="Titulo" value={title} onChangeText={setTitle} placeholder="Hepatite B" />
-      {area?.kind === 'vaccine' ? (
-        <>
-          <TextField label="Quando" value={occurredOn} onChangeText={setOccurredOn} placeholder="AAAA-MM-DD" />
-          <TextField label="Onde" value={location} onChangeText={setLocation} placeholder="UBS Centro" />
-        </>
+      <TextField label="Titulo" value={title} onChangeText={setTitle} placeholder={example.titlePlaceholder} />
+      {example.showWhen ? (
+        <TextField label="Quando" value={occurredOn} onChangeText={setOccurredOn} placeholder={example.whenPlaceholder} />
       ) : null}
-      <TextField label="Numero" value={numberValue} onChangeText={setNumberValue} placeholder="200" keyboardType="decimal-pad" />
-      <TextField label="Texto" value={body} onChangeText={setBody} placeholder="Opcional" />
+      {example.showWhere ? (
+        <TextField label="Onde" value={location} onChangeText={setLocation} placeholder={example.wherePlaceholder} />
+      ) : null}
+      <TextField
+        label="Numero"
+        value={numberValue}
+        onChangeText={setNumberValue}
+        placeholder={example.numberPlaceholder}
+        keyboardType="decimal-pad"
+      />
+      <TextField label="Texto" value={body} onChangeText={setBody} placeholder={example.bodyPlaceholder} />
       {Platform.OS === 'web' ? (
         <View>
           <Text nativeID="foto-entrada-label" style={styles.lead}>

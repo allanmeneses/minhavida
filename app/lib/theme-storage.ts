@@ -20,3 +20,21 @@ export async function writeThemePreference(value: ThemePreference): Promise<void
   }
   await (await import('expo-secure-store')).setItemAsync(KEY, value);
 }
+
+const CONTRAST_KEY = 'circulos.contrast';
+
+export async function readHighContrast(): Promise<boolean> {
+  const value = Platform.OS === 'web'
+    ? globalThis.localStorage?.getItem(CONTRAST_KEY)
+    : await (await import('expo-secure-store')).getItemAsync(CONTRAST_KEY);
+  return value === 'high';
+}
+
+export async function writeHighContrast(value: boolean): Promise<void> {
+  const stored = value ? 'high' : 'normal';
+  if (Platform.OS === 'web') {
+    globalThis.localStorage?.setItem(CONTRAST_KEY, stored);
+    return;
+  }
+  await (await import('expo-secure-store')).setItemAsync(CONTRAST_KEY, stored);
+}

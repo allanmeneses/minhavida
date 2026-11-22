@@ -12,6 +12,62 @@ Legenda:
 
 Numero da pergunta: transcricao. A segunda serie 60-69 aparece como `N (reinicio)`.
 
+## Rodada 7 (recap, perfil publico, dependencias, lacunas pequenas)
+
+Pedido desta rodada, so o que a especificacao/lacunas sustentam. O que nao estava cravado nao foi inventado.
+
+| Item | Status | Origem | Evidencia |
+| --- | --- | --- | --- |
+| Recap de uso por perfil (so fluxos usados) | feito e testado | 36 | `GET /api/recap/me`. Fluxo com count 0 nao entra. Testes `Recap_Perfil_SoMostraFluxosComUso`. `npm test` cache de `/api/recap/me`. Playwright `recap de uso no perfil so mostra fluxo usado` (inclusive leitura offline do cache). |
+| Recap / retrospectiva por circulo, so a historia da pessoa | feito e testado | 17, 18, 19, 20 | `GET /api/circles/{id}/recap`. So posts, memorias e itens da propria pessoa. Visitante 404. Testes `Recap_Circulo_SoAHistoriaDaPessoa_NaoVazaPostDoOutro`, `Recap_VisitanteDoCirculoNaoLe`. Playwright `circulo temporario arquiva e compartilha a historia`. |
+| Compartilhar retrospectiva (snapshot, nao dados dos outros) | feito e testado | 19, 20 | `POST /api/circles/{id}/recap/share` com `UserRowLock` e snapshot em `recap_shares`. `GET /api/public/recaps/{token}` anonimo. Post posterior nao entra no snapshot. Testes `Recap_CompartilhaHistoriaPropria_VisitanteNaoVeOsOutros`, `Recap_ShareSobreposto_GeraDoisTokens`. UI `/r/{token}`. Playwright no teste de arquivo. PDF/imagem de retrospectiva (61 reinicio) nao feito. |
+| Arquivar circulo temporario ou diario | feito e testado | 16, 17, 18 | `POST /api/circles/{id}/archive` com `UserRowLock`. So Temporary/Daily. Admin+. Idempotente, um log. Viewer 403. Duradouro 400. Testes `Arquivo_TemporarioGeraRecap_DuradouroFalha`, `ArquivoSobreposto_FicaArquivadoUmaVez`, `Arquivo_ViewerRecebe403`. Sem relogio automatico: a data de fim do ciclo nao esta cravada. |
+| Tipo do circulo na UI (duradouro / temporario / diario) | feito e testado | 16 | Create envia `kind`. Botao `Tipo:`. `npm test` `alterna duradouro, temporario e diario`. Playwright escolhe Temporario no teste de arquivo. |
+| Perfil publico compartilhavel, com privacidade | feito e testado | 29, 30 | Nasce privado. Dono liga `isPublic`. `GET /api/public/profiles/{id}` e `/photo` anonimos; 404 se privado. Payload: userId, displayName, hasPhoto. Sem telefone, e-mail, nascimento, diario. Testes `PerfilPublico_VisitanteVeNomeEFoto_PrivadoDa404`, `Perfil_VoltaPrivado_SomeDaVisaoPublica`. `npm test` rascunho do toggle sobrevive ao rerender. Playwright `perfil publico compartilhavel com privacidade`. UI `/p/{id}`. |
+| O que o visitante ve no perfil publico (nome vs feed) | nao cravado | 31 | A transcricao nao escolheu entre identidade e feed. Esta rodada entrega so nome e foto. Diario, documentos, telefone e e-mail ficam fora. |
+| Contraste alto | feito e testado | 42 | Paleta `paletteFor` + botao em Ajustes. `npm test` `troca a paleta sem misturar com o tema normal`. Playwright `contraste alto troca a paleta na hora`. Leitor de tela: `accessibilityLabel` ja existia; sem teste de leitor. |
+| Exemplo por tipo de entrada | feito e testado | 98 | `entryExample` em `life/[id].tsx`. `npm test` `cada tipo tem padrao simples com exemplo`. Playwright `diario mostra exemplo de preenchimento`. Vacina quando/onde permanece. |
+| Edicao substitui de vez, sem versao | feito e testado | 68, 67 | PUT da entrada sobrescreve. Teste `Entrada_EdicaoSubstituiDeVez`. Sem UI de edicao da entrada nesta rodada (gesto de pessoa N/A). |
+| Dependencias (Actions, app, .NET, majors) | feito e testado | 82 | Actions: checkout@v7, setup-node@v7, setup-java@v6, setup-dotnet@v6, upload-artifact@v7. App: react/react-dom 19.3.1, reanimated 4.8.0, worklets 0.14.0. .NET: Npgsql 10.0.4, QrCodeGenerator 3.2.1, Test.Sdk 18.12.0, coverlet 10.1.1. SkiaSharp 4.157.0 e TypeScript ~7.0.2: build e testes locais passaram sem mudanca de API. `.github/dependabot.yml` agrupa patch/minor (nuget, npm) e github-actions. `npm test` `Dependabot cobre...` e grupos. |
+| Billing, SMTP real, Azure, iOS, votacao, WebSocket, cookie httpOnly (72), conflito offline (262), revelacao agendada (230) | nao feito | pedido desta rodada | Fora do escopo. |
+
+CI observado (API GitHub, lido nesta rodada):
+
+- Squash `b6a322b` no `main`: CI run [45064997353](https://github.com/allanmeneses/minhavida/actions/runs/45064997353) conclusion `failure`. Jobs `backend`, `app` e `android` com `steps: []` e `runner_id: 0`, 2 a 3 segundos. Annotacao do check-run 137339058626: "The job was not started because recent account payments have failed or your spending limit needs to be increased." CodeQL run [45064997483](https://github.com/allanmeneses/minhavida/actions/runs/45064997483) conclusion `failure`, mesmos jobs vazios. Nao e falha de codigo.
+- HEAD do PR #21 (`2e8afa94f77f`): CI run [45061785889](https://github.com/allanmeneses/minhavida/actions/runs/45061785889) conclusion `success`. Jobs `backend`, `app` e `android` conclusion `success`. CodeQL run [45061785806](https://github.com/allanmeneses/minhavida/actions/runs/45061785806) conclusion `success`.
+
+Testes locais desta rodada (comandos e exit code):
+
+- `dotnet test --nologo` (backend): Passed 117, Failed 0, exit 0
+- `npm test` (app): 26 pass, 0 fail, exit 0
+- `npx tsc --noEmit` (app): exit 0
+- `npx playwright test` (app): 37 passed, exit 0
+
+## O que ainda depende de decisao do Allan
+
+Lista fechada, sem inventar regra:
+
+- 31: visitante do perfil publico ve so identidade (nome/foto, feito aqui) ou tambem um feed? Sem resposta na transcricao.
+- 72: cookie httpOnly (sugestao sem Ok/Beleza).
+- 103: arrastar atalho para qualquer ponto da tela.
+- 108 e 208: teto de atalhos no plano (sugestao sem Ok).
+- 207: recuperar atalho depois de excluir ("Pode ser alterado").
+- 230: revelacao surpresa agendada por data (a ligacao descreve o momento da revelacao, nao um relogio).
+- 237: exclusao do circulo na vida da pessoa e reversivel? (fala "E definitiva?", sem contexto).
+- 255 e 256: botao + no painel (sugestao sem Ok).
+- 262: conflito offline entre dois aparelhos (ultima sincronizada vence, sem merge).
+- 270: filtro do log (sugestao sem Ok).
+- 309 e 310: valor mensal em reais.
+- 331 a 344 e 336: votacao de sucessao (336 sem confirmacao; sem essa regra a votacao nao entra).
+- 10 a 12 no detalhe: busca por localizacao / geo.
+- Login proprio para pet/grupo; edicao do perfil vivo por qualquer membro.
+- Cor por tipo de atalho: paleta nao cravada (106, 107).
+- Data de fim automatica do ciclo temporario/diario (16 a 18): arquivar e acao do admin, nao relogio.
+- Arquivamento como beneficio de plano e retrospectiva em PDF/imagem (26, 27, 61 reinicio).
+- Feed de descoberta com silenciar (37 a 39).
+- Denuncia interna / bloqueio pela equipe (21 a 25).
+- Billing/gateway, SMTP real, deploy Azure, iOS nativo, PWA install, WebSocket, SMS 2FA.
+
 ## Rodada 6 (memorias, revelacao, modelos, calendario, pet/grupo, observabilidade)
 
 Pedido desta rodada, so o que a especificacao/lacunas sustentam. O que nao estava cravado nao foi inventado.
@@ -70,7 +126,7 @@ Observado nesta continuacao via API do GitHub: job `backend` do run [45038488241
 
 ### ImageSharp / SkiaSharp
 
-`Circulos.Api.csproj` referencia `SkiaSharp` 3.119.4 e `SkiaSharp.NativeAssets.Linux.NoDependencies` 3.119.4. Grep `ImageSharp` em `*.cs` e `*.csproj`: zero. Compressao: `ImageCompressor.MaxEdge = 1080`, `JpegQuality = 82`. Teste: `Foto_ComprimeSubstituiOriginalEFicaCifrada`.
+`Circulos.Api.csproj` referencia `SkiaSharp` 4.157.0 e `SkiaSharp.NativeAssets.Linux.NoDependencies` 4.157.0. Grep `ImageSharp` em `*.cs` e `*.csproj`: zero. Compressao: `ImageCompressor.MaxEdge = 1080`, `JpegQuality = 82`. Teste: `Foto_ComprimeSubstituiOriginalEFicaCifrada`. A 4.x entrou nesta rodada depois de `dotnet test` local passar sem mudanca de API.
 
 Avisos do pacote antigo 3.1.12, conferidos nesta rodada em https://www.nuget.org/packages/SixLabors.ImageSharp/3.1.12 (lista os GHSA abaixo). Identificadores lidos em `https://api.github.com/advisories/{ghsa}` no campo `identifiers` (tipo CVE) e no campo `cve_id`:
 
@@ -94,13 +150,13 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Produto app e web | parcial | confirmacao posterior; 305 | Expo Router web + nativo. Playwright: `cadastro abre o painel do dia, o perfil solo e um circulo`. `app.json` tem bloco iOS; projeto iOS nao foi gerado nesta branch. |
 | Comecar pelo perfil solo | feito e testado | 95 | Cadastro cria perfil e areas (`AuthController`, `LifeAreaDefaults`). Teste `Cadastro_CriaPerfilPrivadoComAreasSugeridas`. Playwright abre Hoje, depois Perfil. |
 | Perfil solo sem circulo | feito e testado | 28 | Areas no cadastro. Circulo e opcional. |
-| Perfil nasce privado e pode virar publico | parcial | 29, 30 | `IsPublic = false` no cadastro. Teste `Perfil_PodeVirarPublico` so muda o flag do dono. Nao ha GET de perfil publico para visitante. O que o visitante veria (31) ficou sem resposta na transcricao. |
+| Perfil nasce privado e pode virar publico | feito e testado | 29, 30 | `IsPublic = false` no cadastro. GET publico anonimo e toggle. Ver secao Rodada 7. O recorte do visitante (31) continua nao cravado: so identidade. |
 | Conteudo: vacinas, lembretes, documentos, diario | feito e testado | 31 | `LifeAreaDefaults`: Vacinas, Lembretes, Documentos, Diario. `Pessoa_CriaAreaNovaEVacinaComQuandoEOnde`, `Diario_ExportaTextoCorrido`. Playwright ve Vacinas e Diario. |
 | Sessoes sugeridas + pessoa cria sessoes novas | feito e testado | 96, 97 | POST `/api/life-areas`. Teste `Pessoa_CriaAreaNovaEVacinaComQuandoEOnde`. UI: `profile.tsx`. |
 | Aprender sessoes com o que as pessoas criam | nao feito | 96, 97 | Sem codigo de aprendizado. |
-| Padrao de preenchimento simples com exemplo | parcial | 98 | Vacina tem Quando/Onde (`life/[id].tsx`). Sem exemplo por tipo alem dos placeholders. |
+| Padrao de preenchimento simples com exemplo | feito e testado | 98 | `entryExample` por tipo. Ver secao Rodada 7. |
 | Ao entrar num circulo, ver quem esta envolvido | parcial | 1 | Detalhe lista membros (`CirclesController.Get`, `circle/[id].tsx` "Quem esta aqui"). Nao ha tela de descoberta com feed de pessoas antes de entrar. |
-| Metricas do perfil acompanham o uso | nao feito | 36 | Sem recap por uso. |
+| Metricas do perfil acompanham o uso | feito e testado | 36 | Recap so dos fluxos usados. Ver secao Rodada 7. |
 | Diario estilo Notion no solo, sem busca, sem versao, sem PDF, sync ao abrir, exporta texto | parcial | 243 a 250 | Area Diario com texto e export `.txt` (`LifeAreasController` export, `Diario_ExportaTextoCorrido`). Sem sessoes tipo Notion. Cache offline cobre o perfil; o diario em si nao tem fila propria. Export no app so dispara download se `document` existir (web). |
 | Identidade (nome, foto) | feito e testado | abertura, 1 | Perfil + foto. Testes de auth/perfil/foto. Camera e galeria no perfil (`profile.tsx`); Playwright nao exercita esses botoes. |
 | Tipo pet ou grupo no perfil | feito e testado | abertura (fala do entrevistador); 224 | `LivingProfile` (person/pet/group) alem da conta pessoa. Ver secao Rodada 6. Login proprio do pet nao cravado. |
@@ -136,7 +192,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | GitHub Actions: build, unit, integracao | feito e testado | 79, 80, 81, 84 | `.github/workflows/ci.yml`: `dotnet test`, `npm test`, `tsc --noEmit`, Playwright. Jobs `backend` e `app` verdes no run desta branch. |
 | Checagem de seguranca / Dependabot | parcial | 82 | `.github/dependabot.yml` nuget/npm/github-actions. CodeQL analisa; upload de code scanning nao ligado no repo. Ver secao Rodada 5. `dotnet list --vulnerable` nao entra no CI. |
 | Testes desde o inicio; nada sobe sem teste | parcial | 79, 80 | xUnit 86 `[Fact]`, `npm test` 18 casos, Playwright 26. Nao ha gate de deploy. Deploy nao foi feito. |
-| Edicao substitui de vez, sem versao | feito sem teste | 68, 67 | PUT da entrada sobrescreve (`LifeAreasController.UpdateEntry`). Sem tabela de versoes. Sem teste do PUT. |
+| Edicao substitui de vez, sem versao | feito e testado | 68, 67 | PUT da entrada sobrescreve (`LifeAreasController.UpdateEntry`). Teste `Entrada_EdicaoSubstituiDeVez`. Sem tabela de versoes. |
 | Tags opcionais nas entradas | nao feito | abertura | |
 
 ## Circulos
@@ -148,9 +204,9 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Sem dono ativo em caso sensivel: trava | parcial | 4 | `CircleStatus.LockedNoOwner` na exclusao sem admin/sucessor. Teste `Exclusao_SemAdminNemSucessor_TravaCirculo`. Sem trava por inatividade. |
 | Circulo nao some na exclusao: transfere ou trava; se nao houver sucessor, votacao | parcial | 327 a 331, 330 | Transfere para admin: testado. Lock: `Exclusao_SemAdminNemSucessor_TravaCirculo`. Votacao nao existe (331 a 344; 336 sem confirmacao). |
 | Votacao de sucessao (10%, candidaturas, empate, etc.) | nao feito | 331 a 344; 336 sem confirmacao | Sem entidades de voto. README coloca votacao no depois. 336 e 345 nao cravam regra. |
-| Vida util temporario / duradouro / diario | parcial | 16 | Enum `CircleKind` Lasting/Temporary/Daily no create. UI nao escolhe kind (cai no padrao `lasting`). Sem arquivar sozinho. |
-| Temporario encerrado: arquivo + retrospectiva | nao feito | 17, 18 | Status `Archived` existe no enum. Nenhum endpoint arquiva nem gera retrospectiva. |
-| Compartilhar retrospectiva so a narrativa da pessoa | nao feito | 19, 20 | |
+| Vida util temporario / duradouro / diario | feito e testado | 16 | Enum `CircleKind` + UI `Tipo:`. Arquivar e acao do admin, sem relogio. Ver secao Rodada 7. |
+| Temporario encerrado: arquivo + retrospectiva | feito e testado | 17, 18 | `POST /archive` e recap. Sem data automatica de fim. Ver secao Rodada 7. |
+| Compartilhar retrospectiva so a narrativa da pessoa | feito e testado | 19, 20 | Snapshot em `recap_shares`. Ver secao Rodada 7. |
 | Arquivamento como beneficio de plano; retencao indefinida | nao feito | 26, 27 | Nao ha compactacao nem exclusao por tempo. Retencao de fato e "fica no banco"; nao ha politica escrita no codigo. |
 | Cadastro livre; entrar em circulo alheio por pedido ou convite | feito e testado | 8 | Convite: `Dono_CriaConviteEOutroAceita`. Pedido: UI `Pedir para entrar` e lista no dono. Playwright `descobrir circulo e pedir entrada`. |
 | Publico: quem nao entrou ve so nome e descricao | feito e testado | 9 | `Publico_VisitanteVeSoNomeEDescricao`. |
@@ -212,7 +268,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Tempo real, pessoa controla o jeito | nao feito | 40, 40 reformulada | Sem push, sem WebSocket. Painel so no GET. Anuncios vs organico (40 original) sem resposta. |
 | Interface muda (sem som ao salvar) | feito sem teste | 287 | Sem som no save. |
 | Dark mode automatico com override | feito e testado (web) | 41, 284 | `userInterfaceStyle: automatic`, `ThemeContext`. Playwright `modo escuro troca a paleta na hora`. |
-| Acessibilidade leitor e contraste alto | parcial | 42 | `accessibilityLabel` em `Button` e `TextField`. Sem contraste alto. Sem teste de leitor. |
+| Acessibilidade leitor e contraste alto | parcial | 42 | Contraste alto: feito e testado (Rodada 7). `accessibilityLabel` em `Button` e `TextField`. Sem teste de leitor. |
 | Uma lingua, estrutura para mais | parcial | 35 | Textos em portugues no codigo. Sem i18n (chaves/arquivos). |
 | Transicao instantanea | nao verificado | 286 | Nao medi animacao. Expo Router usa transicao padrao. |
 | Nome e dominio no fim | parcial | 90, 91, 92 | O app ja se chama Circulos (`app.json`, JWT Issuer). Sem dominio de producao. |
@@ -298,3 +354,5 @@ Nao some "feito por ausencia" com entrega de produto. Os buracos que ainda imped
 - Billing/gateway, SMTP real, deploy Azure, iOS nativo.
 - Revelacao surpresa agendada por data (230; a ligacao descreve o momento da revelacao, nao um relogio).
 - Login proprio para pet/grupo; edicao do perfil vivo por qualquer membro.
+
+A lista consolidada do que ainda pede o Allan esta na secao **O que ainda depende de decisao do Allan** (Rodada 7).

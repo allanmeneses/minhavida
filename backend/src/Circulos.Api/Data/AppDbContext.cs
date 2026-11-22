@@ -31,6 +31,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Memory> Memories => Set<Memory>();
     public DbSet<LivingProfile> LivingProfiles => Set<LivingProfile>();
     public DbSet<RoutineTemplate> RoutineTemplates => Set<RoutineTemplate>();
+    public DbSet<RecapShare> RecapShares => Set<RecapShare>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -433,6 +434,25 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Description).HasMaxLength(500).IsRequired();
             entity.Property(x => x.PayloadJson).HasMaxLength(8000).IsRequired();
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<RecapShare>(entity =>
+        {
+            entity.ToTable("recap_shares");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.Token).IsUnique();
+            entity.HasIndex(x => x.UserId);
+            entity.Property(x => x.Token).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.PayloadJson).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Circle)
+                .WithMany()
+                .HasForeignKey(x => x.CircleId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<SentEmail>(entity =>

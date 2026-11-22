@@ -15,7 +15,7 @@ export default function SettingsScreen() {
   const { token, logout } = useAuth();
   const router = useRouter();
   const tour = useTour();
-  const { preference, setPreference, resolved, colors } = useTheme();
+  const { preference, setPreference, resolved, colors, highContrast, setHighContrast } = useTheme();
   const styles = screenStyles(colors);
   const [plan, setPlan] = useState<PlanInfo | null>(null);
   const [password, setPassword] = useState('');
@@ -130,9 +130,15 @@ export default function SettingsScreen() {
 
       <Text style={styles.section}>Aparencia</Text>
       <Text style={styles.lead}>Agora: {resolved}. Preferencia: {preference}.</Text>
+      <Text style={styles.lead}>Contraste: {highContrast ? 'alto' : 'normal'}.</Text>
       <Button label="Seguir o aparelho" variant="ghost" onPress={() => void setPreference('system')} />
       <Button label="Claro" variant="ghost" onPress={() => void setPreference('light')} />
       <Button label="Escuro" variant="ghost" onPress={() => void setPreference('dark')} />
+      <Button
+        label={highContrast ? 'Contraste normal' : 'Contraste alto'}
+        variant="ghost"
+        onPress={() => void setHighContrast(!highContrast)}
+      />
 
       <Text style={styles.section}>Plano</Text>
       <Text style={styles.lead}>
