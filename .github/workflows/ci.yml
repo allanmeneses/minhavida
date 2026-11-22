@@ -123,6 +123,11 @@ jobs:
         env:
           CI: '1'
         run: npx expo prebuild --platform android
+      - name: HTTP so em debug
+        working-directory: app
+        run: |
+          grep 'android:usesCleartextTraffic="false"' android/app/src/main/AndroidManifest.xml
+          grep 'android:usesCleartextTraffic="true"' android/app/src/debug/AndroidManifest.xml
       - name: Gerar APK
         working-directory: app/android
         run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64 --no-daemon
