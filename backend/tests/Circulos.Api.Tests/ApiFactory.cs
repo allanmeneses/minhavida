@@ -1,9 +1,11 @@
 using Circulos.Api.Data;
+using Circulos.Api.Domain;
 using Circulos.Api.Storage;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Circulos.Api.Tests;
@@ -33,7 +35,11 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             _connection = new SqliteConnection("DataSource=:memory:");
             _connection.Open();
 
-            services.AddDbContext<AppDbContext>(options => options.UseSqlite(_connection));
+            services.AddDbContext<AppDbContext>(options =>
+            {
+                options.UseSqlite(_connection);
+                options.AddInterceptors(new OverlapSaveInterceptor());
+            });
             services.AddSingleton<IFileStorage, MemoryFileStorage>();
         });
     }
@@ -61,6 +67,26 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         {
             services.Remove(descriptor);
         }
+    }
+}
+
+/// <summary>
+/// Atrasa o SaveChanges de cadastro para o teste de e-mail duplicado concorrente
+/// conseguir sobrepor as duas escritas, nao so disparar uma depois que a outra ja commitou.
+/// </summary>
+internal sealed class OverlapSaveInterceptor : SaveChangesInterceptor
+{
+    public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
+        CancellationToken cancellationToken = default)
+    {
+        if (eventData.Context?.ChangeTracker.Entries<User>().Any(entry => entry.State == EntityState.Added) == true)
+        {
+            await Task.Delay(80, cancellationToken);
+        }
+
+        return result;
     }
 }
 

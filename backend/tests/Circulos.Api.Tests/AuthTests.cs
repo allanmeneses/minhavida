@@ -68,6 +68,33 @@ public sealed class AuthTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Cadastro_EmailDuplicadoConcorrente_RetornaConflitoSemErroInterno()
+    {
+        var primeiro = _factory.CreateClient();
+        var segundo = _factory.CreateClient();
+        var email = $"race-{Guid.NewGuid():N}@exemplo.com";
+        var body = new
+        {
+            email,
+            password = "senha-segura-1",
+            name = "Pessoa",
+        };
+
+        var tarefa1 = primeiro.PostAsJsonAsync("/api/auth/register", body);
+        var tarefa2 = segundo.PostAsJsonAsync("/api/auth/register", body);
+        var respostas = await Task.WhenAll(tarefa1, tarefa2);
+
+        var codes = respostas.Select(r => r.StatusCode).ToArray();
+        Assert.Contains(HttpStatusCode.Created, codes);
+        Assert.Contains(HttpStatusCode.Conflict, codes);
+        Assert.DoesNotContain(HttpStatusCode.InternalServerError, codes);
+
+        var conflito = respostas.Single(r => r.StatusCode == HttpStatusCode.Conflict);
+        using var doc = JsonDocument.Parse(await conflito.Content.ReadAsStringAsync());
+        Assert.Equal("Ja existe uma conta com este e-mail.", doc.RootElement.GetProperty("error").GetString());
+    }
+
+    [Fact]
     public async Task Cadastro_SenhaCurta_RetornaErroDeValidacao()
     {
         var client = _factory.CreateClient();

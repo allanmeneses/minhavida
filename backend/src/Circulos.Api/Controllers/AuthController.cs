@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Circulos.Api.Controllers;
 
@@ -45,7 +46,14 @@ public sealed class AuthController(
         user.PasswordHash = passwordHasher.HashPassword(user, request.Password);
 
         db.Users.Add(user);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex) when (IsEmailUniqueViolation(ex))
+        {
+            return Conflict(new ErrorResponse("Ja existe uma conta com este e-mail."));
+        }
 
         return Created("/api/auth/me", ToResponse(user));
     }
@@ -96,6 +104,19 @@ public sealed class AuthController(
         new(tokens.Create(user), new AuthUserDto(user.Id, user.Email, user.Profile.DisplayName));
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
+
+    private static bool IsEmailUniqueViolation(DbUpdateException exception)
+    {
+        if (exception.InnerException is Npgsql.PostgresException postgres
+            && postgres.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            return true;
+        }
+
+        var message = exception.InnerException?.Message ?? exception.Message;
+        return message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("IX_users_Email", StringComparison.OrdinalIgnoreCase);
+    }
 }
 
 public static class ClaimsPrincipalExtensions
