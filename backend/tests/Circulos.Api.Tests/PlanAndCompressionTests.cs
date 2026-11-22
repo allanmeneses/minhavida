@@ -5,8 +5,7 @@ using Circulos.Api.Domain;
 using Circulos.Api.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 
 namespace Circulos.Api.Tests;
 
@@ -71,19 +70,18 @@ public sealed class PlanAndCompressionTests : IClassFixture<ApiFactory>
         var auth = await AuthHelper.RegisterAsync(client);
         client.WithToken(auth.Token);
 
-        using var image = new Image<Rgba32>(1600, 1200);
+        using var image = new SKBitmap(1600, 1200, SKColorType.Rgba8888, SKAlphaType.Opaque);
         for (var y = 0; y < image.Height; y++)
         {
             for (var x = 0; x < image.Width; x++)
             {
-                image[x, y] = new Rgba32((byte)(x % 255), (byte)(y % 255), (byte)((x + y) % 255));
+                image.SetPixel(x, y, new SKColor((byte)(x % 255), (byte)(y % 255), (byte)((x + y) % 255)));
             }
         }
-        using var png = new MemoryStream();
-        await image.SaveAsPngAsync(png);
-        png.Position = 0;
-
-        using var file = new ByteArrayContent(png.ToArray());
+        using var pngImage = SKImage.FromBitmap(image);
+        using var pngData = pngImage.Encode(SKEncodedImageFormat.Png, 100)
+            ?? throw new InvalidOperationException("Falha ao gerar o PNG de teste.");
+        using var file = new ByteArrayContent(pngData.ToArray());
         file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
         using var form = new MultipartFormDataContent();
         form.Add(file, "file", "grande.png");
@@ -95,7 +93,8 @@ public sealed class PlanAndCompressionTests : IClassFixture<ApiFactory>
         var jpeg = await photo.Content.ReadAsByteArrayAsync();
         Assert.Equal(0xFF, jpeg[0]);
         Assert.Equal(0xD8, jpeg[1]);
-        using var decoded = Image.Load(jpeg);
+        using var decoded = SKBitmap.Decode(jpeg);
+        Assert.NotNull(decoded);
         Assert.True(Math.Max(decoded.Width, decoded.Height) <= ImageCompressor.MaxEdge);
 
         var inspectable = _factory.Services.GetRequiredService<InspectableMemoryFileStorage>();

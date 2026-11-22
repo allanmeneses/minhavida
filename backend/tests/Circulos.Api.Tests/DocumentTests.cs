@@ -5,7 +5,7 @@ using System.Text.Json;
 using Circulos.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using SixLabors.ImageSharp;
+using SkiaSharp;
 
 namespace Circulos.Api.Tests;
 
@@ -213,10 +213,11 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
 
     private static MultipartFormDataContent CreatePngFile(string name)
     {
-        using var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(8, 8);
-        using var buffer = new MemoryStream();
-        image.SaveAsPng(buffer);
-        var file = new ByteArrayContent(buffer.ToArray());
+        using var image = new SKBitmap(8, 8, SKColorType.Rgba8888, SKAlphaType.Opaque);
+        image.Erase(SKColors.SteelBlue);
+        using var encoded = SKImage.FromBitmap(image).Encode(SKEncodedImageFormat.Png, 100)
+            ?? throw new InvalidOperationException("Falha ao gerar o PNG de teste.");
+        var file = new ByteArrayContent(encoded.ToArray());
         file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
         var form = new MultipartFormDataContent();
         form.Add(file, "file", name);
