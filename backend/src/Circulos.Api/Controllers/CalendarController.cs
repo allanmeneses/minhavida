@@ -2,6 +2,7 @@ using Circulos.Api.Contracts;
 using Circulos.Api.Data;
 using Circulos.Api.Domain;
 using Circulos.Api.Reminders;
+using Circulos.Api.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
