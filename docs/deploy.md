@@ -33,9 +33,11 @@ Num celular fisico, `EXPO_PUBLIC_API_URL=http://127.0.0.1:5288` nao funciona. Us
 
 ## Fora desta versao, mas citados na especificacao
 
-- Gateway de cobranca (cartao recorrente)
+- Deploy Azure e SMTP real (Allan, 22/11/2026: ainda nao)
 - WebSocket com TLS
 - Pagina de status (UptimeRobot ou similar)
-- 2FA, votacao de sucessao, PWA de loja
+- iOS nativo, PWA de loja, SMS 2FA
+
+Billing desta rodada fica em sandbox, desligado por padrao. Para ligar Mercado Pago de verdade: `Billing:Enabled=true`, `Billing:Provider=MercadoPago`, `MercadoPago:AccessToken` e `MercadoPago:WebhookSecret` so em secret, nunca no repositorio.
 
 Nenhum desses itens e requisito para o primeiro deploy da API + app atuais.

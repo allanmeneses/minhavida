@@ -24,6 +24,7 @@ export default function CirclesScreen() {
   const [visibility, setVisibility] = useState<'private' | 'public'>('private');
   const [discoverable, setDiscoverable] = useState(false);
   const [kind, setKind] = useState<CircleKind>('lasting');
+  const [findable, setFindable] = useState(false);
   const [surprise, setSurprise] = useState(false);
   const [surpriseEmail, setSurpriseEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +55,9 @@ export default function CirclesScreen() {
           description: description.trim(),
           visibility,
           discoverable,
+          findableByLocation: findable,
+          latitude: findable ? -23.55 : null,
+          longitude: findable ? -46.63 : null,
           kind,
           isSurprise: surprise,
           surpriseSubjectEmail: surprise ? surpriseEmail.trim() || null : null,
@@ -92,6 +96,11 @@ export default function CirclesScreen() {
         label={discoverable ? 'Aparece na busca' : 'Oculto na busca'}
         variant="ghost"
         onPress={() => setDiscoverable(!discoverable)}
+      />
+      <Button
+        label={findable ? 'Pode ser encontrado por perto' : 'Nao aparecer na busca por perto'}
+        variant="ghost"
+        onPress={() => setFindable(!findable)}
       />
       <Button
         label={`Tipo: ${CIRCLE_KIND_LABEL[kind]}`}

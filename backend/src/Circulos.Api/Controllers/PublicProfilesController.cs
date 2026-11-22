@@ -22,7 +22,11 @@ public sealed class PublicProfilesController(AppDbContext db, IFileStorage stora
         }
 
         Response.Headers.CacheControl = "private, no-store";
-        return Ok(new PublicProfileResponse(profile.UserId, profile.DisplayName, profile.PhotoStorageKey is not null));
+        return Ok(new PublicProfileResponse(
+            profile.UserId,
+            profile.DisplayName,
+            profile.PhotoStorageKey is not null,
+            profile.Bio));
     }
 
     [HttpGet("{userId:guid}/photo")]

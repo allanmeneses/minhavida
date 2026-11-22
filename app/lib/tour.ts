@@ -6,7 +6,7 @@ export type TourScreen = {
 export const TOUR_SCREENS: TourScreen[] = [
   {
     title: 'Seu perfil solo',
-    body: 'O Circulos comeca pela sua vida, sem exigir um circulo. Vacinas, diario, documentos e listas ficam no perfil, que nasce privado. Se virar publico, quem visita ve so nome e foto.',
+    body: 'O Circulos comeca pela sua vida, sem exigir um circulo. Vacinas, diario, documentos e listas ficam no perfil, que nasce privado. Se virar publico, quem visita ve nome, foto e descricao.',
   },
   {
     title: 'Painel do dia',

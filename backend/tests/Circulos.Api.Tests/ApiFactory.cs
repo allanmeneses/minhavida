@@ -23,6 +23,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Encryption:Key", TestEncryptionKey.Base64);
         builder.UseSetting("Database:Provider", "Postgres");
         builder.UseSetting("ConnectionStrings:Default", _connectionString);
+        builder.UseSetting("Billing:Enabled", "true");
+        builder.UseSetting("Billing:Provider", "Simulated");
+        builder.UseSetting("Billing:Sandbox", "true");
         builder.ConfigureServices(services =>
         {
             RemoveService(services, typeof(DbContextOptions<AppDbContext>));

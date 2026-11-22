@@ -16,7 +16,8 @@ public sealed class CirclesController(
     AppDbContext db,
     QuotaService quota,
     IEmailSender email,
-    IFileStorage storage) : ControllerBase
+    IFileStorage storage,
+    SuccessionService succession) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<CircleSummaryResponse>>> Mine(CancellationToken cancellationToken)
@@ -31,7 +32,7 @@ public sealed class CirclesController(
         var circles = await db.Circles
             .AsNoTracking()
             .Include(x => x.Members)
-            .Where(x => ids.Contains(x.Id))
+            .Where(x => ids.Contains(x.Id) && x.Status != CircleStatus.Deleted)
             .ToListAsync(cancellationToken);
         var revealedForMe = await db.Circles
             .AsNoTracking()
@@ -57,6 +58,7 @@ public sealed class CirclesController(
             .AsNoTracking()
             .Include(x => x.Members)
             .Where(x => x.Discoverable && x.Status == CircleStatus.Active)
+            .Where(x => x.Status != CircleStatus.Deleted)
             .Where(x => !x.IsSurprise || x.RevealedAt != null || x.SurpriseSubjectUserId != userId);
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -66,6 +68,17 @@ public sealed class CirclesController(
 
         var items = await query.ToListAsync(cancellationToken);
         return Ok(items.Select(circle => ToSummary(circle, RoleOf(circle, userId), userId)).ToList());
+    }
+
+    [HttpGet("nearby")]
+    public async Task<ActionResult<IReadOnlyList<NearbyHitResponse>>> NearbyCircles(
+        [FromQuery] double lat,
+        [FromQuery] double lng,
+        [FromQuery] double radiusKm = 10,
+        CancellationToken cancellationToken = default)
+    {
+        var hits = await Nearby.FindAsync(db, User.GetUserId(), lat, lng, radiusKm, "circle", cancellationToken);
+        return Ok(hits);
     }
 
     [HttpPost]
@@ -108,6 +121,9 @@ public sealed class CirclesController(
             Description = request.Description?.Trim() ?? string.Empty,
             Visibility = EnumText.ParseVisibility(request.Visibility),
             Discoverable = request.Discoverable,
+            FindableByLocation = request.FindableByLocation,
+            Latitude = request.FindableByLocation ? request.Latitude : null,
+            Longitude = request.FindableByLocation ? request.Longitude : null,
             IsSurprise = request.IsSurprise,
             SurpriseSubjectUserId = subjectId,
             Kind = EnumText.ParseCircleKind(request.Kind),
@@ -134,7 +150,7 @@ public sealed class CirclesController(
     {
         var userId = User.GetUserId();
         var circle = await LoadCircle(id, cancellationToken);
-        if (circle is null || HiddenSurprise(circle, userId))
+        if (circle is null || circle.Status == CircleStatus.Deleted || HiddenSurprise(circle, userId))
         {
             return NotFound(new ErrorResponse("Circulo nao encontrado."));
         }
@@ -158,21 +174,7 @@ public sealed class CirclesController(
         var joinRequests = member.Role >= CircleRole.Admin
             ? await PendingJoinRequests(circle.Id, cancellationToken)
             : [];
-        return Ok(new CircleDetailResponse(
-            circle.Id,
-            circle.Name,
-            circle.Description,
-            EnumText.Visibility(circle.Visibility),
-            circle.Discoverable,
-            circle.IsSurprise,
-            circle.RevealedAt is not null,
-            EnumText.Kind(circle.Kind),
-            EnumText.Status(circle.Status),
-            circle.OwnerUserId,
-            names,
-            posts,
-            log,
-            joinRequests));
+        return Ok(ToDetail(circle, names, posts, log, joinRequests));
     }
 
     [HttpPost("{id:guid}/invites")]
@@ -389,17 +391,8 @@ public sealed class CirclesController(
         await transaction.CommitAsync(cancellationToken);
 
         var names = await MemberNames(circle, cancellationToken);
-        return Ok(new CircleDetailResponse(
-            circle.Id,
-            circle.Name,
-            circle.Description,
-            EnumText.Visibility(circle.Visibility),
-            circle.Discoverable,
-            circle.IsSurprise,
-            circle.RevealedAt is not null,
-            EnumText.Kind(circle.Kind),
-            EnumText.Status(circle.Status),
-            circle.OwnerUserId,
+        return Ok(ToDetail(
+            circle,
             names,
             circle.Posts.OrderByDescending(x => x.CreatedAt).Select(ToPost).ToList(),
             circle.Logs.OrderByDescending(x => x.CreatedAt).Select(ToLog).ToList(),
@@ -424,11 +417,94 @@ public sealed class CirclesController(
 
         if (member.Role == CircleRole.Owner)
         {
-            return BadRequest(new ErrorResponse("O dono precisa transferir o circulo antes de sair."));
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            await CircleRowLock.AcquireAsync(db, id, cancellationToken);
+            circle = await LoadCircle(id, cancellationToken);
+            member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
+            if (circle is null || member is null)
+            {
+                return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            }
+
+            var remaining = circle.Members.Where(item => item.UserId != userId).ToList();
+            if (remaining.Count == 0)
+            {
+                return BadRequest(new ErrorResponse("Exclua o circulo se voce e a unica pessoa nele."));
+            }
+
+            if (remaining.Any(item => item.Role >= CircleRole.Admin))
+            {
+                return BadRequest(new ErrorResponse("O dono precisa transferir o circulo antes de sair."));
+            }
+
+            circle.OwnerUserId = null;
+            db.CircleMembers.Remove(member);
+            await quota.ReleaseCircleAsync(userId, cancellationToken);
+            await succession.OpenIfNeededAsync(circle, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return NoContent();
         }
 
         db.CircleMembers.Remove(member);
         await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPut("{id:guid}/location")]
+    public async Task<ActionResult<CircleSummaryResponse>> SetLocation(
+        Guid id,
+        [FromBody] CircleLocationRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
+        if (circle is null || circle.Status == CircleStatus.Deleted || HiddenSurprise(circle, userId) || member is null)
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        if (member.Role < CircleRole.Admin)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("So administrador ou dono liga a busca por perto."));
+        }
+
+        circle.FindableByLocation = request.FindableByLocation;
+        circle.Latitude = request.FindableByLocation ? request.Latitude : null;
+        circle.Longitude = request.FindableByLocation ? request.Longitude : null;
+        await db.SaveChangesAsync(cancellationToken);
+        return Ok(ToSummary(circle, member.Role, userId));
+    }
+
+    [HttpPost("{id:guid}/delete")]
+    public async Task<IActionResult> DeleteForever(
+        Guid id,
+        [FromBody] DeleteCircleRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(request.Confirmation?.Trim(), "excluir definitivo", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new ErrorResponse("Para excluir de vez, escreva: excluir definitivo"));
+        }
+
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await CircleRowLock.AcquireAsync(db, id, cancellationToken);
+        var circle = await LoadCircle(id, cancellationToken);
+        var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
+        if (circle is null || circle.Status == CircleStatus.Deleted || member is null || member.Role != CircleRole.Owner)
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        circle.Status = CircleStatus.Deleted;
+        circle.FindableByLocation = false;
+        circle.Discoverable = false;
+        db.CircleLogs.Add(Log(circle.Id, userId, "deleted-forever", "Exclusao definitiva. Nao da para desfazer."));
+        await quota.ReleaseCircleAsync(userId, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return NoContent();
     }
 
@@ -626,16 +702,31 @@ public sealed class CirclesController(
     }
 
     [HttpGet("{id:guid}/log")]
-    public async Task<ActionResult<IReadOnlyList<CircleLogResponse>>> LogList(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<CircleLogResponse>>> LogList(
+        Guid id,
+        [FromQuery] string? action,
+        [FromQuery] Guid? actorUserId,
+        CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
         var circle = await LoadCircle(id, cancellationToken);
-        if (circle is null || HiddenSurprise(circle, userId) || circle.Members.All(x => x.UserId != userId))
+        if (circle is null || circle.Status == CircleStatus.Deleted || HiddenSurprise(circle, userId) || circle.Members.All(x => x.UserId != userId))
         {
             return NotFound(new ErrorResponse("Circulo nao encontrado."));
         }
 
-        return Ok(circle.Logs.OrderByDescending(x => x.CreatedAt).Select(ToLog).ToList());
+        IEnumerable<CircleLog> logs = circle.Logs;
+        if (!string.IsNullOrWhiteSpace(action))
+        {
+            logs = logs.Where(item => string.Equals(item.Action, action.Trim(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (actorUserId is Guid actor)
+        {
+            logs = logs.Where(item => item.ActorUserId == actor);
+        }
+
+        return Ok(logs.OrderByDescending(x => x.CreatedAt).Select(ToLog).ToList());
     }
 
     private Task<Circle?> LoadCircle(Guid id, CancellationToken cancellationToken) =>
@@ -703,6 +794,7 @@ public sealed class CirclesController(
             hidden ? null : circle.Description,
             EnumText.Visibility(circle.Visibility),
             circle.Discoverable,
+            circle.FindableByLocation,
             circle.IsSurprise,
             circle.RevealedAt is not null,
             EnumText.Kind(circle.Kind),
@@ -710,6 +802,29 @@ public sealed class CirclesController(
             EnumText.Role(role),
             circle.Members.Count);
     }
+
+    private static CircleDetailResponse ToDetail(
+        Circle circle,
+        IReadOnlyList<CircleMemberDto> names,
+        IReadOnlyList<CirclePostResponse> posts,
+        IReadOnlyList<CircleLogResponse> log,
+        IReadOnlyList<CircleJoinRequestDto> joinRequests) =>
+        new(
+            circle.Id,
+            circle.Name,
+            circle.Description,
+            EnumText.Visibility(circle.Visibility),
+            circle.Discoverable,
+            circle.FindableByLocation,
+            circle.IsSurprise,
+            circle.RevealedAt is not null,
+            EnumText.Kind(circle.Kind),
+            EnumText.Status(circle.Status),
+            circle.OwnerUserId,
+            names,
+            posts,
+            log,
+            joinRequests);
 
     private async Task<List<CircleJoinRequestDto>> PendingJoinRequests(Guid circleId, CancellationToken cancellationToken)
     {
@@ -738,6 +853,7 @@ public sealed class CirclesController(
             circle.Description,
             EnumText.Visibility(circle.Visibility),
             circle.Discoverable,
+            circle.FindableByLocation,
             circle.IsSurprise,
             circle.RevealedAt is not null,
             EnumText.Kind(circle.Kind),

@@ -1,6 +1,7 @@
 using Circulos.Api.Contracts;
 using Circulos.Api.Data;
 using Circulos.Api.Domain;
+using Circulos.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -86,6 +87,18 @@ public sealed class SearchController(AppDbContext db, TimeProvider clock) : Cont
         }
 
         return Ok(new SearchResponse(hits, await History(userId, cancellationToken)));
+    }
+
+    [HttpGet("nearby")]
+    public async Task<ActionResult<IReadOnlyList<NearbyHitResponse>>> NearbySearch(
+        [FromQuery] double lat,
+        [FromQuery] double lng,
+        [FromQuery] double radiusKm = 10,
+        [FromQuery] string? kind = null,
+        CancellationToken cancellationToken = default)
+    {
+        var hits = await Nearby.FindAsync(db, User.GetUserId(), lat, lng, radiusKm, kind, cancellationToken);
+        return Ok(hits);
     }
 
     [HttpGet("history")]

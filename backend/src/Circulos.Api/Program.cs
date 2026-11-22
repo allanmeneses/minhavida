@@ -3,6 +3,7 @@ using Circulos.Api.Auth;
 using Circulos.Api.Data;
 using Circulos.Api.Domain;
 using Circulos.Api.Observability;
+using Circulos.Api.Payments;
 using Circulos.Api.Services;
 using Circulos.Api.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -30,6 +31,24 @@ builder.Services.AddScoped<IEmailSender, OutboxEmailSender>();
 builder.Services.AddScoped<AccountDeletionService>();
 builder.Services.AddScoped<StatusPage>();
 builder.Services.AddScoped<RecapService>();
+builder.Services.Configure<BillingOptions>(builder.Configuration.GetSection("Billing"));
+builder.Services.Configure<PlanPriceOptions>(builder.Configuration.GetSection("Plans"));
+builder.Services.Configure<MercadoPagoOptions>(builder.Configuration.GetSection("MercadoPago"));
+builder.Services.AddScoped<BillingService>();
+builder.Services.AddScoped<SuccessionService>();
+var billingProvider = builder.Configuration["Billing:Provider"] ?? "Simulated";
+var mercadoPagoToken = builder.Configuration["MercadoPago:AccessToken"];
+if (string.Equals(billingProvider, "MercadoPago", StringComparison.OrdinalIgnoreCase)
+    && !string.IsNullOrWhiteSpace(mercadoPagoToken))
+{
+    builder.Services.AddHttpClient<IPaymentGateway, MercadoPagoGateway>();
+}
+else
+{
+    builder.Services.AddSingleton<FakePaymentGateway>();
+    builder.Services.AddSingleton<IPaymentGateway>(sp => sp.GetRequiredService<FakePaymentGateway>());
+}
+
 builder.Services.AddCirculosObservability(builder.Configuration);
 
 builder.Services.Configure<FormOptions>(options =>

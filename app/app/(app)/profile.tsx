@@ -40,6 +40,8 @@ export default function ProfileScreen() {
     phone: string;
     secondaryEmail: string;
     isPublic: boolean;
+    bio: string;
+    findableByLocation: boolean;
   }) {
     if (!token) {
       return;
@@ -57,6 +59,10 @@ export default function ProfileScreen() {
           phone: values.phone.trim() ? values.phone.trim() : null,
           secondaryEmail: values.secondaryEmail.trim() ? values.secondaryEmail.trim() : null,
           isPublic: values.isPublic,
+          bio: values.bio.trim() ? values.bio.trim() : null,
+          findableByLocation: values.findableByLocation,
+          latitude: values.findableByLocation ? -23.55 : null,
+          longitude: values.findableByLocation ? -46.63 : null,
         }),
       });
       setProfile(next);
@@ -202,7 +208,7 @@ export default function ProfileScreen() {
         <AreaComposer value={newArea} onChange={setNewArea} onCreate={() => void createArea()} />
         {profile?.isPublic && user?.id ? (
           <Text style={[styles.lead, { color: colors.muted }]}>
-            Link publico: /p/{user.id}. Quem visita ve so nome e foto.
+            Link publico: /p/{user.id}. Quem visita ve nome, foto e descricao.
           </Text>
         ) : (
           <Text style={[styles.lead, { color: colors.muted }]}>

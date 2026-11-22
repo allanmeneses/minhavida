@@ -143,9 +143,31 @@ export default function SettingsScreen() {
       <Text style={styles.section}>Plano</Text>
       <Text style={styles.lead}>
         {plan?.plan === 'paid' ? 'Pago' : 'Gratuito'}: {plan?.circleLimit ?? 'ilimitado'} circulos,{' '}
-        {plan ? Math.round(plan.storageLimitBytes / (1024 * 1024)) : 0} MB. Uso {used}%.
+        {plan ? Math.round(plan.storageLimitBytes / (1024 * 1024)) : 0} MB, {plan?.shortcutLimit ?? 5} atalhos.
+        Uso {used}%.
       </Text>
-      <Text style={styles.lead}>{plan?.checkout}</Text>
+      <Text style={styles.lead}>
+        Status: {plan?.subscriptionStatus ?? 'none'}. {plan?.inGoodStanding ? 'Em dia.' : 'Inadimplente.'}{' '}
+        {plan?.sandbox ? 'Sandbox.' : ''} {plan?.checkout}
+      </Text>
+      <Button label="Ver precos" variant="ghost" onPress={() => router.push('/pricing' as Href)} />
+      {plan?.plan === 'paid' ? (
+        <Button
+          label="Cancelar assinatura"
+          variant="ghost"
+          onPress={() => {
+            if (!token) {
+              return;
+            }
+            void api<PlanInfo>('/api/plan/cancel', { method: 'POST', token })
+              .then((next) => {
+                setPlan(next);
+                setOk('Assinatura cancelada. O acesso pago segue ate o fim do ciclo.');
+              })
+              .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel cancelar.'));
+          }}
+        />
+      ) : null}
       <Text style={styles.section}>Uso de armazenamento</Text>
       <View
         accessibilityLabel={`Uso de armazenamento ${used} por cento`}

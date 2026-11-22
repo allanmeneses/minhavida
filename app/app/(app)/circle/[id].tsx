@@ -17,6 +17,7 @@ import {
   type RecapShareCreated,
   type RevealSummary,
   type SharedListSummary,
+  type SuccessionVote,
 } from '@/lib/api';
 import { canArchiveKind, CIRCLE_KIND_LABEL, type CircleKind } from '@/lib/circleKinds';
 import { formatPersonTime } from '@/lib/formatPersonTime';
@@ -53,6 +54,10 @@ export default function CircleDetailScreen() {
   const [sharePath, setSharePath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [vote, setVote] = useState<SuccessionVote | null>(null);
+  const [deleteText, setDeleteText] = useState('');
+  const [logFilter, setLogFilter] = useState('');
+  const [filteredLog, setFilteredLog] = useState<CircleDetail['log'] | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !circleId) {
@@ -83,6 +88,11 @@ export default function CircleDetailScreen() {
       setRecap(await api<CircleRecap>(`/api/circles/${circleId}/recap`, { token }));
     } catch {
       setRecap(null);
+    }
+    try {
+      setVote(await api<SuccessionVote>(`/api/circles/${circleId}/succession`, { token }));
+    } catch {
+      setVote(null);
     }
   }, [token, circleId]);
 
@@ -156,6 +166,7 @@ export default function CircleDetailScreen() {
     }
     await api(`/api/circles/${circleId}/membership`, { method: 'DELETE', token });
     setOk('Voce saiu. Sem rastro para os outros.');
+    router.push('/(app)/circles');
   }
 
   async function join() {
@@ -346,9 +357,27 @@ export default function CircleDetailScreen() {
           ) : null}
           <Text style={styles.section}>Perfis deste circulo</Text>
           {living.map((item) => (
-            <Text key={item.id} style={styles.lead}>
-              {item.name} · {item.kind}
-            </Text>
+            <View key={item.id}>
+              <Text style={styles.lead}>
+                {item.name} · {item.kind} · {item.canEdit ? 'pode editar' : 'so visualiza'}
+              </Text>
+              {item.canEdit ? (
+                <Button
+                  label={`Renomear ${item.name}`}
+                  variant="ghost"
+                  onPress={() => {
+                    if (!token) {
+                      return;
+                    }
+                    void api(`/api/living-profiles/${item.id}`, {
+                      method: 'PUT',
+                      token,
+                      body: JSON.stringify({ name: `${item.name} editado`, kind: item.kind, circleId }),
+                    }).then(() => load());
+                  }}
+                />
+              ) : null}
+            </View>
           ))}
           <Text style={styles.section}>Listas do circulo</Text>
           {lists.map((item) => (
@@ -426,6 +455,79 @@ export default function CircleDetailScreen() {
               .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel exportar.'));
           }}
         />
+      ) : null}
+      {vote && isMember ? (
+        <>
+          <Text style={styles.section}>Votacao de sucessao</Text>
+          <Text style={styles.lead}>
+            Maioria simples. Prazo de 3 dias. Todos os membros votam. Status: {vote.status}. Encerra em{' '}
+            {new Date(vote.deadlineAt).toLocaleString('pt-BR')}.
+          </Text>
+          {detail?.members.map((member) => (
+            <Button
+              key={member.userId}
+              label={`Votar em ${member.name}`}
+              variant="ghost"
+              onPress={() => {
+                if (!token || !circleId) {
+                  return;
+                }
+                void api(`/api/circles/${circleId}/succession/votes`, {
+                  method: 'POST',
+                  token,
+                  body: JSON.stringify({ candidateUserId: member.userId }),
+                })
+                  .then(() => load())
+                  .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel votar.'));
+              }}
+            />
+          ))}
+        </>
+      ) : null}
+      <Text style={styles.section}>Filtro do log</Text>
+      <TextField label="Acao do log" value={logFilter} onChangeText={setLogFilter} placeholder="created" />
+      <Button
+        label="Filtrar log"
+        variant="ghost"
+        onPress={() => {
+          if (!token || !circleId) {
+            return;
+          }
+          const q = logFilter.trim() ? `?action=${encodeURIComponent(logFilter.trim())}` : '';
+          void api<CircleDetail['log']>(`/api/circles/${circleId}/log${q}`, { token }).then(setFilteredLog);
+        }}
+      />
+      {filteredLog
+        ? filteredLog.map((item) => (
+            <Text key={item.id} style={styles.lead}>
+              {formatPersonTime(item.createdAt)} · {item.action}: {item.detail}
+            </Text>
+          ))
+        : null}
+      {isOwner ? (
+        <>
+          <Text style={styles.section}>Excluir circulo</Text>
+          <Text style={styles.lead}>Exclusao definitiva. Nao da para desfazer. Escreva: excluir definitivo</Text>
+          <TextField label="Confirmacao da exclusao" value={deleteText} onChangeText={setDeleteText} />
+          <Button
+            label="Excluir circulo de vez"
+            variant="danger"
+            onPress={() => {
+              if (!token || !circleId) {
+                return;
+              }
+              void api(`/api/circles/${circleId}/delete`, {
+                method: 'POST',
+                token,
+                body: JSON.stringify({ confirmation: deleteText.trim() }),
+              })
+                .then(() => router.push('/(app)/circles'))
+                .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel excluir.'));
+            }}
+            disabled={deleteText.trim().toLowerCase() !== 'excluir definitivo'}
+          />
+          <Button label="Sair e abrir votacao" variant="ghost" onPress={() => void leave()} />
+        </>
       ) : null}
       {detail?.members.some((member) => member.userId === user?.id && member.role !== 'owner') ? (
         <Button label="Sair do circulo" variant="danger" onPress={() => void leave()} />

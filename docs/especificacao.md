@@ -12,10 +12,11 @@ Fora da transcricao original, o dono fechou estas ambiguidades:
 - Somos sem raca: o correto e Sem rastro.
 - E definitiva? e So uma?: sem contexto, nao confirmadas. Nenhuma regra de produto parte delas.
 - Pergunta 229 primeira formula: cortada. Nao inventar a resposta.
+- 22/11/2026: perfil publico mostra nome, foto e descricao; revelacao agendada nao tera; exclusao de circulo e definitiva; conflito offline ultima sincronizacao vence; votacao de sucessao por maioria simples em 3 dias com todos os membros; busca por raio so com permissao explicita; pet/grupo edita quem tem grant de edicao; billing Mercado Pago (proposta de precos em `docs/planos.md`); Azure e SMTP real ainda nao.
 
 ## Visao
 
-O Circulos e um hub da vida pessoal. A unidade central e um perfil vivo (pessoa, e tambem pet ou grupo na fala inicial do entrevistador). Em volta dele existem entradas (numero, texto, foto, lembrete) e circulos (familia, amizade, interesse, evento, cuidado). Uma pessoa pode ter um ou milhares de circulos. A mesma entrada pode aparecer em varios circulos, com permissoes diferentes, sem duplicar o dado. (abertura; perguntas 1, 16, 28)
+O Circulos e um hub da vida pessoal. A unidade central e um perfil vivo (pessoa, e tambem pet ou grupo na fala inicial do entrevistador). Em volta dele existem entradas (numero, texto, foto, lembrete) e circulos (familia, amizade, interesse, evento, cuidado). Uma pessoa pode ter um ou milhares de circulos. A mesma entrada pode aparecer em varios circulos, com permissoes diferentes, sem duplicar o dado. Perfil de pet/grupo: edita quem tem permissao de edicao concedida; quem so tem visualizacao so visualiza. Decidido em 22/11/2026. (abertura; perguntas 1, 16, 28)
 
 Regra de ouro de uso: se registrar uma acao exigir login, menu e varios passos, a acao morre. Atalhos de um toque (iniciei a corrida, tomei o remedio, iniciei o estudo) sao o jeito de guardar o que aconteceu. (98, 99, 100)
 
@@ -25,6 +26,7 @@ Comecar pelo perfil solo, nao pelo circulo. (95)
 
 - Existe perfil solo, sem circulo nenhum, so registrando a vida da pessoa. (28)
 - O perfil solo nasce privado. Da para mudar para publico depois. (29, 30)
+- Visitante do perfil publico ve nome, foto e descricao. Diario, documentos, telefone e e-mail ficam fora. Decidido em 22/11/2026. (31)
 - Conteudo do perfil solo: vacinas (quando e onde, como exemplo), lembretes da vida, informacoes que a pessoa esquece, documentos de acesso rapido, e participacao em outros circulos. (31)
 - Campos iniciais: o app sugere sessoes do dia a dia no codigo; a pessoa tambem cria sessoes novas. Mais tarde o app pode aprender com o que as pessoas criam. (96, 97)
 - Cada tipo de entrada tem um padrao de preenchimento simples, com exemplo. (98)
@@ -67,11 +69,11 @@ Comecar pelo perfil solo, nao pelo circulo. (95)
 - Compartilhar retrospectiva: a pessoa conta a historia dela, nao os dados dos outros. (19, 20)
 - Arquivamento pode ser beneficio de plano. Retencao no gratuito: indefinida (o entrevistador registrou eterna). (26, 27)
 - Publico versus privado: criar o circulo da propria vida e livre. Entrar em circulo de outro pede pedido ou convite. Circulos privados: so administradores controlam permanencia. Circulos publicos: qualquer pessoa pode entrar, mas quem ainda nao entrou ve so nome e descricao, nao as entradas. (8, 9)
-- Busca por interesse em comum e, com opt-in, por localizacao. So aparece quem marcou aceitar localizacao. Quem define isso e o dono sozinho. Circulos que nao querem ser encontrados precisam ser respeitados (invisiveis por padrao). (10, 11, 12, 12 reformulada)
+- Busca por interesse em comum e, com opt-in, por localizacao. Decidido em 22/11/2026: buscar o que tem por perto por raio; so aparece quem/o que tiver permissao explicita de ser encontrado (desligado por padrao); sem coordenada exata a terceiros. Circulos que nao querem ser encontrados ficam invisiveis por padrao. (10, 11, 12, 12 reformulada)
 - Feed de descoberta existe, so com dados internos do app, com opcao de silenciar sugestoes. (37, 38, 39)
 - Entrada apagada deixa rastro de que existiu, com quem apagou e quando. (5, 6)
-- Log de atividades visivel para todos do circulo, para sempre, com data/hora no fuso da pessoa. Filtro por pessoa e por tipo foi sugestao sem Beleza/Ok. (267 a 271)
-- Circulo surpresa (aniversario): o aniversariante nao ve nome nem descricao. Na revelacao, resumo com mensagens e fotos. Cada participante pode guardar a recordacao no proprio perfil, editavel em silencio. Sair de um circulo e direito de esquecer para si; o circulo segue para os outros. (229 reformulada a 236)
+- Log de atividades visivel para todos do circulo, para sempre, com data/hora no fuso da pessoa. Filtro por acao e por pessoa: decisao padrao da Rodada 8. (267 a 271)
+- Circulo surpresa (aniversario): o aniversariante nao ve nome nem descricao. Na revelacao, resumo com mensagens e fotos. Cada participante pode guardar a recordacao no proprio perfil, editavel em silencio. Sair de um circulo e direito de esquecer para si; o circulo segue para os outros. Revelacao agendada por data: nao tera (decidido em 22/11/2026). (229 reformulada a 236, 230)
 - Pergunta 229 primeira formula (quando a lista de ideias e compartilhada, a outra pessoa pode adicionar ideias ou so [cortado]): sem resposta. Nao inventar se quem recebe a lista pode incluir ideias.
 - Templates de rotina: opcao aceita, gratuitos, editaveis por quem copiou, curadoria inicial do dono do produto, ranqueamento e contagem de uso, criador anonimo. Sem nota obrigatoria no comeco; depois o dono aceitou ranqueamento. (47 a 52)
 
@@ -93,8 +95,7 @@ Pedido do dono em 22/11/2026, fora da transcricao original.
 - Cadastro da conta e livre para criar o proprio circulo. Participar de circulo alheio e por pedido ou convite. (8)
 - Denuncia interna no circulo. Quem decide: dono/admins e tambem a equipe do app, que pode bloquear o circulo e tira-lo do radar. Aviso ao dono no bloqueio. Recurso existe, com revisao humana, sem prazo definido (fala: Fica aberto 100 prazo). (21, 21 reformulada, 22, 23, 24, 25)
 - Exclusao da conta: so apaga o que e da pessoa. Circulos que ela criou transferem para administradores ou sucessor que ela definiu. (325 a 329)
-- Sucessao sem sucessor: votacao. 10% dos envolvidos concordando com uma pessoa, ela vira administrador. Candidaturas abertas durante o processo. Fica aberta ate bater 10%. Pode indicar um membro se ninguem se candidatar. Votos visiveis. Resultado no log. Dono que ja excluiu a conta nao cancela. Circulo segue funcionando na votacao. Empate pede nova votacao; se o empate se repetir, aceita novas candidaturas. Historico de votacoes anteriores nao fica visivel. Perdedor pode se candidatar de novo. (331 a 344)
-- Pergunta 336 (um membro vota mais de uma vez ou so uma): a fala visivel e So uma?, sem contexto. O dono marcou como nao confirmada. Nao cravar se o voto e unico. Sem essa regra, a votacao de sucessao nao entra no codigo.
+- Sucessao sem sucessor: votacao. Decidido em 22/11/2026: maioria simples, prazo de 3 dias, todos os membros do circulo votam (um voto por membro). (331 a 344, 336)
 - Pergunta 345 (remover admin recem-eleito) nao teve decisao: o dono encerrou com Cansar esse pedido.
 
 ## Publicacoes
@@ -103,7 +104,7 @@ Pedido do dono em 22/11/2026, fora da transcricao original.
 - Sem video nas entradas. (53)
 - Retrospectiva automatica no fim do ciclo, com cara de post para a pessoa querer compartilhar a narrativa dela. (17, 18, 19)
 - Painel do dia e a primeira tela: o que vence, o que esta atrasado, o que vem. Mostra quantos circulos ativos (sugestao aceita com Ok). Atualiza sozinho quando algo muda. (251 a 254)
-- Botao de mais no painel para criar entrada sem navegar, sugerindo o contexto (ex.: tomei se o lembrete atrasado e medicacao): sugestao sem Ok/Beleza. (255, 256)
+- Botao de mais no painel para criar atalho sem navegar (decisao padrao da Rodada 8). (255, 256)
 - Busca unificada (entradas, circulos, aniversarios, espaco livre) com filtro opcional por tipo; historico de buscas sincronizado entre dispositivos; termos frequentes no topo. (257 a 260)
 - Offline: guarda local e sincroniza ao voltar. Conflito: ultima sincronizada vence, aviso informativo (nao lado a lado). Icone online/offline. (261 a 266)
 - Edicao substitui de vez, sem versao anterior. (68)
@@ -122,12 +123,12 @@ Pedido do dono em 22/11/2026, fora da transcricao original.
 
 ## Atalhos
 
-- Atalhos de uma acao, posicionaveis livremente, varios na mesma tela. (98, 102, 103)
+- Atalhos de uma acao, varios na mesma tela. Reordenar: subir/descer (decisao padrao da Rodada 8; sem arrastar livre). (98, 102, 103)
 - Disparo: icone na tela inicial do celular e tecla no computador. Sem gesto de balancar ou desenhar. Aceito com Concordo. (100)
 - Executa direto, sem confirmacao. Feedback visual de que recebeu o estimulo. Sugestao de 1 segundo sem Ok. Cor muda por tipo de acao. So o nome da acao (fala: So comandacao). (101, 104, 105, 106, 107)
 - Som e vibracao opcionais: bip padrao, vibracao curta. (109, 200, 201)
 - Desativar some da tela principal ate reativar, mas continua acessivel. Excluir de vez e possivel; entradas ja criadas ficam no historico; atalho excluido pode ser alterado/recuperado. (202 a 207)
-- Limite sugerido (sem Ok): 5 no gratuito, ilimitado no pago. Teto de ativos sugerido (sem Ok): 20. (108, 208)
+- Teto de atalhos (decisao padrao da Rodada 8, alinhado a `docs/planos.md`): 5 no gratuito, 20 no pago. (108, 208)
 - Compartilhar atalho no circulo: a outra pessoa ve que veio de voce; quem toca registra no mesmo lugar; so o dono edita; aviso de edicao mostra o que mudou. (209 a 214)
 
 ## Notificacoes
@@ -146,7 +147,7 @@ Pedido do dono em 22/11/2026, fora da transcricao original.
 - Circulos invisiveis por padrao se nao quiserem ser encontrados. (12)
 - Circulo surpresa com zero vazamento para o aniversariante. (229 reformulada)
 - Sair de um circulo: sem rastro para os outros. Confirmado pelo dono: Sem rastro. (238)
-- Pergunta 237 (exclusao do circulo na vida da pessoa e reversivel ou definitiva): a fala visivel e E definitiva?, sem contexto. O dono marcou como nao confirmada. Nao cravar reversibilidade.
+- Exclusao do circulo e definitiva, nao da para desfazer. Confirmacao clara na UI (`excluir definitivo`). Decidido em 22/11/2026. (237)
 - Estatisticas anonimas so internamente. (43, 44)
 - Excluir conta pede senha, apaga o que e da pessoa, manda e-mail de confirmacao do cancelamento de assinatura, sem link de reativacao nesse e-mail. (323 a 326)
 
@@ -159,7 +160,7 @@ Pedido do dono em 22/11/2026, fora da transcricao original.
 - Atalhos extras, armazenamento maior e retrospectivas bloqueiam se a assinatura suspender; circulos e historico ficam. (315)
 - Armazenamento: 100 MB gratis, 1 GB pago. (275)
 - Pagina de precos comparando planos, valores em reais. (307, 308)
-- Mensal: dono nao cravou valor. Entrevistador sugeriu 25 a 40 reais, sem Ok. Anual com desconto: sim. Dois meses gratis no anual foi fala do entrevistador, nao confirmada. (309, 310)
+- Gateway: Mercado Pago. Precos em reais: PROPOSTA 29,90 mensal e 299,00 anual, configuraveis, aguardando aprovacao (`docs/planos.md`). Decidido em 22/11/2026. (309, 310)
 - Pagamento so cartao, recorrente automatico (dono tirou o Pix depois de ter dito os dois). Cartao recusado: suspende na hora. Volta na hora se pagar de novo. Historico visivel so se esta em dia ou nao, sem valor nem data. Sem nota fiscal por e-mail. Botao de cancelar visivel; acesso pago ate o fim do ciclo; cancela direto, com e-mail de confirmacao, sem link de reativar. (311 a 324)
 - Sem programa de indicacao. Sem selo feito no Brasil. Sem blog. Redes sociais oficiais depois. Sem onboarding por e-mail. Sem beta fechado. (300 a 306, 302, 303, 304)
 - FAQ no menu, atualiza com o app, sem busca interna, suporte so e-mail sem prazo prometido. Sem ajuda contextual por tela. Tour na primeira abertura, pulavel, reaparece se pedir, cobre tudo, telas estaticas com texto, so avanca. (288 a 299)
@@ -178,7 +179,7 @@ Pedido do dono em 22/11/2026, fora da transcricao original.
 
 - Backend: C Sharp. (62 reinicio)
 - Frontend citado pelo dono: Pode fazer em Nuxt. (63 reinicio)
-- Deploy: Azure. (64 reinicio)
+- Deploy: Azure. (64 reinicio) Decidido em 22/11/2026: ainda nao. SMTP real: ainda nao.
 - Banco: Postgres. (65 reinicio)
 - Acesso a dados: so Entity Framework, nao Dapper. (66 e 67 reinicio)
 - API: REST, nao GraphQL. (68 reinicio)

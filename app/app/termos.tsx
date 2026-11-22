@@ -22,7 +22,8 @@ export default function TermsScreen() {
         O Circulos e um hub da vida pessoal. Voce cria uma conta com e-mail e senha, guarda um perfil solo,
         documentos, fotos, areas de vida, circulos, lembretes e atalhos. O produto funciona no aplicativo
         (Expo) e no navegador. Nao ha loja de pagamentos ligada nesta versao: o plano gratuito tem limites
-        (3 circulos e 100 MB). O checkout pago responde que a cobranca ainda nao esta ligada a um gateway.
+        (3 circulos, 5 atalhos e 100 MB). O plano pago usa Mercado Pago em sandbox, com precos em reais
+        configuraveis. Sem secret, a cobranca fica desligada.
       </Text>
       <Text style={styles.section}>2. Cadastro e acesso</Text>
       <Text style={styles.lead}>

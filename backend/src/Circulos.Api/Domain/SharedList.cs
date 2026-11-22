@@ -44,6 +44,7 @@ public sealed class SharedListItem
     public Guid? DoneByUserId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? DoneAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 
     public SharedList List { get; set; } = null!;
 }

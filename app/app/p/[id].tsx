@@ -32,11 +32,12 @@ export default function PublicProfileScreen() {
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.kicker}>Circulos</Text>
       <Text style={styles.title}>Perfil publico</Text>
-      <Text style={styles.lead}>Quem visita ve so nome e foto. Telefone, e-mail e diario ficam fora.</Text>
+      <Text style={styles.lead}>Quem visita ve nome, foto e descricao. Telefone, e-mail e diario ficam fora.</Text>
       {error ? <Text style={styles.lead}>{error}</Text> : null}
       {profile ? (
         <>
           <Text style={styles.item}>{profile.displayName}</Text>
+          {profile.description ? <Text style={styles.lead}>{profile.description}</Text> : null}
           {profile.hasPhoto ? (
             <Image
               accessibilityLabel={`Foto de ${profile.displayName}`}

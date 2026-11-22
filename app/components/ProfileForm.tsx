@@ -13,6 +13,8 @@ type Values = {
   phone: string;
   secondaryEmail: string;
   isPublic: boolean;
+  bio: string;
+  findableByLocation: boolean;
 };
 
 type Props = {
@@ -31,6 +33,8 @@ function fromProfile(profile: Profile | null): Values {
     phone: profile?.phone ?? '',
     secondaryEmail: profile?.secondaryEmail ?? '',
     isPublic: profile?.isPublic ?? false,
+    bio: profile?.bio ?? '',
+    findableByLocation: profile?.findableByLocation ?? false,
   };
 }
 
@@ -76,14 +80,25 @@ export function ProfileForm({ initial, error, ok, busy, accountEmail, onSave }: 
         autoComplete="email"
         placeholder="Opcional, se for diferente do login"
       />
+      <TextField
+        label="Descricao publica"
+        value={shown.bio}
+        onChangeText={(bio) => patch({ bio })}
+        placeholder="Uma frase sobre voce"
+      />
       <Button
         label={shown.isPublic ? 'Perfil publico' : 'Perfil privado'}
         variant="ghost"
         onPress={() => patch({ isPublic: !shown.isPublic })}
       />
+      <Button
+        label={shown.findableByLocation ? 'Pode ser encontrado por perto' : 'Nao aparecer na busca por perto'}
+        variant="ghost"
+        onPress={() => patch({ findableByLocation: !shown.findableByLocation })}
+      />
       <Text style={[styles.account, { color: colors.muted }]}>
         {shown.isPublic
-          ? 'Quem visita ve so nome e foto. Telefone, e-mail e diario ficam fora.'
+          ? 'Quem visita ve nome, foto e descricao. Telefone, e-mail e diario ficam fora.'
           : 'O perfil nasce privado. Ninguem de fora ve seus dados.'}
       </Text>
       {accountEmail ? <Text style={[styles.account, { color: colors.muted }]}>Conta: {accountEmail}</Text> : null}

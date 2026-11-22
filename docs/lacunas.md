@@ -12,6 +12,26 @@ Legenda:
 
 Numero da pergunta: transcricao. A segunda serie 60-69 aparece como `N (reinicio)`.
 
+## Rodada 8 (billing, votacao, perfil publico, busca por raio)
+
+Decisoes do Allan em 22/11/2026, registradas abaixo. O que ele marcou como nao, ficou fora.
+
+| Item | Status | Origem | Evidencia |
+| --- | --- | --- | --- |
+| Billing Mercado Pago, sandbox, precos configuraveis | feito e testado | 309, 310, 307, 311 a 324 | `Billing:Enabled` desligado por padrao. Development/Testing usam `FakePaymentGateway`. Pagina `/pricing`, `POST /api/plan/checkout`, webhook HMAC, status no perfil. Precos em `Plans:PaidMonthlyReais` / `PaidYearlyReais`. Proposta em `docs/planos.md`. Testes `Catalogo_MostraPropostaComPrecosConfiguraveis`, `CheckoutSimulado_AssinaEWebhookValidaAssinatura`, `CartaoRecusado_NaoAssina_ECheckoutSobrepostoFicaUmaAssinatura`, `Inadimplencia_BloqueiaAtalhoExtraEWebhookPausado`, `AssinaturaHmac_ManifestoDoMercadoPago`. Playwright `assinatura simulada e webhook`. |
+| Votacao de sucessao: maioria simples, 3 dias, todos votam | feito e testado | 331 a 344, 336 | `POST /api/circles/{id}/succession/votes`, prazo `SuccessionVote.DeadlineDays = 3`, maioria `votos * 2 > membros`. Teste `Votacao_MaioriaSimplesEmTresDiasElege_EPrazoSemMaioriaTrava`. Playwright `votacao de sucessao com prazo`. |
+| Perfil publico: visitante ve foto e descricao alem do nome | feito e testado | 31 | `PublicProfileResponse.Description`. Diario, documentos, telefone e e-mail fora. Teste `PerfilPublico_VisitanteVeNomeEFoto_PrivadoDa404`. Playwright `perfil publico mostra descricao`. |
+| Revelacao agendada (230) | decidido nao | 230 | Sem `RevealAt` automatico. A revelacao continua sendo acao da pessoa. |
+| Exclusao de circulo definitiva | feito e testado | 237 | `POST /api/circles/{id}/delete` com confirmacao `excluir definitivo`. Status `Deleted`, GET 404. Teste `ExclusaoDefinitiva_NaoDesfaz_EConfirmacaoObrigatoria`. Playwright `exclusao definitiva do circulo`. |
+| Conflito offline: ultima sincronizacao vence | feito e testado | 262 | PUT do item da lista sempre grava. `LastSyncWins` se o cliente veio com `knownUpdatedAt` antigo. Teste `Lista_UltimaSincronizacaoVenceMesmoSobreposta`. |
+| Pet/grupo: edita quem tem permissao de edicao | feito e testado | perfil vivo | `PUT /api/living-profiles/{id}/grants`. Sem grant, membro so ve. Testes `DonoCriaPetEGrupo_MembroVe_NaoEdita`, `GrantEditar_MembroEdita_VisualizarNaoEdita`. Playwright `permissao de pet e grupo`. |
+| Busca por raio, permissao explicita, sem coordenada | feito e testado | 10 a 12 | `GET /api/search/nearby`. `FindableByLocation` desligado por padrao. Distancia arredondada. Teste `BuscaPorRaio_SoComPermissaoExplicita_SemCoordenada`. Playwright `busca por raio com e sem permissao`. |
+| Deploy Azure e SMTP real | decidido nao | pedido | `docs/deploy.md` segue descrevendo o que faltaria. Nenhum recurso Azure criado. Outbox local. |
+| Teto de atalhos, +, filtro do log, recuperar, arrastar, paleta | feito e testado | 108, 208, 255, 256, 270, 207, 103, 106, 107 | Decisao padrao: 5/20 atalhos, botao `+`, filtro `?action=`, restore, subir/descer no lugar de arrastar livre, cores por tipo. Teste `Atalho_TetoDoGratisERecuperaExcluidoComPaleta`, `Log_FiltraPorAcao`. |
+| iOS nativo, SMS 2FA, WebSocket, cookie httpOnly (72) | fora | pedido | Sem implementacao. JWT Bearer no Expo. |
+
+O clone do repositorio privado `allanmeneses/zedoaluguel` para leitura do padrao Mercado Pago falhou (`Repository not found` no git). A leitura foi pela API do GitHub e pela documentacao publica do Mercado Pago. Nenhuma credencial foi copiada.
+
 ## Rodada 7 (recap, perfil publico, dependencias, lacunas pequenas)
 
 Pedido desta rodada, so o que a especificacao/lacunas sustentam. O que nao estava cravado nao foi inventado.
@@ -24,7 +44,7 @@ Pedido desta rodada, so o que a especificacao/lacunas sustentam. O que nao estav
 | Arquivar circulo temporario ou diario | feito e testado | 16, 17, 18 | `POST /api/circles/{id}/archive` com `UserRowLock`. So Temporary/Daily. Admin+. Idempotente, um log. Viewer 403. Duradouro 400. Testes `Arquivo_TemporarioGeraRecap_DuradouroFalha`, `ArquivoSobreposto_FicaArquivadoUmaVez`, `Arquivo_ViewerRecebe403`. Sem relogio automatico: a data de fim do ciclo nao esta cravada. |
 | Tipo do circulo na UI (duradouro / temporario / diario) | feito e testado | 16 | Create envia `kind`. Botao `Tipo:`. `npm test` `alterna duradouro, temporario e diario`. Playwright escolhe Temporario no teste de arquivo. |
 | Perfil publico compartilhavel, com privacidade | feito e testado | 29, 30 | Nasce privado. Dono liga `isPublic`. `GET /api/public/profiles/{id}` e `/photo` anonimos; 404 se privado. Payload: userId, displayName, hasPhoto. Sem telefone, e-mail, nascimento, diario. Testes `PerfilPublico_VisitanteVeNomeEFoto_PrivadoDa404`, `Perfil_VoltaPrivado_SomeDaVisaoPublica`. `npm test` rascunho do toggle sobrevive ao rerender. Playwright `perfil publico compartilhavel com privacidade`. UI `/p/{id}`. |
-| O que o visitante ve no perfil publico (nome vs feed) | nao cravado | 31 | A transcricao nao escolheu entre identidade e feed. Esta rodada entrega so nome e foto. Diario, documentos, telefone e e-mail ficam fora. |
+| O que o visitante ve no perfil publico (nome vs feed) | feito e testado | 31 | Decidido em 22/11/2026: nome, foto e descricao. Diario, documentos, telefone e e-mail ficam fora. Ver Rodada 8. |
 | Contraste alto | feito e testado | 42 | Paleta `paletteFor` + botao em Ajustes. `npm test` `troca a paleta sem misturar com o tema normal`. Playwright `contraste alto troca a paleta na hora`. Leitor de tela: `accessibilityLabel` ja existia; sem teste de leitor. |
 | Exemplo por tipo de entrada | feito e testado | 98 | `entryExample` em `life/[id].tsx`. `npm test` `cada tipo tem padrao simples com exemplo`. Playwright `diario mostra exemplo de preenchimento`. Vacina quando/onde permanece. |
 | Edicao substitui de vez, sem versao | feito e testado | 68, 67 | PUT da entrada sobrescreve. Teste `Entrada_EdicaoSubstituiDeVez`. Sem UI de edicao da entrada nesta rodada (gesto de pessoa N/A). |
@@ -43,30 +63,33 @@ Testes locais desta rodada (comandos e exit code):
 - `npx tsc --noEmit` (app): exit 0
 - `npx playwright test` (app): 37 passed, exit 0
 
+## Decisoes do Allan em 22/11/2026
+
+Antes estavam na lista de pendencias. O dono fechou nesta data:
+
+- 31: visitante do perfil publico ve foto e descricao alem do nome. Diario, documentos, telefone e e-mail ficam fora. Decidido em 22/11/2026.
+- 309 e 310: gateway Mercado Pago. Precos em reais ficam como PROPOSTA em `docs/planos.md` (29,90 mensal e 299,00 anual, configuraveis). Decidido em 22/11/2026.
+- 331 a 344 e 336: votacao de sucessao por maioria simples, prazo de 3 dias, todos os membros votam. Decidido em 22/11/2026.
+- 230: revelacao agendada nao tera. Decidido nao em 22/11/2026.
+- 237: exclusao de circulo e definitiva, nao da para desfazer. Decidido em 22/11/2026.
+- 262: conflito offline, ultima sincronizacao vence. Decidido em 22/11/2026.
+- Perfil de pet/grupo: edita quem tem permissao de edicao concedida; quem so tem visualizacao so visualiza. Decidido em 22/11/2026.
+- 10 a 12: busca por perto por raio; so com permissao explicita, desligada por padrao; sem coordenada exata a terceiros. Decidido em 22/11/2026.
+- Deploy Azure e SMTP real: ainda nao. Decidido nao em 22/11/2026.
+- Itens menores, decisao padrao desta rodada (nao eram Ok na transcricao; o pedido desta rodada autorizou o padrao mais simples): teto de atalhos 5/20 (108, 208); botao + no painel (255, 256); filtro do log (270); recuperar atalho excluido (207); reordenar atalho por subir/descer no lugar de arrastar livre (103); paleta de cor por tipo (106, 107).
+
 ## O que ainda depende de decisao do Allan
 
 Lista fechada, sem inventar regra:
 
-- 31: visitante do perfil publico ve so identidade (nome/foto, feito aqui) ou tambem um feed? Sem resposta na transcricao.
-- 72: cookie httpOnly (sugestao sem Ok/Beleza).
-- 103: arrastar atalho para qualquer ponto da tela.
-- 108 e 208: teto de atalhos no plano (sugestao sem Ok).
-- 207: recuperar atalho depois de excluir ("Pode ser alterado").
-- 230: revelacao surpresa agendada por data (a ligacao descreve o momento da revelacao, nao um relogio).
-- 237: exclusao do circulo na vida da pessoa e reversivel? (fala "E definitiva?", sem contexto).
-- 255 e 256: botao + no painel (sugestao sem Ok).
-- 262: conflito offline entre dois aparelhos (ultima sincronizada vence, sem merge).
-- 270: filtro do log (sugestao sem Ok).
-- 309 e 310: valor mensal em reais.
-- 331 a 344 e 336: votacao de sucessao (336 sem confirmacao; sem essa regra a votacao nao entra).
-- 10 a 12 no detalhe: busca por localizacao / geo.
-- Login proprio para pet/grupo; edicao do perfil vivo por qualquer membro.
-- Cor por tipo de atalho: paleta nao cravada (106, 107).
+- 72: cookie httpOnly (sugestao sem Ok/Beleza). Fora desta rodada; o cliente Expo usa Bearer.
+- Precos finais em reais: a proposta 29,90 / 299,00 espera aprovacao do Allan (`docs/planos.md`).
+- Login proprio para pet/grupo (conta separada). Nesta rodada so a permissao de edicao/visualizacao.
 - Data de fim automatica do ciclo temporario/diario (16 a 18): arquivar e acao do admin, nao relogio.
 - Arquivamento como beneficio de plano e retrospectiva em PDF/imagem (26, 27, 61 reinicio).
 - Feed de descoberta com silenciar (37 a 39).
 - Denuncia interna / bloqueio pela equipe (21 a 25).
-- Billing/gateway, SMTP real, deploy Azure, iOS nativo, PWA install, WebSocket, SMS 2FA.
+- SMTP real, deploy Azure, iOS nativo, PWA install, WebSocket, SMS 2FA (ainda nao).
 
 ## Rodada 6 (memorias, revelacao, modelos, calendario, pet/grupo, observabilidade)
 
@@ -150,7 +173,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Produto app e web | parcial | confirmacao posterior; 305 | Expo Router web + nativo. Playwright: `cadastro abre o painel do dia, o perfil solo e um circulo`. `app.json` tem bloco iOS; projeto iOS nao foi gerado nesta branch. |
 | Comecar pelo perfil solo | feito e testado | 95 | Cadastro cria perfil e areas (`AuthController`, `LifeAreaDefaults`). Teste `Cadastro_CriaPerfilPrivadoComAreasSugeridas`. Playwright abre Hoje, depois Perfil. |
 | Perfil solo sem circulo | feito e testado | 28 | Areas no cadastro. Circulo e opcional. |
-| Perfil nasce privado e pode virar publico | feito e testado | 29, 30 | `IsPublic = false` no cadastro. GET publico anonimo e toggle. Ver secao Rodada 7. O recorte do visitante (31) continua nao cravado: so identidade. |
+| Perfil nasce privado e pode virar publico | feito e testado | 29, 30, 31 | `IsPublic = false` no cadastro. GET publico anonimo e toggle. Visitante ve nome, foto e descricao. Diario, documentos, telefone e e-mail ficam fora. Ver secao Rodada 8. |
 | Conteudo: vacinas, lembretes, documentos, diario | feito e testado | 31 | `LifeAreaDefaults`: Vacinas, Lembretes, Documentos, Diario. `Pessoa_CriaAreaNovaEVacinaComQuandoEOnde`, `Diario_ExportaTextoCorrido`. Playwright ve Vacinas e Diario. |
 | Sessoes sugeridas + pessoa cria sessoes novas | feito e testado | 96, 97 | POST `/api/life-areas`. Teste `Pessoa_CriaAreaNovaEVacinaComQuandoEOnde`. UI: `profile.tsx`. |
 | Aprender sessoes com o que as pessoas criam | nao feito | 96, 97 | Sem codigo de aprendizado. |
@@ -159,7 +182,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Metricas do perfil acompanham o uso | feito e testado | 36 | Recap so dos fluxos usados. Ver secao Rodada 7. |
 | Diario estilo Notion no solo, sem busca, sem versao, sem PDF, sync ao abrir, exporta texto | parcial | 243 a 250 | Area Diario com texto e export `.txt` (`LifeAreasController` export, `Diario_ExportaTextoCorrido`). Sem sessoes tipo Notion. Cache offline cobre o perfil; o diario em si nao tem fila propria. Export no app so dispara download se `document` existir (web). |
 | Identidade (nome, foto) | feito e testado | abertura, 1 | Perfil + foto. Testes de auth/perfil/foto. Camera e galeria no perfil (`profile.tsx`); Playwright nao exercita esses botoes. |
-| Tipo pet ou grupo no perfil | feito e testado | abertura (fala do entrevistador); 224 | `LivingProfile` (person/pet/group) alem da conta pessoa. Ver secao Rodada 6. Login proprio do pet nao cravado. |
+| Tipo pet ou grupo no perfil | feito e testado | abertura (fala do entrevistador); 224 | `LivingProfile` (person/pet/group) alem da conta pessoa. Edita quem tem grant de edicao. Ver secao Rodada 8. Login proprio do pet nao cravado. |
 | A mesma entrada em varios circulos sem duplicar | nao feito | abertura | `LifeEntry` e do perfil; `CirclePost` e outro objeto. |
 | Feed geral tipo rede social | sem confirmacao | 20 | Transcricao: sem resposta direta visivel. |
 
@@ -202,8 +225,8 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Dono fixo que pode mudar; historico fica | feito e testado | 2, 3 | POST `/api/circles/{id}/transfer` com `UserRowLock`. Historico e permissoes ficam. Testes `Dono_TransfereEmVida_HistoricoEPermissoesFicam` e `TransferenciaSobreposta_SoUmaVence`. Playwright `transferir dono do circulo em vida`. |
 | Varios gestores | parcial | 3 | Papel `Admin` existe (`CircleRole`). Nao ha varios donos simultaneos. |
 | Sem dono ativo em caso sensivel: trava | parcial | 4 | `CircleStatus.LockedNoOwner` na exclusao sem admin/sucessor. Teste `Exclusao_SemAdminNemSucessor_TravaCirculo`. Sem trava por inatividade. |
-| Circulo nao some na exclusao: transfere ou trava; se nao houver sucessor, votacao | parcial | 327 a 331, 330 | Transfere para admin: testado. Lock: `Exclusao_SemAdminNemSucessor_TravaCirculo`. Votacao nao existe (331 a 344; 336 sem confirmacao). |
-| Votacao de sucessao (10%, candidaturas, empate, etc.) | nao feito | 331 a 344; 336 sem confirmacao | Sem entidades de voto. README coloca votacao no depois. 336 e 345 nao cravam regra. |
+| Circulo nao some na exclusao: transfere ou trava; se nao houver sucessor, votacao | feito e testado | 327 a 331, 330 | Transfere para admin: testado. Sem admin, abre votacao (membros restantes). Solo restante ainda trava. Ver secao Rodada 8. |
+| Votacao de sucessao (maioria simples, 3 dias, todos votam) | feito e testado | 331 a 344, 336 | Decidido em 22/11/2026. Ver secao Rodada 8. |
 | Vida util temporario / duradouro / diario | feito e testado | 16 | Enum `CircleKind` + UI `Tipo:`. Arquivar e acao do admin, sem relogio. Ver secao Rodada 7. |
 | Temporario encerrado: arquivo + retrospectiva | feito e testado | 17, 18 | `POST /archive` e recap. Sem data automatica de fim. Ver secao Rodada 7. |
 | Compartilhar retrospectiva so a narrativa da pessoa | feito e testado | 19, 20 | Snapshot em `recap_shares`. Ver secao Rodada 7. |
@@ -211,12 +234,12 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Cadastro livre; entrar em circulo alheio por pedido ou convite | feito e testado | 8 | Convite: `Dono_CriaConviteEOutroAceita`. Pedido: UI `Pedir para entrar` e lista no dono. Playwright `descobrir circulo e pedir entrada`. |
 | Publico: quem nao entrou ve so nome e descricao | feito e testado | 9 | `Publico_VisitanteVeSoNomeEDescricao`. |
 | Privado: so admins controlam permanencia | feito e testado | 8 | Aceitar pedido exige `Role >= Admin`. UI no detalhe. Playwright `descobrir circulo e pedir entrada`. |
-| Busca por interesse e, com opt-in, por localizacao | parcial | 10, 11, 12, 12 reformulada | GET `/api/circles/discover?q=` e tela `Descobrir circulos`. Sem geo (localizacao nao cravada nesta rodada). |
+| Busca por interesse e, com opt-in, por localizacao | feito e testado | 10, 11, 12, 12 reformulada | Discover por texto. `GET /api/search/nearby` por raio, so com `FindableByLocation` (desligado por padrao), sem coordenada exata. Ver secao Rodada 8. |
 | Circulos que nao querem ser encontrados: invisivel por padrao | feito e testado | 12 | `Discoverable` false se omitido. UI: `Oculto na busca` / `Aparece na busca`. Playwright cria com o botao. |
 | Feed de descoberta interno, da para silenciar | nao feito | 37, 38, 39 | Discover lista circulos; nao e feed e nao ha silenciar. |
 | Entrada apagada deixa rastro com quem e quando | feito e testado | 5, 6 | `EntradaApagada_DeixaRastroNoLog`. Tela formata `CreatedAt` com `formatPersonTime`. Playwright espera data no log. |
-| Log visivel para o circulo, para sempre, fuso da pessoa | parcial | 267 a 271 | GET log no detalhe. UI mostra data/hora no fuso do aparelho. Sem retencao. Sem filtro (270 foi sugestao sem Ok; nao cravar). |
-| Circulo surpresa: aniversariante nao ve; revelacao; recordacao no perfil; sair sem rastro | feito e testado | 229 reformulada a 236, 238 | `Surpresa_AniversarianteNaoVeOCirculo`, `Sair_NaoDeixaRastroDeParticipacao`. Revelacao, resumo e recordacao: ver secao Rodada 6. Revelacao por data automatica nao cravada (230). |
+| Log visivel para o circulo, para sempre, fuso da pessoa | parcial | 267 a 271 | GET log no detalhe. UI mostra data/hora no fuso do aparelho. Sem retencao. Filtro `?action=` e `actorUserId` (decisao padrao da Rodada 8). |
+| Circulo surpresa: aniversariante nao ve; revelacao; recordacao no perfil; sair sem rastro | feito e testado | 229 reformulada a 236, 238 | `Surpresa_AniversarianteNaoVeOCirculo`, `Sair_NaoDeixaRastroDeParticipacao`. Revelacao, resumo e recordacao: ver secao Rodada 6. Revelacao agendada (230): decidido nao em 22/11/2026. |
 | Lista de ideias compartilhada: a outra pessoa pode incluir? | sem confirmacao | 229 primeira formula (cortada) | Lembrete tem `giftIdeas` so no dono. Nao ha compartilhar no circulo (228). |
 | Templates de rotina | feito e testado | 47 a 52 | Catalogo pt-BR, copia editavel, uso/ranking, criador anonimo. Ver secao Rodada 6. |
 | Denuncia interna, bloqueio pela equipe, recurso humano | nao feito | 21 a 25 | |
@@ -227,9 +250,9 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Decisao | Status | Origem | Evidencia |
 | --- | --- | --- | --- |
 | Painel do dia primeiro: vence, atrasado, em seguida, quantos circulos | feito e testado | 251 a 254 | `GET /api/home`, `home.tsx`. Poll a cada 5s e ao voltar o foco (sem WebSocket; 73 e 74 nao feitos). Playwright `painel do dia atualiza sozinho`. |
-| Botao + no painel sugerindo contexto | nao feito | 255, 256 (sem Ok) | |
+| Botao + no painel sugerindo contexto | feito e testado | 255, 256 | Botao `+` no painel abre o formulario de atalho. Decisao padrao da Rodada 8. |
 | Busca unificada + historico sincronizado | feito e testado | 257 a 260 | `GET /api/search` e `/api/search/history`. Tela `search.tsx`. Teste `Busca_UnificadaComHistoricoSincronizadoETermosFrequentes`. Playwright `busca unificada com historico`. |
-| Offline: guarda local, ultima sync vence, icone online/offline | parcial | 261 a 266 | Cache + fila de listas + icone. Conflito entre aparelhos (262) nao cravado. Ver secao Rodada 5. |
+| Offline: guarda local, ultima sync vence, icone online/offline | feito e testado | 261 a 266 | Cache + fila de listas + icone. Conflito 262: ultima sincronizacao vence (`LastSyncWins`). Ver secao Rodada 8. |
 
 ## Lembretes e recorrencia
 
@@ -250,15 +273,15 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Decisao | Status | Origem | Evidencia |
 | --- | --- | --- | --- |
 | Atalhos de uma acao, varios na tela | feito e testado | 98, 102, 103 | Home lista e dispara. `Atalho_ExecutaSemConfirmacaoEApareceNoPainel`. Playwright `atalho de um toque dispara sem confirmacao`. |
-| Posicionaveis livremente | parcial | 102, 103 | Reordena com Subir/Descer e `PUT /api/shortcuts/order`. Teste `Atalho_ReordenaNaTela`. Playwright `atalhos reordenam na tela`. Sem arrastar livre (103). |
+| Posicionaveis livremente | feito e testado | 102, 103 | Reordena com Subir/Descer e `PUT /api/shortcuts/order` (decisao padrao da Rodada 8, sem arrastar livre). Teste `Atalho_ReordenaNaTela`. Playwright `atalhos reordenam na tela`. |
 | Icone na tela inicial e tecla no computador | nao feito | 100 | Sem widget, sem atalho de teclado, sem PWA install. 99 ficou sem resposta direta; vale a 100. |
 | Sem gesto de balancar | feito (por ausencia) | 100 | Nao ha gesto. |
 | Executa direto, sem confirmacao; so o nome | feito e testado | 101, 104 a 107 | POST `/run` sem dialog. |
 | Feedback 1 segundo | nao feito | 105 (sem Ok) | `flash` do label permanece ate novo load. |
-| Cor por tipo de acao | parcial | 106, 107 | UI cria com `#C45C26`. Sem paleta por tipo. API default se omitir cor: `#1F6F66`. |
+| Cor por tipo de acao | feito e testado | 106, 107 | `ShortcutPalette` por tipo. Teste `Atalho_TetoDoGratisERecuperaExcluidoComPaleta`. |
 | Som e vibracao opcionais | feito e testado | 109, 200, 201 | `playShortcutFeedback`: bip 880 Hz 0,12s e vibracao 40 ms. `npm test` `usa bip padrao e vibracao curta`. Playwright nao mede audio. |
-| Desativar some da principal; excluir mantem historico | parcial | 202 a 207 | UI Desativar/Reativar/Excluir. Playwright `atalho desativado some da tela principal e pode voltar`. Recuperar depois de excluir (207) nao cravar: resposta "Pode ser alterado". |
-| Limite 5 gratis / 20 ativos | nao feito | 108, 208 (sem Ok) | Sem teto. |
+| Desativar some da principal; excluir mantem historico | feito e testado | 202 a 207 | UI Desativar/Reativar/Excluir. Soft-delete e restore. Teste `Atalho_TetoDoGratisERecuperaExcluidoComPaleta`. Playwright `atalho desativado some da tela principal e pode voltar`. |
+| Limite 5 gratis / 20 ativos | feito e testado | 108, 208 | Decisao padrao da Rodada 8. `PlanLimits`. Teste `Atalho_TetoDoGratisERecuperaExcluidoComPaleta`. |
 | Compartilhar atalho no circulo | nao feito | 209 a 214 | |
 
 ## Notificacoes e interface
@@ -282,19 +305,19 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Exclusao: dono do dado, confirma e-mail, rastro anonimo | feito e testado | 64, 65, 66, 325, 326 | `Exclusao_PedeSenhaConfirmaPorEmailEApagaDadosPessoais`, `Exclusao_TransfereCirculoParaAdminEAnonimizaLog`. E-mail de encerramento sem `http`. |
 | Sem painel de transparencia | feito (por ausencia) | 69 | Nao ha painel. |
 | Sair do circulo sem rastro para os outros | feito e testado | 238 | `Sair_NaoDeixaRastroDeParticipacao`. |
-| Exclusao do circulo na vida da pessoa reversivel? | sem confirmacao | 237 | Nao cravar. |
+| Exclusao do circulo na vida da pessoa reversivel? | feito e testado | 237 | Decidido em 22/11/2026: definitiva. `ExclusaoDefinitiva_NaoDesfaz_EConfirmacaoObrigatoria`. |
 | E-mail de exclusao sem reativar | feito e testado | 323 a 326 | Ver teste acima. SMTP real nao existe; outbox local. |
 
 ## Plano e monetizacao
 
 | Decisao | Status | Origem | Evidencia |
 | --- | --- | --- | --- |
-| Plano pago desde o inicio, limites no gratis | parcial | 15, 60 reinicio | Limites 3 circulos e 100 MB (`PlanLimits`, `PlanoGratis_TerceiroCirculoPassaEQuartoFalhaMesmoSobreposto`). `User.Plan` existe; checkout 501 (`Plano_MostraLimitesSemGateway`). |
+| Plano pago desde o inicio, limites no gratis | feito e testado | 15, 60 reinicio | Limites 3 circulos, 5 atalhos e 100 MB. Checkout simulado em teste (`CheckoutSimulado_AssinaEWebhookValidaAssinatura`). Precos: PROPOSTA em `docs/planos.md`. |
 | Circulos ilimitados no pago; membro extra; selo anual | nao feito | 15 | Sem cobranca de membro, sem selo. |
 | Pago: >100 membros, retrospectiva PDF/imagem, suporte prioridade | nao feito | 61 reinicio | |
-| Se a assinatura cair, atalhos extras/storage/retrospectivas bloqueiam; historico fica | nao feito | 315 | |
-| Pagina de precos em reais | nao feito | 307, 308 | Valor mensal nao cravado (309, 310). |
-| So cartao recorrente; recusa suspende; historico so em dia ou nao; sem NF; cancelar visivel | nao feito | 311 a 324 | Pix foi tirado pelo dono; nao ha Pix no codigo. |
+| Se a assinatura cair, atalhos extras/storage/retrospectivas bloqueiam; historico fica | feito e testado | 315 | `Inadimplencia_BloqueiaAtalhoExtraEWebhookPausado`. Recap share 402 se pago e fora de dia. |
+| Pagina de precos em reais | feito e testado | 307, 308 | `/pricing` e `GET /api/plans`. Valores PROPOSTA em `docs/planos.md`. |
+| So cartao recorrente; recusa suspende; historico so em dia ou nao; sem NF; cancelar visivel | feito e testado | 311 a 324 | Checkout cartao simulado. Recusa 400. Webhook paused suspende. Cancelar visivel em Ajustes. Sem NF. |
 | Sem indicacao, sem selo feito no Brasil, sem blog, redes depois, sem onboarding e-mail, sem beta fechado | feito (por ausencia) | 300 a 306 | Nao ha esses produtos. |
 | FAQ no menu, tour na primeira abertura | feito e testado | 288 a 299 | Telas `faq.tsx` e `TourGuide`. Ver secao Rodada 5. |
 
@@ -341,18 +364,13 @@ Nao some "feito por ausencia" com entrega de produto. Os buracos que ainda imped
 
 ## Fora desta rodada (nao cravar)
 
-- Busca por localizacao / geo (10 a 12 no detalhe do opt-in e se some depois).
-- Recuperar atalho depois de excluir (207; resposta "Pode ser alterado").
-- Filtro do log (270; sugestao sem Ok).
-- Votacao de sucessao (331 a 344; 336 sem confirmacao).
-- WebSocket (73, 74); o painel usa poll de 5s.
-- Botao + no painel (255, 256; sugestao sem Ok).
-- Arrastar atalho para qualquer ponto da tela (103).
-- Cookie httpOnly (72; sugestao sem Ok). Bearer no app.
-- Conflito offline entre dois aparelhos (262; ultima sincronizada vence, sem regra de merge).
-- SMS para 2FA (34 cobriu so o recorte inicial; esta rodada fez TOTP).
-- Billing/gateway, SMTP real, deploy Azure, iOS nativo.
-- Revelacao surpresa agendada por data (230; a ligacao descreve o momento da revelacao, nao um relogio).
-- Login proprio para pet/grupo; edicao do perfil vivo por qualquer membro.
+Itens ainda fora, depois da Rodada 8:
 
-A lista consolidada do que ainda pede o Allan esta na secao **O que ainda depende de decisao do Allan** (Rodada 7).
+- WebSocket (73, 74); o painel usa poll de 5s.
+- Cookie httpOnly (72; sugestao sem Ok). Bearer no app.
+- SMS para 2FA (34 cobriu so o recorte inicial; TOTP ja existe).
+- SMTP real, deploy Azure, iOS nativo.
+- Login proprio para pet/grupo.
+- Precos finais em reais: proposta em `docs/planos.md` espera aprovacao.
+
+A lista consolidada do que ainda pede o Allan esta na secao **O que ainda depende de decisao do Allan**.

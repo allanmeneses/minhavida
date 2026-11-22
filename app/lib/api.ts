@@ -56,6 +56,8 @@ export type Profile = {
   secondaryEmail: string | null;
   isPublic: boolean;
   hasPhoto: boolean;
+  bio: string | null;
+  findableByLocation: boolean;
 };
 export type LifeArea = {
   id: string;
@@ -82,6 +84,7 @@ export type CircleSummary = {
   description: string | null;
   visibility: string;
   discoverable: boolean;
+  findableByLocation: boolean;
   isSurprise: boolean;
   revealed: boolean;
   kind: string;
@@ -102,6 +105,7 @@ export type CircleDetail = {
   description: string | null;
   visibility: string;
   discoverable: boolean;
+  findableByLocation: boolean;
   isSurprise: boolean;
   revealed: boolean;
   kind: string;
@@ -111,6 +115,40 @@ export type CircleDetail = {
   posts: { id: string; body: string; createdAt: string }[];
   log: { id: string; action: string; detail: string; createdAt: string; actorUserId: string | null }[];
   joinRequests: CircleJoinRequest[];
+};
+export type SuccessionVote = {
+  id: string;
+  status: string;
+  openedAt: string;
+  deadlineAt: string;
+  winnerUserId: string | null;
+  memberCount: number;
+  tallies: { candidateUserId: string; votes: number }[];
+  myVote: string | null;
+};
+export type NearbyHit = {
+  kind: string;
+  id: string;
+  name: string;
+  description: string | null;
+  distanceKm: number;
+};
+export type PlanOffer = {
+  id: string;
+  name: string;
+  priceReais: number;
+  circleLimit: number | null;
+  storageLimitBytes: number;
+  shortcutLimit: number;
+  summary: string;
+};
+export type PlanCatalog = {
+  status: string;
+  free: PlanOffer;
+  paidMonthly: PlanOffer;
+  paidYearly: PlanOffer;
+  sandbox: boolean;
+  provider: string;
 };
 export type RecapFlow = { key: string; label: string; count: number };
 export type ProfileRecap = { flows: RecapFlow[] };
@@ -124,7 +162,7 @@ export type CircleRecap = {
   myTitles: string[];
 };
 export type RecapShareCreated = { token: string; path: string };
-export type PublicProfile = { userId: string; displayName: string; hasPhoto: boolean };
+export type PublicProfile = { userId: string; displayName: string; hasPhoto: boolean; description: string | null };
 export type MemoryItem = {
   id: string;
   authorUserId: string;
@@ -177,6 +215,7 @@ export type LivingProfileItem = {
   circleId: string | null;
   hasPhoto: boolean;
   canEdit: boolean;
+  grants: { userId: string; name: string; access: string }[] | null;
 };
 export type ReminderItem = {
   id: string;
@@ -198,6 +237,8 @@ export type ShortcutItem = {
   sortOrder: number;
   isActive: boolean;
   reminderId: string | null;
+  actionKind: string;
+  isDeleted: boolean;
 };
 export type SearchHit = { type: string; id: string; title: string; detail: string | null };
 export type SearchResponse = {
@@ -253,6 +294,12 @@ export type PlanInfo = {
   storageUsedBytes: number;
   storageWarning: boolean;
   checkout: string;
+  subscriptionStatus: string;
+  inGoodStanding: boolean;
+  shortcutLimit: number;
+  sandbox: boolean;
+  provider: string;
+  subscriptionProviderId: string | null;
 };
 export type DayPanel = {
   overdue: { id: string; title: string; kind: string; at: string; overdue: boolean }[];

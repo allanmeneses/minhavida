@@ -32,6 +32,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<LivingProfile> LivingProfiles => Set<LivingProfile>();
     public DbSet<RoutineTemplate> RoutineTemplates => Set<RoutineTemplate>();
     public DbSet<RecapShare> RecapShares => Set<RecapShare>();
+    public DbSet<BillingEvent> BillingEvents => Set<BillingEvent>();
+    public DbSet<SuccessionVote> SuccessionVotes => Set<SuccessionVote>();
+    public DbSet<SuccessionBallot> SuccessionBallots => Set<SuccessionBallot>();
+    public DbSet<LivingProfileGrant> LivingProfileGrants => Set<LivingProfileGrant>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,6 +50,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.VacationUntil).HasColumnType("timestamp with time zone");
             entity.Property(x => x.TwoFactorSecret).HasMaxLength(64);
             entity.Property(x => x.CalendarFeedToken).HasMaxLength(64);
+            entity.Property(x => x.SubscriptionProviderId).HasMaxLength(80);
+            entity.Property(x => x.PaidUntil).HasColumnType("timestamp with time zone");
             entity.HasIndex(x => x.CalendarFeedToken).IsUnique().HasFilter("\"CalendarFeedToken\" IS NOT NULL");
             entity.HasOne(x => x.Profile)
                 .WithOne(x => x.User)
@@ -94,6 +100,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.ToTable("profiles");
             entity.HasKey(x => x.UserId);
             entity.Property(x => x.DisplayName).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.Bio).HasMaxLength(500);
             entity.Property(x => x.Phone).HasMaxLength(40);
             entity.Property(x => x.SecondaryEmail).HasMaxLength(256);
             entity.Property(x => x.PhotoStorageKey).HasMaxLength(260);
@@ -147,6 +154,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasIndex(x => x.OwnerUserId);
             entity.Property(x => x.Name).HasMaxLength(120).IsRequired();
             entity.Property(x => x.Description).HasMaxLength(2000);
+            entity.HasMany<SuccessionVote>()
+                .WithOne(x => x.Circle)
+                .HasForeignKey(x => x.CircleId)
+                .OnDelete(DeleteBehavior.Cascade);
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.RevealedAt).HasColumnType("timestamp with time zone");
             entity.HasOne(x => x.Owner)
@@ -264,6 +275,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Label).HasMaxLength(80).IsRequired();
             entity.Property(x => x.Color).HasMaxLength(20).IsRequired();
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.DeletedAt).HasColumnType("timestamp with time zone");
             entity.HasOne<Reminder>()
                 .WithMany()
                 .HasForeignKey(x => x.ReminderId)
@@ -314,6 +326,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Note).HasMaxLength(500);
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.DoneAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<PasswordReset>(entity =>
@@ -424,6 +437,52 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 .WithMany()
                 .HasForeignKey(x => x.CircleId)
                 .OnDelete(DeleteBehavior.SetNull);
+            entity.HasMany(x => x.Grants)
+                .WithOne(x => x.LivingProfile)
+                .HasForeignKey(x => x.LivingProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LivingProfileGrant>(entity =>
+        {
+            entity.ToTable("living_profile_grants");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.LivingProfileId, x.UserId }).IsUnique();
+        });
+
+        modelBuilder.Entity<SuccessionVote>(entity =>
+        {
+            entity.ToTable("succession_votes");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.CircleId);
+            entity.Property(x => x.OpenedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.DeadlineAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.ClosedAt).HasColumnType("timestamp with time zone");
+            entity.HasMany(x => x.Ballots)
+                .WithOne(x => x.Vote)
+                .HasForeignKey(x => x.VoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SuccessionBallot>(entity =>
+        {
+            entity.ToTable("succession_ballots");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.VoteId, x.VoterUserId }).IsUnique();
+            entity.Property(x => x.CastAt).HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<BillingEvent>(entity =>
+        {
+            entity.ToTable("billing_events");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.Provider, x.EventKey }).IsUnique();
+            entity.Property(x => x.Provider).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.EventKey).HasMaxLength(160).IsRequired();
+            entity.Property(x => x.Topic).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.ResourceId).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.Result).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.ReceivedAt).HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<RoutineTemplate>(entity =>

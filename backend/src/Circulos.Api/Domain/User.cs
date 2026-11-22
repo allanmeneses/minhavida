@@ -7,6 +7,10 @@ public sealed class User
     public string PasswordHash { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public PlanKind Plan { get; set; } = PlanKind.Free;
+    public SubscriptionStatus SubscriptionStatus { get; set; } = SubscriptionStatus.None;
+    public BillingPeriod? BillingPeriod { get; set; }
+    public string? SubscriptionProviderId { get; set; }
+    public DateTime? PaidUntil { get; set; }
     public long StorageUsedBytes { get; set; }
     public int OwnedCircleCount { get; set; }
     public DateTime? VacationUntil { get; set; }

@@ -24,4 +24,5 @@ public sealed class LivingProfile
 
     public User Owner { get; set; } = null!;
     public Circle? Circle { get; set; }
+    public ICollection<LivingProfileGrant> Grants { get; set; } = new List<LivingProfileGrant>();
 }
