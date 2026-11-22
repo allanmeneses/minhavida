@@ -60,7 +60,7 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock) : Contro
         var shortcuts = await db.Shortcuts.AsNoTracking()
             .Where(x => x.UserId == userId && x.IsActive)
             .OrderBy(x => x.SortOrder)
-            .Select(x => new ShortcutResponse(x.Id, x.Label, x.Color, x.SortOrder, x.IsActive))
+            .Select(x => new ShortcutResponse(x.Id, x.Label, x.Color, x.SortOrder, x.IsActive, x.ReminderId))
             .ToListAsync(cancellationToken);
 
         var circles = await db.CircleMembers.CountAsync(
@@ -95,7 +95,7 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock) : Contro
         var items = await db.Shortcuts.AsNoTracking()
             .Where(x => x.UserId == User.GetUserId())
             .OrderBy(x => x.SortOrder)
-            .Select(x => new ShortcutResponse(x.Id, x.Label, x.Color, x.SortOrder, x.IsActive))
+            .Select(x => new ShortcutResponse(x.Id, x.Label, x.Color, x.SortOrder, x.IsActive, x.ReminderId))
             .ToListAsync(cancellationToken);
         return Ok(items);
     }
@@ -105,10 +105,25 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock) : Contro
         [FromBody] ShortcutRequest request,
         CancellationToken cancellationToken)
     {
+        Guid? reminderId = null;
+        if (request.ReminderId is Guid linkedReminder)
+        {
+            var exists = await db.Reminders.AnyAsync(
+                x => x.Id == linkedReminder && x.UserId == User.GetUserId(),
+                cancellationToken);
+            if (!exists)
+            {
+                return BadRequest(new ErrorResponse("Lembrete nao encontrado."));
+            }
+
+            reminderId = linkedReminder;
+        }
+
         var shortcut = new Shortcut
         {
             Id = Guid.NewGuid(),
             UserId = User.GetUserId(),
+            ReminderId = reminderId,
             Label = request.Label.Trim(),
             Color = string.IsNullOrWhiteSpace(request.Color) ? "#1F6F66" : request.Color,
             SortOrder = request.SortOrder,
@@ -117,7 +132,7 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock) : Contro
         };
         db.Shortcuts.Add(shortcut);
         await db.SaveChangesAsync(cancellationToken);
-        return Created($"/api/shortcuts/{shortcut.Id}", new ShortcutResponse(shortcut.Id, shortcut.Label, shortcut.Color, shortcut.SortOrder, shortcut.IsActive));
+        return Created($"/api/shortcuts/{shortcut.Id}", new ShortcutResponse(shortcut.Id, shortcut.Label, shortcut.Color, shortcut.SortOrder, shortcut.IsActive, shortcut.ReminderId));
     }
 
     [HttpPost("shortcuts/{id:guid}/run")]
@@ -134,6 +149,31 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock) : Contro
         var diary = await db.LifeAreas.FirstOrDefaultAsync(
             x => x.UserId == shortcut.UserId && x.Kind == LifeAreaKind.Diary,
             cancellationToken);
+        if (shortcut.ReminderId is Guid reminderId)
+        {
+            var reminder = await db.Reminders.FirstOrDefaultAsync(
+                x => x.Id == reminderId && x.UserId == shortcut.UserId,
+                cancellationToken);
+            if (reminder is not null)
+            {
+                reminder.CompletedCount += 1;
+                var rule = RecurrenceRule.Parse(reminder.RecurrenceJson);
+                var next = RecurrenceCalculator.NextOnOrAfter(
+                    rule,
+                    reminder.StartAt,
+                    reminder.NextFireAt.AddSeconds(1),
+                    reminder.CompletedCount);
+                if (next is null)
+                {
+                    reminder.IsPaused = true;
+                }
+                else
+                {
+                    reminder.NextFireAt = next.Value;
+                }
+            }
+        }
+
         if (diary is not null)
         {
             var now = clock.GetUtcNow().UtcDateTime;
@@ -148,9 +188,9 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock) : Contro
                 CreatedAt = now,
                 UpdatedAt = now,
             });
-            await db.SaveChangesAsync(cancellationToken);
         }
 
+        await db.SaveChangesAsync(cancellationToken);
         return Ok(new { received = true, label = shortcut.Label });
     }
 
@@ -192,6 +232,24 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock) : Contro
         }
 
         db.Shortcuts.Remove(shortcut);
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPut("shortcuts/order")]
+    public async Task<IActionResult> Reorder([FromBody] ReorderShortcutsRequest request, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var items = await db.Shortcuts.Where(x => x.UserId == userId).ToListAsync(cancellationToken);
+        for (var i = 0; i < request.Ids.Length; i++)
+        {
+            var item = items.FirstOrDefault(x => x.Id == request.Ids[i]);
+            if (item is not null)
+            {
+                item.SortOrder = i;
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         return NoContent();
     }

@@ -13,6 +13,7 @@ namespace Circulos.Api.Data.Migrations
     [DbContext(typeof(AppDbContext))]
     partial class AppDbContextModelSnapshot : ModelSnapshot
     {
+        /// <inheritdoc />
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
@@ -560,6 +561,34 @@ namespace Circulos.Api.Data.Migrations
                     b.ToTable("reminders", (string)null);
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.SearchQuery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Term")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("TimesUsed")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Term")
+                        .IsUnique();
+
+                    b.ToTable("search_queries", (string)null);
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.SentEmail", b =>
                 {
                     b.Property<Guid>("Id")
@@ -614,6 +643,9 @@ namespace Circulos.Api.Data.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
 
+                    b.Property<Guid?>("ReminderId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 
@@ -621,6 +653,8 @@ namespace Circulos.Api.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ReminderId");
 
                     b.HasIndex("UserId");
 
@@ -839,8 +873,24 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.SearchQuery", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.Shortcut", b =>
                 {
+                    b.HasOne("Circulos.Api.Domain.Reminder", null)
+                        .WithMany()
+                        .HasForeignKey("ReminderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Circulos.Api.Domain.User", "User")
                         .WithMany("Shortcuts")
                         .HasForeignKey("UserId")

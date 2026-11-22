@@ -134,8 +134,10 @@ test('descobrir circulo e pedir entrada', async ({ browser }) => {
   await signUp(owner, '-dono-pedido');
   await owner.getByRole('button', { name: 'Circulos' }).click();
   await expect(owner.getByText('Descobrir circulos')).toBeVisible();
-  await owner.getByLabel('Nome', { exact: true }).fill('Clube de corrida');
-  await owner.getByLabel('Descricao').fill('Treinos de rua');
+  const stamp = Date.now();
+  const circleName = `Clube corrida ${stamp}`;
+  await owner.getByLabel('Nome', { exact: true }).fill(circleName);
+  await owner.getByLabel('Descricao').fill(`Treinos ${stamp}`);
   await owner.getByRole('button', { name: 'Oculto na busca' }).click();
   await owner.getByRole('button', { name: 'Criar circulo' }).click();
   await expect(owner.getByText('Quem esta aqui')).toBeVisible();
@@ -144,14 +146,15 @@ test('descobrir circulo e pedir entrada', async ({ browser }) => {
   const visitor = await visitorContext.newPage();
   await signUp(visitor, '-visitante-pedido');
   await visitor.getByRole('button', { name: 'Circulos' }).click();
-  await visitor.getByLabel('Buscar circulos').fill('corrida');
+  await visitor.getByLabel('Buscar circulos').fill(String(stamp));
   await visitor.getByRole('button', { name: 'Buscar' }).click();
-  await visitor.getByText('Clube de corrida').first().click();
+  await visitor.getByRole('button', { name: `Descobrir ${circleName}` }).click();
   await visitor.getByRole('button', { name: 'Pedir para entrar' }).click();
   await expect(visitor.getByText('Pedido de entrada enviado.')).toBeVisible();
 
-  await owner.reload();
-  await expect(owner.getByText('Pedidos de entrada')).toBeVisible();
+  await owner.getByRole('button', { name: 'Circulos' }).click();
+  await owner.getByRole('button', { name: `Abrir ${circleName}` }).click();
+  await expect(owner.getByText('Pedidos de entrada')).toBeVisible({ timeout: 15_000 });
   await owner.getByRole('button', { name: /Aceitar / }).click();
   await expect(owner.getByText('Pedido aceito.')).toBeVisible();
   await ownerContext.close();
@@ -212,6 +215,113 @@ test('transferir dono do circulo em vida', async ({ page }) => {
   await page.getByRole('button', { name: 'Transferir dono para Sucessor' }).click();
   await expect(page.getByText('Dono transferido. Historico e permissoes ficam com o circulo.')).toBeVisible();
   await expect(page.getByText(/Sucessor · owner/)).toBeVisible();
+});
+
+test('lembrete anual aparece na tela', async ({ page }) => {
+  await signUp(page, '-anual');
+  await page.getByRole('button', { name: 'Lembretes' }).first().click();
+  await page.getByLabel('Titulo').fill('Consulta anual');
+  await page.getByRole('button', { name: 'Recorrencia: none' }).click();
+  await page.getByRole('button', { name: 'Recorrencia: daily' }).click();
+  await page.getByRole('button', { name: 'Recorrencia: weekly' }).click();
+  await page.getByRole('button', { name: 'Recorrencia: monthly' }).click();
+  await expect(page.getByRole('button', { name: 'Recorrencia: yearly' })).toBeVisible();
+  await page.getByRole('button', { name: 'Criar lembrete' }).click();
+  await expect(page.getByText('Consulta anual', { exact: true })).toBeVisible();
+  await expect(page.getByText(/^yearly ·/)).toBeVisible();
+});
+
+test('ferias com prazo escolhido', async ({ page }) => {
+  await signUp(page, '-ferias');
+  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await page.getByLabel('Dias de ferias').fill('3');
+  await page.getByRole('button', { name: 'Silenciar ferias' }).click();
+  await expect(page.getByText('Modo ferias ligado por 3 dia(s). Lembretes ficam guardados.')).toBeVisible();
+  await page.getByRole('button', { name: 'Hoje' }).click();
+  await expect(page.getByText(/Modo ferias ate/)).toBeVisible();
+});
+
+test('atalho marca lembrete de circulo como feito', async ({ page }) => {
+  await signUp(page, '-atalho-ciclo');
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  await page.getByLabel('Nome', { exact: true }).fill('Casa');
+  await page.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(page.getByText('Quem esta aqui')).toBeVisible();
+  await page.getByRole('button', { name: 'Hoje' }).click();
+  await page.getByRole('button', { name: 'Lembretes' }).first().click();
+  await page.getByLabel('Titulo').fill('Tomei');
+  await page.getByRole('button', { name: 'Sem circulo' }).click();
+  await expect(page.getByRole('button', { name: 'Casa' })).toBeVisible();
+  await page.getByRole('button', { name: 'Criar lembrete' }).click();
+  await expect(page.getByText('Tomei', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Hoje' }).click();
+  await page.getByRole('button', { name: 'Sem lembrete de circulo' }).click();
+  await expect(page.getByRole('button', { name: 'Lembrete: Tomei' })).toBeVisible();
+  await page.getByLabel('Nome do atalho').fill('Foi feito');
+  await page.getByRole('button', { name: 'Adicionar atalho' }).click();
+  await page.getByRole('button', { name: 'Foi feito', exact: true }).click();
+  await expect(page.getByText('Foi feito').first()).toBeVisible();
+});
+
+test('painel do dia atualiza sozinho', async ({ page }) => {
+  await signUp(page, '-painel');
+  const token = await page.evaluate(() => localStorage.getItem('circulos.token'));
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const created = await page.request.post(`${apiUrl}/api/reminders`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: {
+      title: 'Painel sozinho',
+      startAt: new Date(Date.now() + 3600_000).toISOString(),
+      recurrence: { frequency: 'none', interval: 1 },
+    },
+  });
+  expect(created.ok()).toBeTruthy();
+  await expect(page.getByText('Painel sozinho', { exact: true })).toBeVisible({ timeout: 15_000 });
+});
+
+test('busca unificada com historico', async ({ page }) => {
+  await signUp(page, '-busca');
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByText('Diario', { exact: true }).click();
+  await page.getByLabel('Titulo').fill('Texto livre da medicacao');
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await expect(page.getByText('Texto livre da medicacao')).toBeVisible();
+  await page.getByRole('button', { name: 'Hoje' }).click();
+  await expect(page.getByText('O que pede atencao hoje')).toBeVisible();
+  await page.getByRole('button', { name: 'Busca' }).first().click();
+  await page.getByLabel('Buscar', { exact: true }).fill('medicacao');
+  await page.getByRole('button', { name: 'Buscar agora' }).click();
+  await expect(page.getByText('Texto livre da medicacao')).toBeVisible();
+  await expect(page.getByText('Mais usadas')).toBeVisible();
+});
+
+test('atalhos reordenam na tela', async ({ page }) => {
+  await signUp(page, '-ordem');
+  await page.getByLabel('Nome do atalho').fill('Primeiro');
+  await page.getByRole('button', { name: 'Adicionar atalho' }).click();
+  await expect(page.getByRole('button', { name: 'Primeiro', exact: true })).toBeVisible({ timeout: 15_000 });
+  await page.getByLabel('Nome do atalho').fill('Segundo');
+  await page.getByRole('button', { name: 'Adicionar atalho' }).click();
+  await expect(page.getByRole('button', { name: 'Segundo', exact: true })).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: 'Subir Segundo' }).click();
+  await expect.poll(async () => {
+    return page.evaluate(() => {
+      const labels = [...document.querySelectorAll('[role="button"]')]
+        .map((el) => el.getAttribute('aria-label') || '')
+        .filter((label) => label === 'Primeiro' || label === 'Segundo');
+      return labels[0] ?? '';
+    });
+  }).toBe('Segundo');
+});
+
+test('termos e privacidade no app', async ({ page }) => {
+  await page.goto('/termos');
+  await expect(page.getByText('Termos de uso')).toBeVisible();
+  await expect(page.getByText(/ALLAN WANDERSON MENESES DE SOUSA/).first()).toBeVisible();
+  await page.goto('/privacidade');
+  await expect(page.getByText('Politica de privacidade')).toBeVisible();
+  await expect(page.getByText('Lei Geral de Protecao de Dados')).toBeVisible();
+  await expect(page.getByText(/ALLAN WANDERSON MENESES DE SOUSA/).first()).toBeVisible();
 });
 
 test('modo escuro troca a paleta na hora', async ({ page }) => {

@@ -67,6 +67,10 @@ export default function AppLayout() {
         }}
       />
       <Tabs.Screen
+        name="search"
+        options={{ title: 'Busca', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Meu perfil',

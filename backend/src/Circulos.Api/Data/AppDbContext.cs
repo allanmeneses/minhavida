@@ -18,6 +18,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<CircleLog> CircleLogs => Set<CircleLog>();
     public DbSet<Reminder> Reminders => Set<Reminder>();
     public DbSet<Shortcut> Shortcuts => Set<Shortcut>();
+    public DbSet<SearchQuery> SearchQueries => Set<SearchQuery>();
     public DbSet<PasswordReset> PasswordResets => Set<PasswordReset>();
     public DbSet<AccountDeletionRequest> AccountDeletionRequests => Set<AccountDeletionRequest>();
     public DbSet<SentEmail> SentEmails => Set<SentEmail>();
@@ -54,6 +55,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(x => x.Shortcuts)
+                .WithOne(x => x.User)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany<SearchQuery>()
                 .WithOne(x => x.User)
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -136,6 +141,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 .HasForeignKey(x => x.CircleId)
                 .OnDelete(DeleteBehavior.Cascade);
             entity.HasMany(x => x.Logs)
+                .WithOne(x => x.Circle)
+                .HasForeignKey(x => x.CircleId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany<SharedList>()
                 .WithOne(x => x.Circle)
                 .HasForeignKey(x => x.CircleId)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -230,6 +239,19 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Label).HasMaxLength(80).IsRequired();
             entity.Property(x => x.Color).HasMaxLength(20).IsRequired();
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne<Reminder>()
+                .WithMany()
+                .HasForeignKey(x => x.ReminderId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SearchQuery>(entity =>
+        {
+            entity.ToTable("search_queries");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.UserId, x.Term }).IsUnique();
+            entity.Property(x => x.Term).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.LastUsedAt).HasColumnType("timestamp with time zone");
         });
 
         modelBuilder.Entity<PasswordReset>(entity =>

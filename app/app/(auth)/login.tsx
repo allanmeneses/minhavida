@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
-import { Link, router } from 'expo-router';
+import { Link, router, type Href } from 'expo-router';
 import { BrandMark } from '@/components/BrandMark';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
@@ -58,6 +58,15 @@ export default function LoginScreen() {
         Ainda nao tem conta?{' '}
         <Link href="/(auth)/register" style={styles.link}>
           Criar conta
+        </Link>
+      </Text>
+      <Text style={styles.hint}>
+        <Link href={'/termos' as Href} style={styles.link}>
+          Termos de uso
+        </Link>
+        {'  '}
+        <Link href={'/privacidade' as Href} style={styles.link}>
+          Politica de privacidade
         </Link>
       </Text>
     </View>

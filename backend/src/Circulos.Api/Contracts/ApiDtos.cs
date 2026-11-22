@@ -225,6 +225,7 @@ public sealed class ReminderRequest
     public string Title { get; set; } = string.Empty;
 
     public string Kind { get; set; } = "general";
+    public Guid? CircleId { get; set; }
     public RecurrenceRule Recurrence { get; set; } = new();
     public DateTime StartAt { get; set; }
     public string? PersonName { get; set; }
@@ -236,6 +237,7 @@ public sealed record ReminderResponse(
     Guid Id,
     string Title,
     string Kind,
+    Guid? CircleId,
     RecurrenceRule Recurrence,
     DateTime StartAt,
     DateTime NextFireAt,
@@ -262,9 +264,21 @@ public sealed class ShortcutRequest
     public string Color { get; set; } = "#1F6F66";
 
     public int SortOrder { get; set; }
+    public Guid? ReminderId { get; set; }
 }
 
-public sealed record ShortcutResponse(Guid Id, string Label, string Color, int SortOrder, bool IsActive);
+public sealed class ReorderShortcutsRequest
+{
+    public Guid[] Ids { get; set; } = [];
+}
+
+public sealed record ShortcutResponse(Guid Id, string Label, string Color, int SortOrder, bool IsActive, Guid? ReminderId);
+
+public sealed record SearchHit(string Type, Guid Id, string Title, string? Detail);
+public sealed record SearchHistoryResponse(IReadOnlyList<string> Recent, IReadOnlyList<string> Frequent);
+public sealed record SearchResponse(
+    IReadOnlyList<SearchHit> Hits,
+    SearchHistoryResponse History);
 
 public sealed record PlanResponse(
     string Plan,
@@ -337,4 +351,5 @@ public static class EnumText
     public static string ReminderKind(ReminderKind value) => value == Domain.ReminderKind.Birthday ? "birthday" : "general";
     public static ReminderKind ParseReminderKind(string? value) =>
         string.Equals(value, "birthday", StringComparison.OrdinalIgnoreCase) ? Domain.ReminderKind.Birthday : Domain.ReminderKind.General;
+
 }

@@ -56,6 +56,15 @@ public sealed class RecurrenceTests
     }
 
     [Fact]
+    public void Anual_MesmoDiaDoAnoSeguinte()
+    {
+        var rule = new RecurrenceRule { Frequency = "yearly", Interval = 1 };
+        var start = new DateTime(2026, 3, 10, 8, 0, 0, DateTimeKind.Utc);
+        var next = RecurrenceCalculator.NextOnOrAfter(rule, start, start.AddDays(1), 0);
+        Assert.Equal(new DateTime(2027, 3, 10, 8, 0, 0, DateTimeKind.Utc), next);
+    }
+
+    [Fact]
     public void TerminoPorNumero_ParaQuandoCompleta()
     {
         var rule = new RecurrenceRule { Frequency = "daily", Interval = 1, MaxOccurrences = 2 };

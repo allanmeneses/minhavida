@@ -66,6 +66,50 @@ public sealed class ReminderTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Atalho_MarcaLembreteDeCirculoComoFeito()
+    {
+        var client = _factory.CreateClient();
+        var auth = await AuthHelper.RegisterAsync(client);
+        client.WithToken(auth.Token);
+        var createdCircle = await client.PostAsJsonAsync("/api/circles", new { name = "Remedio da casa" });
+        var circle = await createdCircle.Content.ReadFromJsonAsync<CircleIdDto>(Json);
+        var start = DateTime.UtcNow.Date.AddHours(9);
+        var createdReminder = await client.PostAsJsonAsync("/api/reminders", new
+        {
+            title = "Tomei",
+            startAt = start,
+            circleId = circle!.Id,
+            recurrence = new { frequency = "daily", interval = 1 },
+        });
+        var reminder = await createdReminder.Content.ReadFromJsonAsync<ReminderDto>(Json);
+        using (var createdDoc = JsonDocument.Parse(await createdReminder.Content.ReadAsStringAsync()))
+        {
+            Assert.Equal(circle.Id, createdDoc.RootElement.GetProperty("circleId").GetGuid());
+        }
+
+        var shortcut = await client.PostAsJsonAsync("/api/shortcuts", new { label = "Foi feito", reminderId = reminder!.Id });
+        var createdShortcut = await shortcut.Content.ReadFromJsonAsync<ShortcutIdDto>(Json);
+        (await client.PostAsync($"/api/shortcuts/{createdShortcut!.Id}/run", null)).EnsureSuccessStatusCode();
+
+        var list = await client.GetFromJsonAsync<List<ReminderDto>>("/api/reminders", Json);
+        var updated = list!.Single(x => x.Id == reminder.Id);
+        Assert.True(updated.NextFireAt > reminder.NextFireAt);
+    }
+
+    [Fact]
+    public async Task Ferias_AceitaPrazoEscolhidoPelaPessoa()
+    {
+        var client = _factory.CreateClient();
+        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        var until = DateTime.UtcNow.AddDays(3);
+        var response = await client.PutAsJsonAsync("/api/reminders/vacation", new { until });
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var home = await client.GetFromJsonAsync<JsonElement>("/api/home", Json);
+        var stored = home.GetProperty("vacationUntil").GetDateTime();
+        Assert.InRange((stored - until).Duration(), TimeSpan.Zero, TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
     public async Task Skip_AvancaParaAProximaOcorrencia()
     {
         var client = _factory.CreateClient();
@@ -150,4 +194,6 @@ public sealed class ReminderTests : IClassFixture<ApiFactory>
     }
 
     private sealed record ReminderDto(Guid Id, string Title, DateTime NextFireAt, bool IsPaused);
+    private sealed record CircleIdDto(Guid Id);
+    private sealed record ShortcutIdDto(Guid Id);
 }

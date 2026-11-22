@@ -98,7 +98,12 @@ export default function CirclesScreen() {
       <TextField label="Buscar circulos" value={query} onChangeText={setQuery} placeholder="corrida, familia" />
       <Button label="Buscar" variant="ghost" onPress={() => void search()} />
       {found.map((item) => (
-        <Pressable key={item.id} onPress={() => router.push(`/(app)/circle/${item.id}`)} style={styles.card}>
+        <Pressable
+          key={item.id}
+          accessibilityRole="button"
+          accessibilityLabel={`Descobrir ${item.name ?? 'circulo'}`}
+          onPress={() => router.push(`/(app)/circle/${item.id}`)}
+          style={styles.card}>
           <Text style={styles.item}>{item.name ?? 'Circulo'}</Text>
           <Text style={styles.lead}>
             {item.description || 'Sem descricao'} · {item.visibility}
@@ -108,7 +113,12 @@ export default function CirclesScreen() {
 
       <Text style={styles.section}>Os seus</Text>
       {items.map((item) => (
-        <Pressable key={item.id} onPress={() => router.push(`/(app)/circle/${item.id}`)} style={styles.card}>
+        <Pressable
+          key={item.id}
+          accessibilityRole="button"
+          accessibilityLabel={`Abrir ${item.name ?? 'circulo'}`}
+          onPress={() => router.push(`/(app)/circle/${item.id}`)}
+          style={styles.card}>
           <Text style={styles.item}>{item.name ?? 'Circulo oculto'}</Text>
           <Text style={styles.lead}>
             {item.visibility} · {item.memberCount} pessoa(s)
