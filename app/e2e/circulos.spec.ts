@@ -1,7 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
+import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 
-const artifacts = '/opt/cursor/artifacts';
+const artifacts =
+  process.env.E2E_ARTIFACTS ??
+  (existsSync('/opt/cursor') ? '/opt/cursor/artifacts' : 'test-results/e2e');
 
 async function signUp(page: Page, suffix = ''): Promise<string> {
   const email = `e2e-${Date.now()}${suffix}@exemplo.com`;

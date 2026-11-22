@@ -1,4 +1,4 @@
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 
 type Props = {
@@ -18,15 +18,19 @@ export function Button({ label, onPress, disabled, loading, variant = 'primary' 
       accessibilityLabel={label}
       onPress={onPress}
       disabled={isDisabled}
-      style={({ pressed, hovered }) => [
-        styles.base,
-        variant === 'primary' && { backgroundColor: colors.primary },
-        variant === 'ghost' && { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.line },
-        variant === 'danger' && { backgroundColor: colors.dangerSoft },
-        pressed && styles.pressed,
-        hovered && !isDisabled && styles.hovered,
-        isDisabled && styles.disabled,
-      ]}>
+      style={(state) => {
+        const hovered = Boolean((state as { hovered?: boolean }).hovered);
+        const stylesForState: StyleProp<ViewStyle>[] = [
+          styles.base,
+          variant === 'primary' ? { backgroundColor: colors.primary } : undefined,
+          variant === 'ghost' ? { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.line } : undefined,
+          variant === 'danger' ? { backgroundColor: colors.dangerSoft } : undefined,
+          state.pressed ? styles.pressed : undefined,
+          hovered && !isDisabled ? styles.hovered : undefined,
+          isDisabled ? styles.disabled : undefined,
+        ];
+        return stylesForState;
+      }}>
       {loading ? (
         <ActivityIndicator color={variant === 'ghost' ? colors.primary : colors.white} />
       ) : (
