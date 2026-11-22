@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { api, ApiError, downloadDocument, type DocumentItem } from '@/lib/api';
+import { api, ApiError, downloadDocument, uploadNativeFile, type DocumentItem } from '@/lib/api';
 
 export default function DocumentsScreen() {
   const { token } = useAuth();
@@ -45,24 +45,24 @@ export default function DocumentsScreen() {
     }
 
     const asset = picked.assets[0];
-    const form = new FormData();
-    if (Platform.OS === 'web' && asset.file) {
-      form.append('file', asset.file, asset.name);
-    } else {
-      form.append('file', {
-        uri: asset.uri,
-        name: asset.name,
-        type: asset.mimeType ?? 'application/octet-stream',
-      } as unknown as Blob);
-    }
-
     setBusy(true);
     setError(null);
     try {
-      await api('/api/documents', { method: 'POST', token, body: form });
+      if (Platform.OS === 'web' && asset.file) {
+        const form = new FormData();
+        form.append('file', asset.file, asset.name);
+        await api('/api/documents', { method: 'POST', token, body: form });
+      } else {
+        await uploadNativeFile(
+          '/api/documents',
+          token,
+          { uri: asset.uri, name: asset.name, mimeType: asset.mimeType },
+          asset.name || 'arquivo',
+        );
+      }
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel enviar o arquivo.');
+      setError(err instanceof Error ? err.message : 'Nao foi possivel enviar o arquivo.');
     } finally {
       setBusy(false);
     }

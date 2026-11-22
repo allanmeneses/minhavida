@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { API_URL } from '@/lib/config';
+import { ensureUploadFileName } from '@/lib/ensureUploadFileName';
 
 export class ApiError extends Error {
   constructor(
@@ -29,16 +30,23 @@ export type DocumentItem = {
   createdAt: string;
 };
 
-export async function api<T>(path: string, options: Options = {}): Promise<T> {
-  const headers = new Headers(options.headers);
-  if (options.token) {
-    headers.set('Authorization', `Bearer ${options.token}`);
+function isFormDataBody(body: unknown): boolean {
+  if (typeof FormData !== 'undefined' && body instanceof FormData) {
+    return true;
   }
-  if (options.body && !(options.body instanceof FormData) && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
+  return typeof body === 'object' && body !== null && typeof (body as FormData).append === 'function';
+}
+
+export async function api<T>(path: string, options: Options = {}): Promise<T> {
+  const headerInit: Record<string, string> = {};
+  if (options.token) {
+    headerInit.Authorization = `Bearer ${options.token}`;
+  }
+  if (options.body && !isFormDataBody(options.body) && !headerInit['Content-Type']) {
+    headerInit['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`${API_URL}${path}`, { ...options, headers });
+  const response = await fetch(`${API_URL}${path}`, { ...options, headers: headerInit });
   if (!response.ok) {
     throw new ApiError(await readError(response), response.status);
   }
@@ -48,6 +56,49 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
 
   const text = await response.text();
   return text ? (JSON.parse(text) as T) : (undefined as T);
+}
+
+export type NativeUploadFile = {
+  uri: string;
+  name?: string | null;
+  mimeType?: string | null;
+};
+
+export async function uploadNativeFile<T>(
+  path: string,
+  token: string,
+  file: NativeUploadFile,
+  fallbackName: string,
+): Promise<T> {
+  const fileName = ensureUploadFileName(file.name, file.mimeType, fallbackName);
+  const mimeType = file.mimeType ?? 'application/octet-stream';
+  const form = new FormData();
+  form.append('file', {
+    uri: file.uri,
+    name: fileName,
+    type: mimeType,
+  } as unknown as Blob);
+
+  const body = await new Promise<string>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_URL}${path}`);
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.onload = () => {
+      if (xhr.status === 204) {
+        resolve('');
+        return;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.responseText);
+        return;
+      }
+      reject(new ApiError(messageFromErrorBody(xhr.responseText, xhr.status), xhr.status));
+    };
+    xhr.onerror = () => reject(new Error('Nao foi possivel concluir o pedido.'));
+    xhr.send(form);
+  });
+
+  return body ? (JSON.parse(body) as T) : (undefined as T);
 }
 
 export async function apiBlob(path: string, token: string): Promise<Blob> {
@@ -94,7 +145,15 @@ export async function downloadDocument(id: string, fileName: string, token: stri
 
 async function readError(response: Response): Promise<string> {
   try {
-    const data = (await response.json()) as {
+    return messageFromErrorBody(await response.text(), response.status);
+  } catch {
+    return messageFromErrorBody('', response.status);
+  }
+}
+
+function messageFromErrorBody(body: string, status: number): string {
+  try {
+    const data = JSON.parse(body) as {
       error?: string;
       title?: string;
       errors?: Record<string, string[]>;
@@ -112,7 +171,7 @@ async function readError(response: Response): Promise<string> {
     // corpo nao JSON
   }
 
-  if (response.status === 401) {
+  if (status === 401) {
     return 'Entre novamente para continuar.';
   }
   return 'Nao foi possivel concluir o pedido.';

@@ -1,5 +1,5 @@
 import { Redirect, Tabs } from 'expo-router';
-import { Pressable, Text } from 'react-native';
+import { Platform, Pressable, Text } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { colors } from '@/constants/theme';
@@ -24,7 +24,15 @@ export default function AppLayout() {
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line },
         headerRight: () => (
-          <Pressable onPress={() => void logout()} style={{ marginRight: 16, paddingVertical: 8 }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Sair"
+            onPress={() => void logout()}
+            style={{
+              marginRight: Platform.OS === 'web' ? 16 : 72,
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+            }}>
             <Text style={{ color: colors.primary, fontWeight: '700' }}>Sair</Text>
           </Pressable>
         ),

@@ -7,7 +7,7 @@ import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { api, ApiError, type Profile } from '@/lib/api';
+import { api, ApiError, uploadNativeFile, type Profile } from '@/lib/api';
 
 export default function ProfileScreen() {
   const { token, user, profile, setProfile, bumpPhoto, photoRevision, refreshProfile } = useAuth();
@@ -72,26 +72,26 @@ export default function ProfileScreen() {
     }
 
     const asset = picked.assets[0];
-    const form = new FormData();
-    const fileName = asset.fileName ?? 'foto.jpg';
-    if (Platform.OS === 'web' && asset.file) {
-      form.append('file', asset.file, fileName);
-    } else {
-      form.append('file', {
-        uri: asset.uri,
-        name: fileName,
-        type: asset.mimeType ?? 'image/jpeg',
-      } as unknown as Blob);
-    }
-
     setPhotoBusy(true);
     try {
-      const next = await api<Profile>('/api/profile/photo', { method: 'POST', token, body: form });
+      let next: Profile;
+      if (Platform.OS === 'web' && asset.file) {
+        const form = new FormData();
+        form.append('file', asset.file, asset.fileName ?? 'foto.jpg');
+        next = await api<Profile>('/api/profile/photo', { method: 'POST', token, body: form });
+      } else {
+        next = await uploadNativeFile<Profile>(
+          '/api/profile/photo',
+          token,
+          { uri: asset.uri, name: asset.fileName, mimeType: asset.mimeType ?? 'image/jpeg' },
+          'foto.jpg',
+        );
+      }
       setProfile(next);
       bumpPhoto();
       setOk('Foto atualizada.');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel enviar a foto.');
+      setError(err instanceof Error ? err.message : 'Nao foi possivel enviar a foto.');
     } finally {
       setPhotoBusy(false);
     }
