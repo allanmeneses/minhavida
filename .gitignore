@@ -1,0 +1,25 @@
+# .NET
+backend/**/bin/
+backend/**/obj/
+*.user
+*.suo
+*.userosscache
+
+# Armazenamento local de documentos e fotos
+backend/src/Circulos.Api/App_Data/
+
+# Node / Expo
+app/node_modules/
+app/.expo/
+app/dist/
+app/web-build/
+app/.env.local
+npm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp

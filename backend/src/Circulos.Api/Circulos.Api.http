@@ -1,0 +1,36 @@
+@baseUrl = http://127.0.0.1:5288
+@token = 
+
+### Saude
+GET {{baseUrl}}/health
+
+### Cadastro
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "maria@exemplo.com",
+  "password": "senha-segura-1",
+  "name": "Maria Silva"
+}
+
+### Login
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "maria@exemplo.com",
+  "password": "senha-segura-1"
+}
+
+### Eu
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### Perfil
+GET {{baseUrl}}/api/profile
+Authorization: Bearer {{token}}
+
+### Documentos
+GET {{baseUrl}}/api/documents
+Authorization: Bearer {{token}}
