@@ -315,7 +315,9 @@ public sealed record CircleDetailResponse(
 
 public sealed record CirclePostResponse(Guid Id, Guid? AuthorUserId, string Body, bool HasPhoto, DateTime CreatedAt);
 public sealed record CircleLogResponse(Guid Id, Guid? ActorUserId, string Action, string Detail, DateTime CreatedAt);
-public sealed record InviteCreatedResponse(string Token);
+public sealed record InviteCreatedResponse(string Token, string? ShareText = null, string? ShareUrl = null);
+
+public sealed record InvitePreviewResponse(string CircleName, string Role, bool OpenLink, DateTime ExpiresAt);
 
 public sealed class ReminderRequest
 {
@@ -346,7 +348,8 @@ public sealed record ReminderResponse(
     string? PersonName,
     int AdvanceDays,
     string[] GiftIdeas,
-    bool EndingSoon);
+    bool EndingSoon,
+    bool HasPhoto = false);
 
 public sealed class VacationRequest
 {
@@ -613,7 +616,11 @@ public sealed record DayPanelResponse(
     PlanResponse Plan,
     IReadOnlyList<ShortcutNoticeResponse> ShortcutNotices,
     IReadOnlyList<string> ReminderEmailsSent,
-    bool EmailRemindersEnabled);
+    bool EmailRemindersEnabled,
+    IReadOnlyList<OnThisDayItem> OnThisDay,
+    MonthlySurpriseResponse? MonthlySurprise,
+    int RoutineStreakDays,
+    IReadOnlyList<OnboardingExampleResponse> Onboarding);
 
 public static class EnumText
 {
@@ -886,7 +893,10 @@ public sealed record ReportItemResponse(
     string TargetKind,
     Guid TargetId,
     string? Note,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    Guid? CircleId = null,
+    string Status = "open",
+    string? CircleDecision = null);
 
 public sealed class AdminBlockRequest
 {
@@ -918,3 +928,95 @@ public sealed record AdminBlockListResponse(
 public sealed record AdminBlockedUserResponse(Guid Id, string Email, DateTime BlockedAt);
 
 public sealed record AdminBlockedCircleResponse(Guid Id, string Name, DateTime? BlockedAt);
+
+public sealed class GoogleLoginRequest
+{
+    [Required]
+    public string IdToken { get; set; } = string.Empty;
+}
+
+public sealed record GoogleAuthStatusResponse(bool Enabled);
+
+public sealed class OnboardingDecisionRequest
+{
+    public bool Confirm { get; set; }
+}
+
+public sealed record OnboardingExampleResponse(
+    Guid Id,
+    Guid? CircleId,
+    string? CircleName,
+    string Kind,
+    string Title,
+    string Body,
+    bool Pending);
+
+public sealed record OnThisDayItem(string Kind, Guid Id, string Title, int Year, DateOnly? OccurredOn, bool HasPhoto);
+
+public sealed record MonthlySurpriseResponse(int Year, int Month, int MemoryCount, int EntryCount, IReadOnlyList<string> Titles);
+
+public sealed record MonthlyAlbumResponse(int Year, int Month, IReadOnlyList<MemoryResponse> Items);
+
+public sealed class DiaryPageRequest
+{
+    [Required]
+    [MinLength(1)]
+    [MaxLength(200)]
+    public string Title { get; set; } = string.Empty;
+
+    [MaxLength(20000)]
+    public string Body { get; set; } = string.Empty;
+}
+
+public sealed record DiaryPageResponse(Guid Id, string Title, string Body, int SortOrder, DateTime UpdatedAt);
+
+public sealed class ShareGiftIdeasRequest
+{
+    [Required]
+    public Guid CircleId { get; set; }
+}
+
+public sealed record GiftIdeaShareResponse(Guid ReminderId, string Title, string? PersonName, string[] Ideas);
+
+public sealed class AppealRequest
+{
+    [Required]
+    [EmailAddress]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    public string Password { get; set; } = string.Empty;
+
+    [Required]
+    [MinLength(8)]
+    [MaxLength(2000)]
+    public string Note { get; set; } = string.Empty;
+}
+
+public sealed record AppealResponse(Guid Id, Guid UserId, string Email, string Note, string Status, DateTime CreatedAt, DateTime? ResolvedAt);
+
+public sealed class ResolveAppealRequest
+{
+    public bool Accept { get; set; }
+}
+
+public sealed class CircleReportDecisionRequest
+{
+    [Required]
+    [MaxLength(20)]
+    public string Decision { get; set; } = "keep";
+}
+
+public sealed class SupportRequest
+{
+    [Required]
+    [MinLength(8)]
+    [MaxLength(4000)]
+    public string Body { get; set; } = string.Empty;
+}
+
+public sealed record PrivacyItemResponse(string What, string Who);
+
+public sealed record PrivacyOverviewResponse(IReadOnlyList<PrivacyItemResponse> Items);
+
+public sealed record JobQueuedResponse(Guid Id, string Kind, string Status);

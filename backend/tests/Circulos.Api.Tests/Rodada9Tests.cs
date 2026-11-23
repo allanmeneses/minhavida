@@ -93,11 +93,10 @@ public sealed class Rodada9Tests : IClassFixture<ApiFactory>
         var visitante = _factory.CreateClient();
         visitante.WithToken((await AuthHelper.RegisterAsync(visitante, name: "Visitante")).Token);
 
-        var pessoal = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Pessoal", visibility = "public", discoverable = true }))
-            .Content.ReadFromJsonAsync<JsonElement>(Json);
+        var mine = await dono.GetFromJsonAsync<List<JsonElement>>("/api/circles", Json);
+        var pessoalId = mine!.Single(x => x.GetProperty("name").GetString() == "Eu").GetProperty("id").GetGuid();
         var equipe = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Equipe", visibility = "public", discoverable = true }))
             .Content.ReadFromJsonAsync<JsonElement>(Json);
-        var pessoalId = pessoal.GetProperty("id").GetGuid();
         var equipeId = equipe.GetProperty("id").GetGuid();
         var invite = await (await dono.PostAsJsonAsync($"/api/circles/{equipeId}/invites", new { email = membroAuth.Email, role = "editor" }))
             .Content.ReadFromJsonAsync<JsonElement>(Json);

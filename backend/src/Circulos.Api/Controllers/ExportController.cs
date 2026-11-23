@@ -22,7 +22,7 @@ public sealed class ExportController(AppDbContext db, IFileStorage storage, Time
     };
 
     [HttpGet("me")]
-    public async Task<IActionResult> Profile(CancellationToken cancellationToken)
+    public async Task<IActionResult> Profile([FromQuery] string? format, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
         var user = await db.Users.Include(x => x.Profile).FirstAsync(x => x.Id == userId, cancellationToken);
@@ -104,6 +104,12 @@ public sealed class ExportController(AppDbContext db, IFileStorage storage, Time
             memories = memories.Select(x => new { x.Id, x.Title, x.Body, x.OccurredOn, hasPhoto = x.PhotoStorageKey is not null }),
             livingProfiles = living.Select(x => new { x.Id, kind = EnumText.LivingKind(x.Kind), x.Name, x.Context, x.BirthDate }),
         };
+
+        if (string.Equals(format, "json", StringComparison.OrdinalIgnoreCase))
+        {
+            var json = JsonSerializer.SerializeToUtf8Bytes(payload, Json);
+            return File(json, "application/json", "circulos-perfil.json");
+        }
 
         return File(await ZipAsync(payload, files, cancellationToken), "application/zip", "circulos-perfil.zip");
     }

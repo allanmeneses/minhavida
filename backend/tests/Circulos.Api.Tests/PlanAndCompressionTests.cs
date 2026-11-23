@@ -118,7 +118,7 @@ public sealed class PlanAndCompressionTests : IClassFixture<ApiFactory>
 
         var home = await client.GetFromJsonAsync<JsonHome>("/api/home");
         Assert.Contains(home!.Shortcuts, x => x.Id == shortcut.Id);
-        Assert.Equal(0, home.ActiveCircleCount);
+        Assert.Equal(2, home.ActiveCircleCount);
     }
 
     [Fact]

@@ -115,6 +115,7 @@ public sealed class Rodada10Tests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync("/api/circles", new { name = "Um" })).StatusCode);
         Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync("/api/circles", new { name = "Dois" })).StatusCode);
         Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync("/api/circles", new { name = "Tres" })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/circles", new { name = "Quatro" })).StatusCode);
     }
 
     [Fact]

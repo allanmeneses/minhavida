@@ -26,6 +26,7 @@ export default function AppLayout() {
   return (
     <Tabs
       screenOptions={{
+        animation: 'none',
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.ink,
         headerTitleStyle: { fontWeight: '700' },

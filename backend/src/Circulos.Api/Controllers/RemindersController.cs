@@ -4,6 +4,7 @@ using Circulos.Api.Data;
 using Circulos.Api.Domain;
 using Circulos.Api.Reminders;
 using Circulos.Api.Services;
+using Circulos.Api.Storage;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,7 @@ namespace Circulos.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/reminders")]
-public sealed class RemindersController(AppDbContext db, TimeProvider clock) : ControllerBase
+public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFileStorage storage, QuotaService quota) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<ReminderResponse>>> List(CancellationToken cancellationToken)
@@ -118,6 +119,8 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock) : C
         }
 
         reminder.CompletedCount += 1;
+        var owner = await db.Users.FirstAsync(x => x.Id == reminder.UserId, cancellationToken);
+        StreakService.Touch(owner, clock.GetUtcNow().UtcDateTime);
         var rule = RecurrenceRule.Parse(reminder.RecurrenceJson);
         var next = RecurrenceCalculator.NextOnOrAfter(rule, reminder.StartAt, reminder.NextFireAt.AddSeconds(1), reminder.CompletedCount);
         if (next is null)
@@ -200,6 +203,111 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock) : C
             reminder.PersonName,
             reminder.AdvanceDays,
             ideas,
-            endingSoon);
+            endingSoon,
+            reminder.PhotoStorageKey is not null);
+    }
+
+    [HttpPost("{id:guid}/photo")]
+    [RequestSizeLimit(FileRules.MaxIncomingBytes + 1024)]
+    public async Task<ActionResult<ReminderResponse>> UploadPhoto(
+        Guid id,
+        IFormFile? file,
+        CancellationToken cancellationToken)
+    {
+        var reminder = await Owned(id, cancellationToken);
+        if (reminder is null)
+        {
+            return NotFound(new ErrorResponse("Lembrete nao encontrado."));
+        }
+
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest(new ErrorResponse("Envie uma foto."));
+        }
+
+        var fileName = FileRules.SafeFileName(file.FileName);
+        var error = FileRules.ValidatePhoto(fileName, file.ContentType, file.Length);
+        if (error is not null)
+        {
+            return BadRequest(new ErrorResponse(error));
+        }
+
+        await using var original = file.OpenReadStream();
+        await using var compressed = await ImageCompressor.CompressAsync(original, cancellationToken);
+        var quotaError = await quota.TryAddStorageAsync(reminder.UserId, compressed.SizeBytes, cancellationToken);
+        if (quotaError is not null)
+        {
+            return BadRequest(new ErrorResponse(quotaError));
+        }
+
+        var key = $"{reminder.UserId:N}/reminders/{reminder.Id:N}.jpg";
+        await storage.SaveAsync(key, compressed.Content, cancellationToken);
+        if (reminder.PhotoStorageKey is not null)
+        {
+            await storage.DeleteAsync(reminder.PhotoStorageKey, cancellationToken);
+            await quota.ReleaseStorageAsync(reminder.UserId, reminder.PhotoSizeBytes, cancellationToken);
+        }
+
+        reminder.PhotoStorageKey = key;
+        reminder.PhotoContentType = compressed.ContentType;
+        reminder.PhotoSizeBytes = compressed.SizeBytes;
+        await db.SaveChangesAsync(cancellationToken);
+        return Ok(ToResponse(reminder, clock.GetUtcNow().UtcDateTime));
+    }
+
+    [HttpGet("{id:guid}/photo")]
+    public async Task<IActionResult> DownloadPhoto(Guid id, CancellationToken cancellationToken)
+    {
+        var reminder = await Owned(id, cancellationToken);
+        if (reminder is null || reminder.PhotoStorageKey is null || reminder.PhotoContentType is null)
+        {
+            return NotFound(new ErrorResponse("Este lembrete ainda nao tem foto."));
+        }
+
+        var stream = await storage.OpenReadAsync(reminder.PhotoStorageKey, cancellationToken);
+        Response.Headers.CacheControl = "private, no-store";
+        return File(stream, reminder.PhotoContentType, "lembrete.jpg");
+    }
+
+    [HttpPost("{id:guid}/share-ideas")]
+    public async Task<IActionResult> ShareIdeas(
+        Guid id,
+        [FromBody] ShareGiftIdeasRequest request,
+        CancellationToken cancellationToken)
+    {
+        var reminder = await Owned(id, cancellationToken);
+        if (reminder is null)
+        {
+            return NotFound(new ErrorResponse("Lembrete nao encontrado."));
+        }
+
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+        var member = await db.CircleMembers.AnyAsync(
+            x => x.CircleId == request.CircleId && x.UserId == userId && x.Circle.Status == CircleStatus.Active,
+            cancellationToken);
+        if (!member)
+        {
+            return BadRequest(new ErrorResponse("Voce precisa participar do circulo."));
+        }
+
+        var already = await db.GiftIdeaShares.AnyAsync(
+            x => x.ReminderId == reminder.Id && x.CircleId == request.CircleId,
+            cancellationToken);
+        if (!already)
+        {
+            db.GiftIdeaShares.Add(new GiftIdeaShare
+            {
+                Id = Guid.NewGuid(),
+                ReminderId = reminder.Id,
+                CircleId = request.CircleId,
+                CreatedAt = clock.GetUtcNow().UtcDateTime,
+            });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return NoContent();
     }
 }

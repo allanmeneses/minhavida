@@ -45,6 +45,13 @@ jobs:
       - name: Testes da API
         working-directory: backend
         run: dotnet test --nologo
+      - name: Dependencias vulneraveis
+        working-directory: backend
+        run: |
+          dotnet restore src/Circulos.Api/Circulos.Api.csproj
+          output=$(dotnet list src/Circulos.Api/Circulos.Api.csproj package --vulnerable --include-transitive)
+          echo "$output"
+          echo "$output" | grep -qi 'has the following vulnerable packages' && exit 1 || exit 0
 
   app:
     runs-on: ubuntu-latest
@@ -137,3 +144,10 @@ jobs:
           name: circulos-android
           path: app/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+
+  ci-ok:
+    needs: [backend, app]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gate de CI
+        run: echo "backend e app passaram. Deploy Azure continua adiado."

@@ -353,6 +353,31 @@ export type PlanInfo = {
   provider: string;
   subscriptionProviderId: string | null;
 };
+export type OnThisDayItem = {
+  kind: string;
+  id: string;
+  title: string;
+  year: number;
+  occurredOn: string | null;
+  hasPhoto: boolean;
+};
+export type MonthlySurprise = {
+  year: number;
+  month: number;
+  memoryCount: number;
+  entryCount: number;
+  titles: string[];
+};
+export type OnboardingExample = {
+  id: string;
+  circleId: string | null;
+  circleName: string | null;
+  kind: string;
+  title: string;
+  body: string;
+  pending: boolean;
+};
+export type PrivacyItem = { what: string; who: string };
 export type DayPanel = {
   overdue: { id: string; title: string; kind: string; at: string; overdue: boolean }[];
   dueToday: { id: string; title: string; kind: string; at: string; overdue: boolean }[];
@@ -364,6 +389,10 @@ export type DayPanel = {
   shortcutNotices: ShortcutNotice[];
   reminderEmailsSent: string[];
   emailRemindersEnabled: boolean;
+  onThisDay: OnThisDayItem[];
+  monthlySurprise: MonthlySurprise | null;
+  routineStreakDays: number;
+  onboarding: OnboardingExample[];
 };
 export type DocumentItem = {
   id: string;

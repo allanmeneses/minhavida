@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
@@ -7,6 +7,7 @@ import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary, type DayPanel, type ReminderItem, type ShortcutItem } from '@/lib/api';
+import { t } from '@/lib/i18n';
 import { playShortcutFeedback } from '@/lib/shortcutFeedback';
 import { SHORTCUT_FLASH_MS } from '@/lib/shortcutFlash';
 import { screenStyles } from '@/lib/screenStyles';
@@ -28,6 +29,8 @@ export default function HomeScreen() {
   const [deletedShortcuts, setDeletedShortcuts] = useState<ShortcutItem[]>([]);
   const [circles, setCircles] = useState<CircleSummary[]>([]);
   const [emailsSent, setEmailsSent] = useState<string[]>([]);
+  const [showRest, setShowRest] = useState(false);
+  const [dragId, setDragId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token) {
@@ -157,6 +160,26 @@ export default function HomeScreen() {
   const inactiveShortcuts = allShortcuts.filter((item) => !item.isActive);
   const circleReminders = reminders.filter((item) => item.circleId);
 
+  async function decideExample(id: string, confirm: boolean) {
+    if (!token) {
+      return;
+    }
+    await api(`/api/onboarding/${id}`, {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ confirm }),
+    });
+    await load();
+  }
+
+  async function ackMonthly() {
+    if (!token) {
+      return;
+    }
+    await api('/api/recap/monthly/ack', { method: 'POST', token });
+    await load();
+  }
+
   async function moveShortcut(item: ShortcutItem, direction: -1 | 1) {
     if (!token || !panel) {
       return;
@@ -178,10 +201,33 @@ export default function HomeScreen() {
     await load();
   }
 
+  async function dropShortcut(targetId: string) {
+    if (!token || !panel || !dragId || dragId === targetId) {
+      return;
+    }
+    const active = [...panel.shortcuts];
+    const from = active.findIndex((entry) => entry.id === dragId);
+    const to = active.findIndex((entry) => entry.id === targetId);
+    if (from < 0 || to < 0) {
+      return;
+    }
+    const [moved] = active.splice(from, 1);
+    active.splice(to, 0, moved);
+    await api('/api/shortcuts/order', {
+      method: 'PUT',
+      token,
+      body: JSON.stringify({ ids: [...active.map((entry) => entry.id), ...inactiveShortcuts.map((entry) => entry.id)] }),
+    });
+    setDragId(null);
+    await load();
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <Text style={styles.kicker}>Painel do dia</Text>
-      <Text style={styles.title}>O que pede atencao hoje</Text>
+      <Text style={styles.kicker}>{t('home.kicker')}</Text>
+      <Text accessibilityRole="header" style={styles.title}>
+        {t('home.title')}
+      </Text>
       {panel?.vacationUntil ? (
         <Text style={styles.lead}>Modo ferias ate {new Date(panel.vacationUntil).toLocaleDateString('pt-BR')}.</Text>
       ) : (
@@ -198,12 +244,78 @@ export default function HomeScreen() {
         <Feedback key={notice.id} message={notice.detail} tone="ok" />
       ))}
 
+      {(panel?.onboarding ?? []).length > 0 ? (
+        <View style={styles.card} testID="onboarding-examples">
+          <Text style={styles.section}>Comece por aqui</Text>
+          <Text style={styles.lead}>Circulos Eu e Familia ja estao prontos. Confirme ou descarte os exemplos.</Text>
+          {(panel?.onboarding ?? []).map((item) => (
+            <View key={item.id} style={extra.onboarding}>
+              <Text style={styles.item}>{item.title}</Text>
+              <Text style={styles.lead}>
+                {item.circleName} · {item.body}
+              </Text>
+              <Button label={t('onboarding.confirm')} onPress={() => void decideExample(item.id, true)} />
+              <Button label={t('onboarding.discard')} variant="ghost" onPress={() => void decideExample(item.id, false)} />
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      <Section title="Atrasado" items={panel?.overdue ?? []} />
+      <Section title="Vence hoje" items={panel?.dueToday ?? []} />
+
+      {(panel?.onThisDay ?? []).length > 0 ? (
+        <View style={styles.card} testID="on-this-day">
+          <Text style={styles.section}>{t('home.onThisDay')}</Text>
+          {(panel?.onThisDay ?? []).map((item) => (
+            <Text key={item.id} style={styles.item}>
+              {item.year}: {item.title}
+            </Text>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.card} testID="on-this-day">
+          <Text style={styles.section}>{t('home.onThisDay')}</Text>
+          <Text style={styles.lead}>Quando houver uma memoria desta data em outro ano, ela aparece aqui.</Text>
+        </View>
+      )}
+
+      {panel?.routineStreakDays ? (
+        <Text style={styles.lead} testID="routine-streak">
+          {t('home.streak')}: {panel.routineStreakDays}
+        </Text>
+      ) : null}
+
+      {panel?.monthlySurprise ? (
+        <View style={styles.card} testID="monthly-surprise">
+          <Text style={styles.section}>Retrospectiva de {panel.monthlySurprise.month}/{panel.monthlySurprise.year}</Text>
+          <Text style={styles.lead}>
+            {panel.monthlySurprise.memoryCount} memoria(s) e {panel.monthlySurprise.entryCount} entrada(s) no mes
+            passado.
+          </Text>
+          {panel.monthlySurprise.titles.map((title) => (
+            <Text key={title} style={styles.item}>
+              {title}
+            </Text>
+          ))}
+          <Button label="Ok, vi a retrospectiva" variant="ghost" onPress={() => void ackMonthly()} />
+        </View>
+      ) : null}
+
       <View style={extra.row}>
         {panel?.shortcuts.map((item) => (
           <View key={item.id} style={extra.shortcutWrap}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={item.label}
+              {...(Platform.OS === 'web'
+                ? ({
+                    draggable: true,
+                    onDragStart: () => setDragId(item.id),
+                    onDragOver: (event: { preventDefault: () => void }) => event.preventDefault(),
+                    onDrop: () => void dropShortcut(item.id),
+                  } as object)
+                : {})}
               onPress={() => void runShortcut(item)}
               style={[extra.shortcut, { backgroundColor: item.color }]}>
               <Text style={extra.shortcutText}>{item.label}</Text>
@@ -315,23 +427,32 @@ export default function HomeScreen() {
           ))}
         </View>
       ) : null}
-
-      <Section title="Atrasado" items={panel?.overdue ?? []} />
-      <Section title="Vence hoje" items={panel?.dueToday ?? []} />
-      <Section title="Em seguida" items={panel?.upcoming ?? []} />
-
-      {panel?.plan.storageWarning ? (
-        <Text style={[styles.lead, { color: colors.accent, fontWeight: '700' }]}>
-          Voce ja usou {Math.round((panel.plan.storageUsedBytes / panel.plan.storageLimitBytes) * 100)}% do
-          armazenamento. O plano pago sobe para 1 GB.
-        </Text>
-      ) : null}
-
       <Button label="Lembretes" variant="ghost" onPress={() => router.push('/(app)/reminders')} />
       <Button label="Calendario" variant="ghost" onPress={() => router.push('/(app)/calendar' as Href)} />
       <Button label="Busca" variant="ghost" onPress={() => router.push('/(app)/search' as Href)} />
       <Button label="FAQ" variant="ghost" onPress={() => router.push('/(app)/faq' as Href)} />
       <Button label="Ajustes" variant="ghost" onPress={() => router.push('/(app)/settings')} />
+      <Button
+        label={showRest ? t('home.hideRest') : t('home.rest')}
+        variant="ghost"
+        onPress={() => setShowRest((value) => !value)}
+      />
+      {showRest ? (
+        <>
+          <Section title="Em seguida" items={panel?.upcoming ?? []} />
+          {panel?.plan.storageWarning ? (
+            <Text style={[styles.lead, { color: colors.accent, fontWeight: '700' }]}>
+              Voce ja usou {Math.round((panel.plan.storageUsedBytes / panel.plan.storageLimitBytes) * 100)}% do
+              armazenamento. O plano pago sobe para 1 GB.
+            </Text>
+          ) : null}
+          <Button
+            label={t('home.album')}
+            variant="ghost"
+            onPress={() => router.push('/(app)/memories' as Href)}
+          />
+        </>
+      ) : null}
     </ScrollView>
   );
 }
@@ -381,5 +502,9 @@ const extra = StyleSheet.create({
   shortcutFrom: {
     fontSize: 13,
     fontWeight: '600',
+  },
+  onboarding: {
+    gap: 8,
+    marginBottom: 12,
   },
 });

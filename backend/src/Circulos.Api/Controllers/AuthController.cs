@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Npgsql;
 
 namespace Circulos.Api.Controllers;
@@ -22,7 +23,10 @@ public sealed class AuthController(
     IEmailSender email,
     TimeProvider clock,
     IWebHostEnvironment env,
-    JwtTokenService jwt) : ControllerBase
+    JwtTokenService jwt,
+    OnboardingService onboarding,
+    IOptions<GoogleAuthOptions> googleOptions,
+    IGoogleIdTokenValidator googleTokens) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
@@ -59,6 +63,7 @@ public sealed class AuthController(
             }
 
             db.Users.Add(user);
+            onboarding.Seed(user, now);
             await db.SaveChangesAsync(cancellationToken);
             return Created("/api/auth/me", AttachWebCookie(await sessions.IssueAsync(user, cancellationToken)));
         }
@@ -118,6 +123,78 @@ public sealed class AuthController(
         var issued = await sessions.IssueAsync(user, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return Ok(AttachWebCookie(issued));
+    }
+
+    [HttpGet("google")]
+    [AllowAnonymous]
+    public ActionResult<GoogleAuthStatusResponse> GoogleStatus() =>
+        Ok(new GoogleAuthStatusResponse(googleOptions.Value.Enabled && !string.IsNullOrWhiteSpace(googleOptions.Value.ClientId)));
+
+    [HttpPost("google")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthResponse>> Google(
+        [FromBody] GoogleLoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!googleOptions.Value.Enabled)
+        {
+            return NotFound(new ErrorResponse("Login com Google esta desligado."));
+        }
+
+        if (string.IsNullOrWhiteSpace(googleOptions.Value.ClientId))
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new ErrorResponse("Login com Google nao esta configurado."));
+        }
+
+        var identity = await googleTokens.ValidateAsync(request.IdToken, cancellationToken);
+        if (identity is null)
+        {
+            return Unauthorized(new ErrorResponse("Nao foi possivel validar o Google."));
+        }
+
+        var user = await db.Users.Include(item => item.Profile)
+            .FirstOrDefaultAsync(item => item.GoogleSubject == identity.Subject, cancellationToken);
+        if (user is null)
+        {
+            user = await db.Users.Include(item => item.Profile)
+                .FirstOrDefaultAsync(item => item.Email == identity.Email, cancellationToken);
+            if (user is not null)
+            {
+                return Conflict(new ErrorResponse("Ja existe uma conta com este e-mail. Entre com senha."));
+            }
+
+            var now = clock.GetUtcNow().UtcDateTime;
+            user = new User
+            {
+                Id = Guid.NewGuid(),
+                Email = identity.Email,
+                CreatedAt = now,
+                GoogleSubject = identity.Subject,
+                Profile = new Profile
+                {
+                    DisplayName = identity.Name,
+                    IsPublic = false,
+                    UpdatedAt = now,
+                },
+            };
+            user.PasswordHash = passwordHasher.HashPassword(user, Guid.NewGuid().ToString("N") + "Aa1!");
+            foreach (var area in LifeAreaDefaults.ForUser(user.Id, now))
+            {
+                user.LifeAreas.Add(area);
+            }
+
+            db.Users.Add(user);
+            onboarding.Seed(user, now);
+            await db.SaveChangesAsync(cancellationToken);
+            return Created("/api/auth/me", AttachWebCookie(await sessions.IssueAsync(user, cancellationToken)));
+        }
+
+        if (user.BlockedAt is not null)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta conta foi bloqueada."));
+        }
+
+        return Ok(AttachWebCookie(await sessions.IssueAsync(user, cancellationToken)));
     }
 
     [HttpPost("refresh")]

@@ -55,6 +55,8 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
     public async Task<ActionResult<IReadOnlyList<LifeEntryResponse>>> Entries(
         Guid id,
         [FromQuery] string? tag,
+        [FromQuery] int? skip,
+        [FromQuery] int? take,
         CancellationToken cancellationToken)
     {
         var area = await OwnedArea(id, cancellationToken);
@@ -77,7 +79,10 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
                 .ToList();
         }
 
-        return Ok(items.Select(ToEntry).ToList());
+        var page = ListPaging.Clamp(skip, take);
+        Response.Headers["X-Total-Count"] = items.Count.ToString();
+        var slice = page.Take == int.MaxValue ? items.Skip(page.Skip) : items.Skip(page.Skip).Take(page.Take);
+        return Ok(slice.Select(ToEntry).ToList());
     }
 
     [HttpPost("{id:guid}/entries")]
@@ -111,6 +116,8 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
             UpdatedAt = now,
         };
         db.LifeEntries.Add(entry);
+        var owner = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
+        StreakService.Touch(owner, now);
         await db.SaveChangesAsync(cancellationToken);
         await stats.IncrementAsync(UsageStats.EntryCreated, cancellationToken);
         if (request.CircleIds is { Length: > 0 })
@@ -294,8 +301,22 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
             .OrderBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
 
+        var pages = await db.DiaryPages.AsNoTracking()
+            .Where(x => x.LifeAreaId == id)
+            .OrderBy(x => x.SortOrder)
+            .ToListAsync(cancellationToken);
         var text = new StringBuilder();
         text.AppendLine(area.Name);
+        foreach (var page in pages)
+        {
+            text.AppendLine();
+            text.AppendLine(page.Title);
+            if (!string.IsNullOrWhiteSpace(page.Body))
+            {
+                text.AppendLine(page.Body);
+            }
+        }
+
         foreach (var entry in entries)
         {
             text.AppendLine();
@@ -317,6 +338,57 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         }
 
         return File(Encoding.UTF8.GetBytes(text.ToString()), "text/plain", $"{area.Name}.txt");
+    }
+
+    [HttpGet("{id:guid}/pages")]
+    public async Task<ActionResult<IReadOnlyList<DiaryPageResponse>>> Pages(Guid id, CancellationToken cancellationToken)
+    {
+        var area = await OwnedArea(id, cancellationToken);
+        if (area is null || area.Kind != LifeAreaKind.Diary)
+        {
+            return NotFound(new ErrorResponse("Diario nao encontrado."));
+        }
+
+        var pages = await db.DiaryPages.AsNoTracking()
+            .Where(x => x.LifeAreaId == id)
+            .OrderBy(x => x.SortOrder)
+            .Select(x => new DiaryPageResponse(x.Id, x.Title, x.Body, x.SortOrder, x.UpdatedAt))
+            .ToListAsync(cancellationToken);
+        return Ok(pages);
+    }
+
+    [HttpPost("{id:guid}/pages")]
+    public async Task<ActionResult<DiaryPageResponse>> CreatePage(
+        Guid id,
+        [FromBody] DiaryPageRequest request,
+        CancellationToken cancellationToken)
+    {
+        var area = await OwnedArea(id, cancellationToken);
+        if (area is null || area.Kind != LifeAreaKind.Diary)
+        {
+            return NotFound(new ErrorResponse("Diario nao encontrado."));
+        }
+
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+        var max = await db.DiaryPages.Where(x => x.LifeAreaId == id).MaxAsync(x => (int?)x.SortOrder, cancellationToken) ?? 0;
+        var now = DateTime.UtcNow;
+        var page = new DiaryPage
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            LifeAreaId = id,
+            Title = request.Title.Trim(),
+            Body = request.Body?.Trim() ?? string.Empty,
+            SortOrder = max + 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        db.DiaryPages.Add(page);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Created($"/api/life-areas/{id}/pages/{page.Id}", new DiaryPageResponse(page.Id, page.Title, page.Body, page.SortOrder, page.UpdatedAt));
     }
 
     private Task<LifeArea?> OwnedArea(Guid id, CancellationToken cancellationToken) =>

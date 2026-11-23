@@ -22,6 +22,38 @@ namespace Circulos.Api.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Circulos.Api.Domain.AccountAppeal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("account_appeals", (string)null);
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.AccountDeletionRequest", b =>
                 {
                     b.Property<Guid>("Id")
@@ -94,6 +126,43 @@ namespace Circulos.Api.Data.Migrations
                     b.ToTable("admin_actions", (string)null);
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.BackgroundJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime>("RunAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "RunAt");
+
+                    b.ToTable("background_jobs", (string)null);
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.BillingEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -157,6 +226,9 @@ namespace Circulos.Api.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("FindableByLocation")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsStarter")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsSurprise")
@@ -226,6 +298,9 @@ namespace Circulos.Api.Data.Migrations
 
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsOpenLink")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("Role")
                         .HasColumnType("integer");
@@ -380,6 +455,19 @@ namespace Circulos.Api.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CircleDecision")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid?>("CircleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CircleReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CircleReviewerUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -389,6 +477,11 @@ namespace Circulos.Api.Data.Migrations
 
                     b.Property<Guid>("ReporterUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<Guid>("TargetId")
                         .HasColumnType("uuid");
@@ -400,6 +493,8 @@ namespace Circulos.Api.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CircleId");
+
                     b.HasIndex("CreatedAt");
 
                     b.HasIndex("ReporterUserId");
@@ -407,6 +502,69 @@ namespace Circulos.Api.Data.Migrations
                     b.HasIndex("TargetKind", "TargetId");
 
                     b.ToTable("content_reports", (string)null);
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.DiaryPage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LifeAreaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LifeAreaId");
+
+                    b.ToTable("diary_pages", (string)null);
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.GiftIdeaShare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CircleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ReminderId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CircleId");
+
+                    b.HasIndex("ReminderId", "CircleId")
+                        .IsUnique();
+
+                    b.ToTable("gift_idea_shares", (string)null);
                 });
 
             modelBuilder.Entity("Circulos.Api.Domain.LifeArea", b =>
@@ -663,6 +821,49 @@ namespace Circulos.Api.Data.Migrations
                     b.ToTable("memories", (string)null);
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.OnboardingExample", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid?>("CircleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("DiscardedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("onboarding_examples", (string)null);
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.PasswordReset", b =>
                 {
                     b.Property<Guid>("Id")
@@ -911,6 +1112,13 @@ namespace Circulos.Api.Data.Migrations
                     b.Property<string>("PersonName")
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
+
+                    b.Property<string>("PhotoContentType")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<long>("PhotoSizeBytes")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("PhotoStorageKey")
                         .HasMaxLength(260)
@@ -1311,6 +1519,33 @@ namespace Circulos.Api.Data.Migrations
                     b.ToTable("succession_votes", (string)null);
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.SupportMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("support_messages", (string)null);
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.TwoFactorChallenge", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1410,8 +1645,21 @@ namespace Circulos.Api.Data.Migrations
                     b.Property<bool>("EmailRemindersEnabled")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("GoogleSubject")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<bool>("IsSystemAdmin")
                         .HasColumnType("boolean");
+
+                    b.Property<DateOnly?>("LastMonthlyRecapSeenOn")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("LastRoutineDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("OnboardingCompletedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("OwnedCircleCount")
                         .HasColumnType("integer");
@@ -1425,6 +1673,9 @@ namespace Circulos.Api.Data.Migrations
                         .HasColumnType("character varying(512)");
 
                     b.Property<int>("Plan")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RoutineStreakDays")
                         .HasColumnType("integer");
 
                     b.Property<long>("StorageUsedBytes")
@@ -1456,7 +1707,22 @@ namespace Circulos.Api.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
+                    b.HasIndex("GoogleSubject")
+                        .IsUnique()
+                        .HasFilter("\"GoogleSubject\" IS NOT NULL");
+
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.AccountAppeal", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Circulos.Api.Domain.AccountDeletionRequest", b =>
@@ -1580,6 +1846,25 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("Reporter");
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.GiftIdeaShare", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.Circle", "Circle")
+                        .WithMany()
+                        .HasForeignKey("CircleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Circulos.Api.Domain.Reminder", "Reminder")
+                        .WithMany()
+                        .HasForeignKey("ReminderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Circle");
+
+                    b.Navigation("Reminder");
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.LifeArea", b =>
                 {
                     b.HasOne("Circulos.Api.Domain.User", "User")
@@ -1674,6 +1959,17 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("Author");
 
                     b.Navigation("Circle");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.OnboardingExample", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Circulos.Api.Domain.PasswordReset", b =>

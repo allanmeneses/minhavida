@@ -59,6 +59,11 @@ export default function CircleDetailScreen() {
   const [deleteText, setDeleteText] = useState('');
   const [logFilter, setLogFilter] = useState('');
   const [filteredLog, setFilteredLog] = useState<CircleDetail['log'] | null>(null);
+  const [shareText, setShareText] = useState<string | null>(null);
+  const [giftIdeas, setGiftIdeas] = useState<{ title: string; personName: string | null; ideas: string[] }[]>([]);
+  const [circleReports, setCircleReports] = useState<
+    { id: string; targetKind: string; status: string; circleDecision: string | null }[]
+  >([]);
 
   const load = useCallback(async () => {
     if (!token || !circleId) {
@@ -94,6 +99,16 @@ export default function CircleDetailScreen() {
       setVote(await api<SuccessionVote>(`/api/circles/${circleId}/succession`, { token }));
     } catch {
       setVote(null);
+    }
+    try {
+      setGiftIdeas(await api(`/api/circles/${circleId}/gift-ideas`, { token }));
+    } catch {
+      setGiftIdeas([]);
+    }
+    try {
+      setCircleReports(await api(`/api/circles/${circleId}/reports`, { token }));
+    } catch {
+      setCircleReports([]);
     }
   }, [token, circleId]);
 
@@ -138,6 +153,18 @@ export default function CircleDetailScreen() {
     setOk(`Convite criado. Codigo: ${result.token}`);
     setInviteEmail('');
     await load();
+  }
+
+  async function inviteLink() {
+    if (!token || !circleId) {
+      return;
+    }
+    const result = await api<{ token: string; shareText: string; shareUrl: string }>(
+      `/api/circles/${circleId}/invite-link`,
+      { method: 'POST', token },
+    );
+    setShareText(result.shareText);
+    setOk('Texto pronto para colar no WhatsApp.');
   }
 
   async function publish() {
@@ -356,6 +383,12 @@ export default function CircleDetailScreen() {
         <>
           <TextField label="Convidar por e-mail" value={inviteEmail} onChangeText={setInviteEmail} />
           <Button label="Enviar convite" onPress={() => void invite()} disabled={!inviteEmail.trim()} />
+          {isAdmin ? <Button label="Criar link para WhatsApp" variant="ghost" onPress={() => void inviteLink()} /> : null}
+          {shareText ? (
+            <Text testID="invite-share-text" style={styles.lead}>
+              {shareText}
+            </Text>
+          ) : null}
           <TextField label="Nova entrada" value={post} onChangeText={setPost} />
           <Button label="Publicar" onPress={() => void publish()} disabled={!post.trim()} />
         </>
@@ -371,6 +404,64 @@ export default function CircleDetailScreen() {
               {(item.tags ?? []).length > 0 ? (
                 <Text style={styles.lead}>Tags: {(item.tags ?? []).join(', ')}</Text>
               ) : null}
+            </View>
+          ))}
+        </>
+      ) : null}
+
+      {giftIdeas.length > 0 ? (
+        <>
+          <Text style={styles.section}>Ideias de presente</Text>
+          {giftIdeas.map((item) => (
+            <Text key={item.title} style={styles.lead}>
+              {item.title}: {item.ideas.join(', ')}
+            </Text>
+          ))}
+        </>
+      ) : null}
+
+      {isAdmin && circleReports.length > 0 ? (
+        <>
+          <Text style={styles.section}>Denuncias do circulo</Text>
+          {circleReports.map((item) => (
+            <View key={item.id} style={styles.card}>
+              <Text style={styles.item}>
+                {item.targetKind} · {item.status}
+              </Text>
+              {item.status !== 'circle-resolved' ? (
+                <>
+                  <Button
+                    label="Manter conteudo"
+                    variant="ghost"
+                    onPress={() => {
+                      if (!token || !circleId) {
+                        return;
+                      }
+                      void api(`/api/circles/${circleId}/reports/${item.id}/decide`, {
+                        method: 'POST',
+                        token,
+                        body: JSON.stringify({ decision: 'keep' }),
+                      }).then(() => load());
+                    }}
+                  />
+                  <Button
+                    label="Esconder conteudo"
+                    variant="ghost"
+                    onPress={() => {
+                      if (!token || !circleId) {
+                        return;
+                      }
+                      void api(`/api/circles/${circleId}/reports/${item.id}/decide`, {
+                        method: 'POST',
+                        token,
+                        body: JSON.stringify({ decision: 'hide' }),
+                      }).then(() => load());
+                    }}
+                  />
+                </>
+              ) : (
+                <Text style={styles.lead}>{item.circleDecision}</Text>
+              )}
             </View>
           ))}
         </>

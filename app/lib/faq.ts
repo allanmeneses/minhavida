@@ -62,6 +62,6 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: 'Como falo com o suporte?',
     answer:
-      'So por e-mail, sem prazo de resposta prometido. O contato do responsavel esta na politica de privacidade. Nao ha busca nesta FAQ: role ate achar o assunto.',
+      'So por e-mail, sem prazo de resposta prometido. Voce envia pela tela de Ajustes; a mensagem entra na caixa local. O contato do responsavel tambem esta na politica de privacidade. Nao ha busca nesta FAQ: role ate achar o assunto.',
   },
 ];

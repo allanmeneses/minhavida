@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Image, Platform, ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
+import { LazyPhoto } from '@/components/LazyPhoto';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
@@ -40,6 +41,9 @@ export default function LifeAreaScreen() {
   const [circles, setCircles] = useState<CircleSummary[]>([]);
   const [selectedCircleIds, setSelectedCircleIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [pageTitle, setPageTitle] = useState('');
+  const [pageBody, setPageBody] = useState('');
+  const [pages, setPages] = useState<{ id: string; title: string; body: string }[]>([]);
   const example = entryExample(area?.kind);
 
   const load = useCallback(async () => {
@@ -48,7 +52,7 @@ export default function LifeAreaScreen() {
     }
     const areas = await api<LifeArea[]>('/api/life-areas', { token });
     setArea(areas.find((item) => item.id === id) ?? null);
-    setEntries(await api<LifeEntry[]>(`/api/life-areas/${id}/entries`, { token }));
+    setEntries(await api<LifeEntry[]>(`/api/life-areas/${id}/entries?skip=0&take=20`, { token }));
     try {
       setCircles(await api<CircleSummary[]>('/api/circles', { token }));
     } catch {
@@ -56,6 +60,13 @@ export default function LifeAreaScreen() {
     }
     if (areas.find((item) => item.id === id)?.kind === 'document') {
       setDocuments(await api<DocumentItem[]>('/api/documents', { token }));
+    }
+    if (areas.find((item) => item.id === id)?.kind === 'diary') {
+      try {
+        setPages(await api(`/api/life-areas/${id}/pages`, { token }));
+      } catch {
+        setPages([]);
+      }
     }
   }, [token, id]);
 
@@ -236,7 +247,38 @@ export default function LifeAreaScreen() {
       )}
       {photoFile || nativePhoto ? <Text style={styles.lead}>Foto pronta para enviar com a entrada.</Text> : null}
       <Button label="Guardar entrada" onPress={() => void addEntry()} disabled={!title.trim()} />
-      {area?.kind === 'diary' ? <Button label="Exportar texto" variant="ghost" onPress={() => void exportDiary()} /> : null}
+      {area?.kind === 'diary' ? (
+        <View style={styles.card}>
+          <Text style={styles.section}>Pagina livre</Text>
+          <TextField label="Titulo da pagina" value={pageTitle} onChangeText={setPageTitle} />
+          <TextField label="Texto da pagina" value={pageBody} onChangeText={setPageBody} />
+          <Button
+            label="Guardar pagina"
+            variant="ghost"
+            disabled={!pageTitle.trim()}
+            onPress={() => {
+              if (!token || !id || !pageTitle.trim()) {
+                return;
+              }
+              void api(`/api/life-areas/${id}/pages`, {
+                method: 'POST',
+                token,
+                body: JSON.stringify({ title: pageTitle.trim(), body: pageBody.trim() }),
+              }).then(() => {
+                setPageTitle('');
+                setPageBody('');
+                return load();
+              });
+            }}
+          />
+          {pages.map((page) => (
+            <Text key={page.id} style={styles.item}>
+              {page.title}
+            </Text>
+          ))}
+          <Button label="Exportar texto" variant="ghost" onPress={() => void exportDiary()} />
+        </View>
+      ) : null}
 
       {entries.map((entry) => (
         <View key={entry.id} style={styles.card}>
@@ -294,5 +336,5 @@ function EntryPhoto({ areaId, entryId, token }: { areaId: string; entryId: strin
   if (!uri) {
     return <Text>Foto</Text>;
   }
-  return <Image source={{ uri }} style={{ width: 160, height: 160, borderRadius: 8 }} accessibilityLabel="Foto da entrada salva" />;
+  return <LazyPhoto uri={uri} alt="Foto da entrada salva" size={160} />;
 }

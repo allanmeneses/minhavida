@@ -2,7 +2,7 @@ namespace Circulos.Api.Storage;
 
 public static class FileRules
 {
-    public const long MaxIncomingBytes = 80L * 1024 * 1024;
+    public const long MaxIncomingBytes = 2L * 1024 * 1024 * 1024;
 
     private static readonly Dictionary<string, string[]> DocumentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -37,11 +37,6 @@ public static class FileRules
             return "O arquivo esta vazio.";
         }
 
-        if (size > MaxIncomingBytes)
-        {
-            return "O arquivo e grande demais para enviar de uma vez.";
-        }
-
         return Validate(fileName, contentType, DocumentTypes, "Este tipo de arquivo nao e aceito nos documentos pessoais.");
     }
 
@@ -50,11 +45,6 @@ public static class FileRules
         if (size <= 0)
         {
             return "A foto esta vazia.";
-        }
-
-        if (size > MaxIncomingBytes)
-        {
-            return "A foto e grande demais para enviar de uma vez.";
         }
 
         return Validate(fileName, contentType, PhotoTypes, "A foto precisa ser JPG, PNG ou WebP.");
