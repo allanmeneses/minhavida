@@ -750,8 +750,7 @@ test('recap de uso no perfil so mostra fluxo usado', async ({ page }) => {
   await signUp(page, '-recap');
   await page.getByRole('button', { name: 'Perfil' }).click();
   await page.getByRole('button', { name: 'Resumo de uso' }).click();
-  await expect(page.getByText('Circulos · 2')).toBeVisible();
-  await expect(page.getByText('Ainda nao ha uso para resumir.')).toHaveCount(0);
+  await expect(page.getByText('Ainda nao ha uso para resumir.')).toBeVisible();
   await page.getByRole('button', { name: 'Perfil' }).click();
   await page.getByText('Vacinas', { exact: true }).click();
   await page.getByLabel('Titulo').fill('Hepatite B');
@@ -1245,6 +1244,25 @@ test('cadastro mostra circulos prontos e exemplos para confirmar', async ({ page
   await page.getByRole('button', { name: 'Hoje' }).click();
   await expect(page.getByTestId('on-this-day')).toBeVisible();
   await expect(page.getByText('Neste dia')).toBeVisible();
+});
+
+test('descartar exemplos deixa circulos prontos vazios', async ({ page }) => {
+  await signUp(page, '-descartar');
+  await expect(page.getByTestId('onboarding-examples')).toBeVisible();
+  const discards = page.getByRole('button', { name: 'Descartar' });
+  await expect(discards).toHaveCount(3);
+  await discards.nth(0).click();
+  await expect(page.getByRole('button', { name: 'Descartar' })).toHaveCount(2);
+  await page.getByRole('button', { name: 'Descartar' }).nth(0).click();
+  await expect(page.getByRole('button', { name: 'Descartar' })).toHaveCount(1);
+  await page.getByRole('button', { name: 'Descartar' }).nth(0).click();
+  await expect(page.getByTestId('onboarding-examples')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  await expect(page.getByRole('button', { name: 'Abrir Eu' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Abrir Familia' })).toBeVisible();
+  await page.getByRole('button', { name: 'Abrir Eu' }).click();
+  await expect(page.getByText('Quem esta aqui')).toBeVisible();
+  await expect(page.getByText('Como foi o meu dia')).toHaveCount(0);
 });
 
 test('login nao mostra Google desligado por padrao', async ({ page }) => {

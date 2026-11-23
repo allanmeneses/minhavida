@@ -271,6 +271,10 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
         var client = _factory.CreateClient();
         var auth = await AuthHelper.RegisterAsync(client);
         client.WithToken(auth.Token);
+        for (var i = 0; i < 2; i++)
+        {
+            (await client.PostAsJsonAsync("/api/circles", new { name = $"C{i}" })).EnsureSuccessStatusCode();
+        }
 
         var outro = _factory.CreateClient();
         outro.WithToken(auth.Token);
@@ -283,8 +287,9 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var count = await db.Circles.CountAsync(x => x.OwnerUserId == auth.UserId);
-        Assert.Equal(3, count);
+        var owned = await db.Circles.CountAsync(x => x.OwnerUserId == auth.UserId && !x.IsStarter);
+        Assert.Equal(3, owned);
+        Assert.Equal(2, await db.Circles.CountAsync(x => x.OwnerUserId == auth.UserId && x.IsStarter));
         var user = await db.Users.SingleAsync(x => x.Id == auth.UserId);
         Assert.Equal(3, user.OwnedCircleCount);
     }

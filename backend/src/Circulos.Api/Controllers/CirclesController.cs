@@ -459,12 +459,15 @@ public sealed class CirclesController(
 
         var oldOwner = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
         var newOwner = await db.Users.FirstAsync(x => x.Id == target.UserId, cancellationToken);
-        if (oldOwner.OwnedCircleCount > 0)
+        if (!circle.IsStarter)
         {
-            oldOwner.OwnedCircleCount -= 1;
-        }
+            if (oldOwner.OwnedCircleCount > 0)
+            {
+                oldOwner.OwnedCircleCount -= 1;
+            }
 
-        newOwner.OwnedCircleCount += 1;
+            newOwner.OwnedCircleCount += 1;
+        }
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
@@ -518,7 +521,10 @@ public sealed class CirclesController(
 
             circle.OwnerUserId = null;
             db.CircleMembers.Remove(member);
-            await quota.ReleaseCircleAsync(userId, cancellationToken);
+            if (!circle.IsStarter)
+            {
+                await quota.ReleaseCircleAsync(userId, cancellationToken);
+            }
             await succession.OpenIfNeededAsync(circle, cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
@@ -581,7 +587,10 @@ public sealed class CirclesController(
         circle.FindableByLocation = false;
         circle.Discoverable = false;
         db.CircleLogs.Add(Log(circle.Id, userId, "deleted-forever", "Exclusao definitiva. Nao da para desfazer."));
-        await quota.ReleaseCircleAsync(userId, cancellationToken);
+        if (!circle.IsStarter)
+        {
+            await quota.ReleaseCircleAsync(userId, cancellationToken);
+        }
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return NoContent();

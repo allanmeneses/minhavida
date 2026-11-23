@@ -13,6 +13,7 @@ public sealed class Circle
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
     public bool IsSurprise { get; set; }
+    public bool IsStarter { get; set; }
     public Guid? SurpriseSubjectUserId { get; set; }
     public DateTime? RevealedAt { get; set; }
     public CircleKind Kind { get; set; } = CircleKind.Lasting;

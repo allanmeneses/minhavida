@@ -12,7 +12,6 @@ public sealed class OnboardingService(AppDbContext db, TimeProvider clock)
         var familia = CreateCircle(user, "Familia", "Combine a rotina de quem mora junto.", now);
         db.Circles.Add(eu);
         db.Circles.Add(familia);
-        user.OwnedCircleCount = 2;
         db.OnboardingExamples.Add(Example(user.Id, eu.Id, "diary", "Como foi o meu dia", "Escreva em uma frase o que marcou hoje.", now));
         db.OnboardingExamples.Add(Example(user.Id, eu.Id, "memory", "Uma data que importa", "Guarde uma memoria antiga, mesmo que curta.", now));
         db.OnboardingExamples.Add(Example(user.Id, familia.Id, "post", "O que a familia combinou", "Um recado simples para quem esta neste circulo.", now));
@@ -137,6 +136,7 @@ public sealed class OnboardingService(AppDbContext db, TimeProvider clock)
             Discoverable = false,
             Kind = CircleKind.Lasting,
             Status = CircleStatus.Active,
+            IsStarter = true,
             CreatedAt = now,
         };
         circle.Members.Add(new CircleMember

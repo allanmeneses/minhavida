@@ -55,7 +55,10 @@ public sealed class AccountDeletionService(
                 circle.OwnerUserId = successorUser.Id;
                 admin.Role = CircleRole.Owner;
                 db.CircleLogs.Add(Log(circle.Id, admin.UserId, "transferred", "Dono anterior saiu. O circulo passou para um administrador."));
-                successorUser.OwnedCircleCount += 1;
+                if (!circle.IsStarter)
+                {
+                    successorUser.OwnedCircleCount += 1;
+                }
             }
         }
 

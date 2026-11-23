@@ -18,7 +18,7 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
         client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
         var empty = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
         var initial = empty.GetProperty("flows").EnumerateArray().ToList();
-        Assert.Contains(initial, x => x.GetProperty("key").GetString() == "circles" && x.GetProperty("count").GetInt32() == 2);
+        Assert.DoesNotContain(initial, x => x.GetProperty("key").GetString() == "circles");
         Assert.DoesNotContain(initial, x => x.GetProperty("key").GetString() == "vaccine");
 
         var areas = await client.GetFromJsonAsync<List<AreaDto>>("/api/life-areas", Json);
@@ -33,7 +33,7 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
         var recap = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
         var flows = recap.GetProperty("flows").EnumerateArray().ToList();
         Assert.Contains(flows, x => x.GetProperty("key").GetString() == "vaccine" && x.GetProperty("count").GetInt32() == 1);
-        Assert.Contains(flows, x => x.GetProperty("key").GetString() == "circles" && x.GetProperty("count").GetInt32() == 2);
+        Assert.DoesNotContain(flows, x => x.GetProperty("key").GetString() == "circles");
         Assert.DoesNotContain(flows, x => x.GetProperty("key").GetString() == "diary");
     }
 

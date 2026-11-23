@@ -22,7 +22,7 @@ Totais da auditoria depois desta rodada (contagem no arquivo): feito e testado 2
 
 | Item | Status | Origem | Evidencia |
 | --- | --- | --- | --- |
-| Cadastro curto com circulos Eu e Familia e 2 ou 3 exemplos | feito e testado | engajamento 1 | `OnboardingService.Seed`. Testes `Cadastro_CriaCirculosEuEFamiliaComTresExemplos`, `Onboarding_ConfirmarEDescartarSobrepostos_DecideUmaVez`. Playwright `cadastro mostra circulos prontos e exemplos para confirmar`. |
+| Cadastro curto com circulos Eu e Familia e 2 ou 3 exemplos | feito e testado | engajamento 1 | `OnboardingService.Seed`. Circulos prontos com `IsStarter` nao entram na cota (`OwnedCircleCount` fica 0). Descartar exemplos deixa Eu e Familia vazios. Testes `Cadastro_CriaCirculosEuEFamiliaComTresExemplos`, `CirculosProntos_NaoComemCota_DescartarDeixaVazios`, `Onboarding_ConfirmarEDescartarSobrepostos_DecideUmaVez`. Playwright `cadastro mostra circulos prontos e exemplos para confirmar` e `descartar exemplos deixa circulos prontos vazios`. |
 | Login Google por variavel, desligado por padrao | feito e testado | engajamento 1 | `Google:Enabled` / `GOOGLE_ENABLED`. Sem credencial no repo. Testes `Google_DesligadoPorPadrao_GetFalseEPost404`, `Google_LigadoSemClientId_Retorna503`. Playwright `login nao mostra Google desligado por padrao`. |
 | Neste dia e retrospectiva mensal no app | feito e testado | engajamento 2 | `GET /api/home` com `onThisDay` e `monthlySurprise`. Teste `NesteDia_ERetrospectivaMensal_AparecemNoPainelEAckSome`. Playwright `cadastro mostra circulos prontos e exemplos para confirmar`. |
 | Convite por link com texto para WhatsApp | feito e testado | engajamento 3 | `POST /api/circles/{id}/invite-link`, `GET /i/{token}`. Teste `ConvitePorLink_TextoProntoEDoisAceitamSobrepostos`. Playwright `convite por link abre o circulo depois do cadastro`. |
@@ -50,10 +50,10 @@ Totais da auditoria depois desta rodada (contagem no arquivo): feito e testado 2
 
 Testes locais observados nesta rodada (comandos e exit code):
 
-- `dotnet test --nologo` (backend): Passed 176, Failed 0, Skipped 0, exit 0.
+- `dotnet test --nologo` (backend): Passed 177, Failed 0, Skipped 0, exit 0.
 - `npm test` (app): 35 pass, 0 fail, exit 0.
 - `npx tsc --noEmit` (app): exit 0.
-- `npx playwright test` (app): 56 passed (1.4m), exit 0.
+- `npx playwright test` (app): 57 passed (1.4m), exit 0.
 
 Bundle web (`npx expo export --platform web --output-dir`), bytes observados:
 

@@ -42,6 +42,9 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         var home = await client.GetFromJsonAsync<JsonElement>("/api/home", Json);
         Assert.Equal(3, home.GetProperty("onboarding").GetArrayLength());
         Assert.Equal(0, home.GetProperty("routineStreakDays").GetInt32());
+        Assert.Equal(2, home.GetProperty("activeCircleCount").GetInt32());
+        var plan = await client.GetFromJsonAsync<JsonElement>("/api/plan", Json);
+        Assert.Equal(0, plan.GetProperty("circleCount").GetInt32());
     }
 
     [Fact]
@@ -94,6 +97,71 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         Assert.Equal(1, await db.LifeEntries.CountAsync(x => x.UserId == auth.UserId && x.Title == "Como foi o meu dia"));
         Assert.Equal(1, await db.Memories.CountAsync(x => x.AuthorUserId == auth.UserId && x.Title == "Uma data que importa"));
         Assert.Equal(1, await db.CirclePosts.CountAsync(x => x.AuthorUserId == auth.UserId));
+        var recap = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
+        Assert.Contains(recap.GetProperty("flows").EnumerateArray(), x => x.GetProperty("key").GetString() == "circles" && x.GetProperty("count").GetInt32() == 2);
+    }
+
+    [Fact]
+    public async Task CirculosProntos_NaoComemCota_DescartarDeixaVazios()
+    {
+        var client = _factory.CreateClient();
+        var auth = await AuthHelper.RegisterAsync(client);
+        client.WithToken(auth.Token);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var user = await db.Users.SingleAsync(x => x.Id == auth.UserId);
+            Assert.Equal(0, user.OwnedCircleCount);
+            Assert.Equal(2, await db.Circles.CountAsync(x => x.OwnerUserId == auth.UserId && x.IsStarter));
+        }
+
+        var emptyRecap = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
+        Assert.DoesNotContain(emptyRecap.GetProperty("flows").EnumerateArray(), x => x.GetProperty("key").GetString() == "circles");
+
+        var examples = await client.GetFromJsonAsync<List<JsonElement>>("/api/onboarding", Json);
+        foreach (var example in examples!)
+        {
+            Assert.Equal(
+                HttpStatusCode.NoContent,
+                (await client.PostAsJsonAsync($"/api/onboarding/{example.GetProperty("id").GetGuid()}", new { confirm = false })).StatusCode);
+        }
+
+        var circles = await client.GetFromJsonAsync<List<JsonElement>>("/api/circles", Json);
+        Assert.Contains(circles!, x => x.GetProperty("name").GetString() == "Eu");
+        Assert.Contains(circles, x => x.GetProperty("name").GetString() == "Familia");
+        var euId = circles.Single(x => x.GetProperty("name").GetString() == "Eu").GetProperty("id").GetGuid();
+        var familiaId = circles.Single(x => x.GetProperty("name").GetString() == "Familia").GetProperty("id").GetGuid();
+        var eu = await client.GetFromJsonAsync<JsonElement>($"/api/circles/{euId}", Json);
+        var familia = await client.GetFromJsonAsync<JsonElement>($"/api/circles/{familiaId}", Json);
+        Assert.Empty(eu.GetProperty("posts").EnumerateArray());
+        Assert.Empty(familia.GetProperty("posts").EnumerateArray());
+
+        var home = await client.GetFromJsonAsync<JsonElement>("/api/home", Json);
+        Assert.Equal(2, home.GetProperty("activeCircleCount").GetInt32());
+        Assert.Equal(0, home.GetProperty("onboarding").GetArrayLength());
+        var afterDiscard = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
+        Assert.DoesNotContain(afterDiscard.GetProperty("flows").EnumerateArray(), x => x.GetProperty("key").GetString() == "circles");
+
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync("/api/circles", new { name = "Um" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync("/api/circles", new { name = "Dois" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync("/api/circles", new { name = "Tres" })).StatusCode);
+        var fourth = await client.PostAsJsonAsync("/api/circles", new { name = "Quatro" });
+        Assert.Equal(HttpStatusCode.BadRequest, fourth.StatusCode);
+        Assert.Contains("3 circulos", await fourth.Content.ReadAsStringAsync());
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var user = await db.Users.SingleAsync(x => x.Id == auth.UserId);
+            Assert.Equal(3, user.OwnedCircleCount);
+            Assert.Equal(5, await db.Circles.CountAsync(x => x.OwnerUserId == auth.UserId && x.Status == CircleStatus.Active));
+        }
+
+        home = await client.GetFromJsonAsync<JsonElement>("/api/home", Json);
+        Assert.Equal(5, home.GetProperty("activeCircleCount").GetInt32());
+        var used = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
+        Assert.Contains(used.GetProperty("flows").EnumerateArray(), x => x.GetProperty("key").GetString() == "circles" && x.GetProperty("count").GetInt32() == 3);
     }
 
     [Fact]
@@ -540,7 +608,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         var plan = await client.GetFromJsonAsync<JsonElement>("/api/plan", Json);
         Assert.True(plan.TryGetProperty("inGoodStanding", out _));
         Assert.False(plan.TryGetProperty("charges", out _));
-        Assert.Equal(2, plan.GetProperty("circleCount").GetInt32());
+        Assert.Equal(0, plan.GetProperty("circleCount").GetInt32());
     }
 
     private async Task<HttpClient> AdminClient()

@@ -4,7 +4,7 @@ Status: **aprovado** pelo Allan em 22/11/2026. Precos em reais: R$ 29,90 mensal 
 
 ## Gratis
 
-- Ate 3 circulos criados pela pessoa
+- Ate 3 circulos criados pela pessoa. Eu e Familia do primeiro acesso nao entram nessa cota.
 - 100 MB de armazenamento
 - 5 atalhos
 - Circulos e historico continuam se a pessoa deixar de pagar depois

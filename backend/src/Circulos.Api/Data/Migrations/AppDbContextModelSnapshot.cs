@@ -228,6 +228,9 @@ namespace Circulos.Api.Data.Migrations
                     b.Property<bool>("FindableByLocation")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsStarter")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsSurprise")
                         .HasColumnType("boolean");
 

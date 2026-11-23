@@ -182,7 +182,10 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
         circle.Owner = winner;
         circle.Status = CircleStatus.Active;
         member.Role = CircleRole.Owner;
-        winner.OwnedCircleCount += 1;
+        if (!circle.IsStarter)
+        {
+            winner.OwnedCircleCount += 1;
+        }
         vote.Status = SuccessionVoteStatus.Decided;
         vote.WinnerUserId = winnerId;
         vote.ClosedAt = now;

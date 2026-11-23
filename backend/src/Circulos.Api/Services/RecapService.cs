@@ -47,7 +47,7 @@ public sealed class RecapService(AppDbContext db)
         await AddIfUsed(flows, "shortcuts", "Atalhos", await db.Shortcuts.CountAsync(x => x.UserId == userId, cancellationToken));
         await AddIfUsed(flows, "lists", "Listas", await db.SharedLists.CountAsync(x => x.OwnerUserId == userId && x.CircleId == null, cancellationToken));
         await AddIfUsed(flows, "memories", "Memorias", await db.Memories.CountAsync(x => x.AuthorUserId == userId && x.CircleId == null, cancellationToken));
-        await AddIfUsed(flows, "circles", "Circulos", await db.CircleMembers.CountAsync(x => x.UserId == userId, cancellationToken));
+        await AddIfUsed(flows, "circles", "Circulos", await UsedCircleCountAsync(userId, cancellationToken));
         return new ProfileRecapResponse(flows);
     }
 
@@ -114,6 +114,15 @@ public sealed class RecapService(AppDbContext db)
             flows,
             titles);
     }
+
+    private Task<int> UsedCircleCountAsync(Guid userId, CancellationToken cancellationToken) =>
+        db.CircleMembers.CountAsync(
+            member => member.UserId == userId
+                && (!member.Circle.IsStarter
+                    || member.Circle.Posts.Any()
+                    || db.Memories.Any(memory => memory.CircleId == member.CircleId)
+                    || db.LifeEntryShares.Any(share => share.CircleId == member.CircleId)),
+            cancellationToken);
 
     public string Serialize(CircleRecapResponse recap) => JsonSerializer.Serialize(recap, Json);
 
