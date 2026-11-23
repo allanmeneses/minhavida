@@ -66,7 +66,7 @@ public sealed class BillingController(AppDbContext db, BillingService billing) :
         }
         catch (JsonException)
         {
-            return BadRequest(new ErrorResponse("Corpo do webhook invalido."));
+            return BadRequest(new ErrorResponse("Corpo do webhook inválido."));
         }
 
         using (document)
@@ -88,7 +88,7 @@ public sealed class BillingController(AppDbContext db, BillingService billing) :
             var requestId = Request.Headers["x-request-id"].FirstOrDefault();
             if (!billing.SignatureValid(signature, requestId, dataId))
             {
-                return Unauthorized(new ErrorResponse("Webhook com assinatura invalida."));
+                return Unauthorized(new ErrorResponse("Webhook com assinatura inválida."));
             }
 
             var topic = string.IsNullOrWhiteSpace(type) ? "subscription_preapproval" : type;

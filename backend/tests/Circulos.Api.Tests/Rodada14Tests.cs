@@ -114,7 +114,7 @@ public sealed class Rodada14Tests : IClassFixture<ApiFactory>
         Assert.DoesNotContain(members[0].Auth.UserId, offered);
 
         var emails = await db.SentEmails
-            .Where(item => item.Subject.Contains("assumir o circulo"))
+            .Where(item => item.Subject.Contains("assumir o círculo"))
             .Select(item => item.To)
             .ToListAsync();
         Assert.Contains(members[1].Auth.Email, emails);
@@ -129,7 +129,7 @@ public sealed class Rodada14Tests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.NoContent, (await a.Client.PostAsJsonAsync($"/api/circles/{circleId}/ownership-offer/accept", new { })).StatusCode);
         var second = await b.Client.PostAsJsonAsync($"/api/circles/{circleId}/ownership-offer/accept", new { });
         Assert.Equal(HttpStatusCode.BadRequest, second.StatusCode);
-        Assert.Contains("nao esta mais aberta", await second.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("não está mais aberta", await second.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -229,7 +229,7 @@ public sealed class Rodada14Tests : IClassFixture<ApiFactory>
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var message = await db.SentEmails.OrderByDescending(item => item.SentAt).FirstAsync(item => item.To == donoAuth.Email);
-            const string prefix = "Para apagar seus dados, use este codigo: ";
+            const string prefix = "Para apagar seus dados, use este código: ";
             var index = message.Body.IndexOf(prefix, StringComparison.Ordinal);
             token = message.Body[(index + prefix.Length)..].Trim();
         }

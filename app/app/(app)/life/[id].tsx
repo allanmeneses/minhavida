@@ -74,7 +74,7 @@ export default function LifeAreaScreen() {
   }, [token, id]);
 
   useEffect(() => {
-    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Falha ao abrir a area.'));
+    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Falha ao abrir a área.'));
   }, [load]);
 
   async function sendBrowserFile(entryId: string, file: File) {
@@ -152,7 +152,7 @@ export default function LifeAreaScreen() {
   async function pickCamera() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      setError('Precisamos da camera para tirar a foto.');
+      setError('Precisamos da câmera para tirar a foto.');
       return;
     }
     const picked = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.85 });
@@ -174,7 +174,7 @@ export default function LifeAreaScreen() {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
-      anchor.download = `${area?.name ?? 'diario'}.txt`;
+      anchor.download = `${area?.name ?? 'diário'}.txt`;
       anchor.click();
       URL.revokeObjectURL(url);
     }
@@ -182,10 +182,10 @@ export default function LifeAreaScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <Text style={styles.title}>{area?.name ?? 'Area'}</Text>
+      <Text style={styles.title}>{area?.name ?? 'Área'}</Text>
       <Text style={styles.lead}>{example.hint}</Text>
       <Feedback message={error} />
-      <TextField label="Titulo" value={title} onChangeText={setTitle} placeholder={example.titlePlaceholder} />
+      <TextField label="Título" value={title} onChangeText={setTitle} placeholder={example.titlePlaceholder} />
       {example.showWhen ? (
         <TextField label="Quando" value={occurredOn} onChangeText={setOccurredOn} placeholder={example.whenPlaceholder} />
       ) : null}
@@ -193,7 +193,7 @@ export default function LifeAreaScreen() {
         <TextField label="Onde" value={location} onChangeText={setLocation} placeholder={example.wherePlaceholder} />
       ) : null}
       <TextField
-        label="Numero"
+        label="Número"
         value={numberValue}
         onChangeText={setNumberValue}
         placeholder={example.numberPlaceholder}
@@ -204,18 +204,18 @@ export default function LifeAreaScreen() {
         label="Tags (opcional)"
         value={tags}
         onChangeText={setTags}
-        placeholder="corrida, manha"
+        placeholder="corrida, manhã"
       />
       {circles.length > 0 ? (
         <View>
-          <Text style={styles.lead}>Mostrar a mesma entrada em circulos, sem duplicar.</Text>
+          <Text style={styles.lead}>Mostrar a mesma entrada em círculos, sem duplicar.</Text>
           {circles.map((circle) => (
             <Button
               key={circle.id}
               label={
                 selectedCircleIds.includes(circle.id)
-                  ? `No circulo: ${circle.name ?? 'circulo'}`
-                  : `Fora do circulo: ${circle.name ?? 'circulo'}`
+                  ? `No círculo: ${circle.name ?? 'círculo'}`
+                  : `Fora do círculo: ${circle.name ?? 'círculo'}`
               }
               variant="ghost"
               onPress={() =>
@@ -245,18 +245,18 @@ export default function LifeAreaScreen() {
       ) : (
         <>
           <Button label="Galeria" variant="ghost" onPress={() => void pickLibrary()} />
-          <Button label="Camera" variant="ghost" onPress={() => void pickCamera()} />
+          <Button label="Câmera" variant="ghost" onPress={() => void pickCamera()} />
         </>
       )}
       {photoFile || nativePhoto ? <Text style={styles.lead}>Foto pronta para enviar com a entrada.</Text> : null}
       <Button label="Guardar entrada" onPress={() => void addEntry()} disabled={!title.trim()} />
       {area?.kind === 'diary' ? (
         <View style={styles.card}>
-          <Text style={styles.section}>Pagina livre</Text>
-          <TextField label="Titulo da pagina" value={pageTitle} onChangeText={setPageTitle} />
-          <TextField label="Texto da pagina" value={pageBody} onChangeText={setPageBody} />
+          <Text style={styles.section}>Página livre</Text>
+          <TextField label="Título da página" value={pageTitle} onChangeText={setPageTitle} />
+          <TextField label="Texto da página" value={pageBody} onChangeText={setPageBody} />
           <Button
-            label="Guardar pagina"
+            label="Guardar página"
             variant="ghost"
             disabled={!pageTitle.trim()}
             onPress={() => {
@@ -286,7 +286,7 @@ export default function LifeAreaScreen() {
             placeholder="palavra-chave"
           />
           <Button
-            label="Buscar no diario"
+            label="Buscar no diário"
             variant="ghost"
             disabled={!diaryQuery.trim()}
             onPress={() => {
@@ -312,7 +312,7 @@ export default function LifeAreaScreen() {
         <View key={entry.id} style={styles.card}>
           <Text style={styles.item}>{entry.title}</Text>
           {entry.numberValue !== null && entry.numberValue !== undefined ? (
-            <Text style={styles.lead}>Numero: {entry.numberValue}</Text>
+            <Text style={styles.lead}>Número: {entry.numberValue}</Text>
           ) : null}
           {entry.occurredOn ? <Text style={styles.lead}>{entry.occurredOn}</Text> : null}
           {entry.location ? <Text style={styles.lead}>{entry.location}</Text> : null}

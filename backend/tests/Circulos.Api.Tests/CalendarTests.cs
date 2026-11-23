@@ -23,14 +23,14 @@ public sealed class CalendarTests : IClassFixture<ApiFactory>
         var start = new DateTime(2026, 11, 1, 8, 0, 0, DateTimeKind.Utc);
         (await client.PostAsJsonAsync("/api/reminders", new
         {
-            title = "Tomei o remedio",
+            title = "Tomei o remédio",
             startAt = start,
             recurrence = new { frequency = "daily", interval = 1 },
         })).EnsureSuccessStatusCode();
 
         var month = await client.GetFromJsonAsync<JsonElement>("/api/calendar?from=2026-11-01&to=2026-11-07", Json);
         Assert.True(month.GetProperty("events").GetArrayLength() >= 7);
-        Assert.Contains(month.GetProperty("events").EnumerateArray(), x => x.GetProperty("title").GetString() == "Tomei o remedio");
+        Assert.Contains(month.GetProperty("events").EnumerateArray(), x => x.GetProperty("title").GetString() == "Tomei o remédio");
         var feedUrl = month.GetProperty("feedUrl").GetString();
         Assert.StartsWith("/api/calendar/feed/", feedUrl);
 
@@ -39,7 +39,7 @@ public sealed class CalendarTests : IClassFixture<ApiFactory>
         Assert.Equal("text/calendar; charset=utf-8", ics.Content.Headers.ContentType?.ToString());
         var body = await ics.Content.ReadAsStringAsync();
         Assert.Contains("BEGIN:VCALENDAR", body);
-        Assert.Contains("Tomei o remedio", body);
+        Assert.Contains("Tomei o remédio", body);
 
         var token = feedUrl!["/api/calendar/feed/".Length..];
         var anonymous = _factory.CreateClient();
@@ -96,10 +96,10 @@ public sealed class IcsCalendarTests
     {
         var ics = IcsCalendar.Build("Lembretes",
         [
-            new IcsEvent("uid-1", new DateTime(2026, 11, 22, 12, 0, 0, DateTimeKind.Utc), new DateTime(2026, 11, 23, 8, 0, 0, DateTimeKind.Utc), "Cafe; da manha", "Linha\n2"),
+            new IcsEvent("uid-1", new DateTime(2026, 11, 22, 12, 0, 0, DateTimeKind.Utc), new DateTime(2026, 11, 23, 8, 0, 0, DateTimeKind.Utc), "Cafe; da manhã", "Linha\n2"),
         ]);
         Assert.Contains("BEGIN:VCALENDAR", ics);
-        Assert.Contains("SUMMARY:Cafe\\; da manha", ics);
+        Assert.Contains("SUMMARY:Cafe\\; da manhã", ics);
         Assert.Contains("DESCRIPTION:Linha\\n2", ics);
         Assert.Contains("\r\n", ics);
     }

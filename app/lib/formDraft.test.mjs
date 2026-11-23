@@ -26,10 +26,10 @@ describe('hydrateIfPristine', () => {
   });
 
   it('keeps typed tags when only the save function identity changes', () => {
-    const typed = { title: 'Corrida', tags: 'treino, manha' };
+    const typed = { title: 'Corrida', tags: 'treino, manhã' };
     const incoming = { title: '', tags: '' };
     const afterRerender = hydrateIfPristine(true, typed, incoming);
-    assert.equal(afterRerender.tags, 'treino, manha');
+    assert.equal(afterRerender.tags, 'treino, manhã');
     assert.equal(afterRerender.title, 'Corrida');
   });
 

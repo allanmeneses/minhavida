@@ -25,7 +25,7 @@ export function TourGuide({ onSkip, onFinish }: Props) {
         {index + 1} de {TOUR_SCREENS.length}
       </Text>
       <Button
-        label={isLast(index) ? 'Concluir tour' : 'Avancar'}
+        label={isLast(index) ? 'Concluir tour' : 'Avançar'}
         onPress={() => {
           if (isLast(index)) {
             onFinish();

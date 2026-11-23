@@ -45,7 +45,7 @@ public sealed class TemplatesController(AppDbContext db, TimeProvider clock) : C
                 .FirstOrDefaultAsync(x => x.Id == listId && x.OwnerUserId == userId, cancellationToken);
             if (list is null)
             {
-                return NotFound(new ErrorResponse("Lista nao encontrada."));
+                return NotFound(new ErrorResponse("Lista não encontrada."));
             }
 
             payload = TemplateCatalog.ListPayload(
@@ -64,7 +64,7 @@ public sealed class TemplatesController(AppDbContext db, TimeProvider clock) : C
                 cancellationToken);
             if (reminder is null)
             {
-                return NotFound(new ErrorResponse("Lembrete nao encontrado."));
+                return NotFound(new ErrorResponse("Lembrete não encontrado."));
             }
 
             payload = TemplateCatalog.ReminderPayload(
@@ -98,7 +98,7 @@ public sealed class TemplatesController(AppDbContext db, TimeProvider clock) : C
         var template = await db.RoutineTemplates.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (template is null)
         {
-            return NotFound(new ErrorResponse("Modelo nao encontrado."));
+            return NotFound(new ErrorResponse("Modelo não encontrado."));
         }
 
         await db.RoutineTemplates

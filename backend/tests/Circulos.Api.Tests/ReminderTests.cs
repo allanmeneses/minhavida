@@ -23,7 +23,7 @@ public sealed class ReminderTests : IClassFixture<ApiFactory>
         var start = DateTime.UtcNow.Date.AddDays(10).AddHours(12);
         var response = await client.PostAsJsonAsync("/api/reminders", new
         {
-            title = "Aniversario da Maria",
+            title = "Aniversário da Maria",
             kind = "birthday",
             startAt = start,
             personName = "Maria",
@@ -47,7 +47,7 @@ public sealed class ReminderTests : IClassFixture<ApiFactory>
         var start = DateTime.UtcNow.Date.AddDays(1).AddHours(9);
         var created = await client.PostAsJsonAsync("/api/reminders", new
         {
-            title = "Remedio",
+            title = "Remédio",
             startAt = start,
             recurrence = new { frequency = "daily", interval = 1 },
         });
@@ -71,7 +71,7 @@ public sealed class ReminderTests : IClassFixture<ApiFactory>
         var client = _factory.CreateClient();
         var auth = await AuthHelper.RegisterAsync(client);
         client.WithToken(auth.Token);
-        var createdCircle = await client.PostAsJsonAsync("/api/circles", new { name = "Remedio da casa" });
+        var createdCircle = await client.PostAsJsonAsync("/api/circles", new { name = "Remédio da casa" });
         var circle = await createdCircle.Content.ReadFromJsonAsync<CircleIdDto>(Json);
         var start = DateTime.UtcNow.Date.AddHours(9);
         var createdReminder = await client.PostAsJsonAsync("/api/reminders", new
@@ -117,7 +117,7 @@ public sealed class ReminderTests : IClassFixture<ApiFactory>
         var start = DateTime.UtcNow.Date.AddDays(1).AddHours(9);
         var created = await client.PostAsJsonAsync("/api/reminders", new
         {
-            title = "Remedio",
+            title = "Remédio",
             startAt = start,
             recurrence = new { frequency = "daily", interval = 1 },
         });

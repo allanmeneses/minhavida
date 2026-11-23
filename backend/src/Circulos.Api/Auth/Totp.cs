@@ -54,7 +54,7 @@ public static class Totp
     }
 
     public static string OtpauthUri(string email, string secret) =>
-        $"otpauth://totp/Circulos:{Uri.EscapeDataString(email)}?secret={secret}&issuer=Circulos&digits={Digits}&period={StepSeconds}";
+        $"otpauth://totp/Círculos:{Uri.EscapeDataString(email)}?secret={secret}&issuer=Círculos&digits={Digits}&period={StepSeconds}";
 
     public static string NormalizeCode(string code) =>
         new string(code.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();

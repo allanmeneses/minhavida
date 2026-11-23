@@ -8,13 +8,13 @@ public sealed class OnboardingService(AppDbContext db, TimeProvider clock)
 {
     public void Seed(User user, DateTime now)
     {
-        var eu = CreateCircle(user, "Eu", "Seu espaco pessoal, so voce.", now);
-        var familia = CreateCircle(user, "Familia", "Combine a rotina de quem mora junto.", now);
+        var eu = CreateCircle(user, "Eu", "Seu espaco pessoal, só você.", now);
+        var familia = CreateCircle(user, "Família", "Combine a rotina de quem mora junto.", now);
         db.Circles.Add(eu);
         db.Circles.Add(familia);
         db.OnboardingExamples.Add(Example(user.Id, eu.Id, "diary", "Como foi o meu dia", "Escreva em uma frase o que marcou hoje.", now));
-        db.OnboardingExamples.Add(Example(user.Id, eu.Id, "memory", "Uma data que importa", "Guarde uma memoria antiga, mesmo que curta.", now));
-        db.OnboardingExamples.Add(Example(user.Id, familia.Id, "post", "O que a familia combinou", "Um recado simples para quem esta neste circulo.", now));
+        db.OnboardingExamples.Add(Example(user.Id, eu.Id, "memory", "Uma data que importa", "Guarde uma memória antiga, mesmo que curta.", now));
+        db.OnboardingExamples.Add(Example(user.Id, familia.Id, "post", "O que a família combinou", "Um recado simples para quem está neste círculo.", now));
     }
 
     public async Task<OnboardingSnapshot> SnapshotAsync(Guid userId, CancellationToken cancellationToken)
@@ -41,7 +41,7 @@ public sealed class OnboardingService(AppDbContext db, TimeProvider clock)
             cancellationToken);
         if (example is null)
         {
-            return "Exemplo nao encontrado.";
+            return "Exemplo não encontrado.";
         }
 
         if (example.ConfirmedAt is not null || example.DiscardedAt is not null)
@@ -153,7 +153,7 @@ public sealed class OnboardingService(AppDbContext db, TimeProvider clock)
             CircleId = circle.Id,
             ActorUserId = user.Id,
             Action = "created",
-            Detail = "Circulo inicial criado no cadastro.",
+            Detail = "Círculo inicial criado no cadastro.",
             CreatedAt = now,
         });
         return circle;

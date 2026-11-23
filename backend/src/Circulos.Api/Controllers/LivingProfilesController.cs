@@ -25,7 +25,7 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
             var circle = await db.Circles.Include(x => x.Members).FirstOrDefaultAsync(x => x.Id == cid, cancellationToken);
             if (circle is null || CircleAccess.HiddenSurprise(circle, userId) || circle.Members.All(x => x.UserId != userId))
             {
-                return NotFound(new ErrorResponse("Circulo nao encontrado."));
+                return NotFound(new ErrorResponse("Círculo não encontrado."));
             }
 
             var shared = await db.LivingProfiles.AsNoTracking()
@@ -61,7 +61,7 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
             var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
             if (circle is null || CircleAccess.HiddenSurprise(circle, userId) || member is null)
             {
-                return NotFound(new ErrorResponse("Circulo nao encontrado."));
+                return NotFound(new ErrorResponse("Círculo não encontrado."));
             }
 
             if (!CircleAccess.IsWritable(circle))
@@ -71,7 +71,7 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
 
             if (member.Role < CircleRole.Editor)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Seu papel neste circulo nao liga um perfil."));
+                return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Seu papel neste círculo não liga um perfil."));
             }
 
             circleId = cid;
@@ -111,8 +111,8 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
         if (profile is null || !CanEdit(profile, userId))
         {
             return profile is null || !CanView(profile, userId)
-                ? NotFound(new ErrorResponse("Perfil nao encontrado."))
-                : StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Quem so visualiza nao edita este perfil."));
+                ? NotFound(new ErrorResponse("Perfil não encontrado."))
+                : StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Quem só visualiza não edita este perfil."));
         }
 
         if (request.CircleId is Guid cid)
@@ -120,7 +120,7 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
             var circle = await db.Circles.Include(x => x.Members).FirstOrDefaultAsync(x => x.Id == cid, cancellationToken);
             if (circle is null || circle.Members.All(x => x.UserId != userId))
             {
-                return BadRequest(new ErrorResponse("Voce precisa participar do circulo."));
+                return BadRequest(new ErrorResponse("Você precisa participar do círculo."));
             }
 
             profile.CircleId = cid;
@@ -149,12 +149,12 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
         var profile = await LoadAsync(id, cancellationToken);
         if (profile is null || profile.OwnerUserId != userId)
         {
-            return NotFound(new ErrorResponse("Perfil nao encontrado."));
+            return NotFound(new ErrorResponse("Perfil não encontrado."));
         }
 
         if (request.UserId == userId)
         {
-            return BadRequest(new ErrorResponse("O dono ja edita."));
+            return BadRequest(new ErrorResponse("O dono já edita."));
         }
 
         var grant = await db.LivingProfileGrants.FirstOrDefaultAsync(
@@ -188,7 +188,7 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
         var profile = await LoadAsync(id, cancellationToken);
         if (profile is null || profile.OwnerUserId != userId)
         {
-            return NotFound(new ErrorResponse("Perfil nao encontrado."));
+            return NotFound(new ErrorResponse("Perfil não encontrado."));
         }
 
         if (profile.PhotoStorageKey is not null)
@@ -214,8 +214,8 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
         if (profile is null || !CanEdit(profile, userId))
         {
             return profile is null || !CanView(profile, userId)
-                ? NotFound(new ErrorResponse("Perfil nao encontrado."))
-                : StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Quem so visualiza nao edita este perfil."));
+                ? NotFound(new ErrorResponse("Perfil não encontrado."))
+                : StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Quem só visualiza não edita este perfil."));
         }
 
         if (file is null || file.Length == 0)

@@ -14,10 +14,14 @@ const FILTERS = ['', 'entry', 'circle', 'birthday', 'diary'] as const;
 const SEARCH_TYPE_LABEL: Record<string, string> = {
   '': 'tudo',
   entry: 'entrada',
-  circle: 'circulo',
-  birthday: 'aniversario',
-  diary: 'diario',
-  memory: 'memoria',
+  circle: 'círculo',
+  birthday: 'aniversário',
+  diary: 'diário',
+  memory: 'memória',
+  person: 'pessoa',
+  pet: 'pet',
+  group: 'grupo',
+  user: 'pessoa',
 };
 
 function searchTypeLabel(type: string): string {
@@ -67,19 +71,24 @@ export default function SearchScreen() {
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Busca</Text>
-      <Text style={styles.lead}>Entradas, circulos, aniversarios e o diario, juntos. Filtro opcional por tipo.</Text>
+      <Text style={styles.lead}>Entradas, círculos, aniversários e o diário, juntos. Filtro opcional por tipo.</Text>
       <Feedback message={error} />
-      <TextField label="Buscar" value={query} onChangeText={setQuery} placeholder="medicacao" />
+      <TextField label="Buscar" value={query} onChangeText={setQuery} placeholder="medicação" />
       <Button
         label={`Filtro: ${searchTypeLabel(filter)}`}
         variant="ghost"
         onPress={() => setFilter(FILTERS[(FILTERS.indexOf(filter) + 1) % FILTERS.length])}
       />
-      <Button label="Buscar agora" onPress={() => void run()} disabled={!query.trim()} />
+      <Button
+        label="Buscar agora"
+        onPress={() => void run()}
+        disabled={!query.trim()}
+        disabledHint="Digite um termo para buscar."
+      />
       <Text style={styles.section}>Por perto</Text>
       <Text style={styles.lead}>
-        So circulos que marcaram aceitar localizacao. A posicao da busca vale so nesta hora, sem gravar latitude nem
-        longitude da pessoa. Distancia arredondada, sem coordenada exata.
+        Só círculos que marcaram aceitar localização. A posição da busca vale só nesta hora, sem gravar latitude nem
+        longitude da pessoa. Distância arredondada, sem coordenada exata.
       </Text>
       <TextField label="Latitude" value={lat} onChangeText={setLat} />
       <TextField label="Longitude" value={lng} onChangeText={setLng} />
@@ -98,7 +107,7 @@ export default function SearchScreen() {
             .catch((err) => setError(err instanceof ApiError ? err.message : 'Falha na busca por perto.'));
         }}
       />
-      {nearby.length === 0 ? <Text style={styles.lead}>Ninguem por perto com permissao.</Text> : null}
+      {nearby.length === 0 ? <Text style={styles.lead}>Ninguém por perto com permissão.</Text> : null}
       {nearby.map((hit) => (
         <Text key={`${hit.kind}-${hit.id}`} style={styles.item}>
           {hit.name} · {searchTypeLabel(hit.kind)} · {hit.distanceKm} km
@@ -132,7 +141,7 @@ export default function SearchScreen() {
           <Text style={styles.item}>{hit.title}</Text>
           <Text style={styles.lead}>{searchTypeLabel(hit.type)}</Text>
           {hit.type === 'circle' ? (
-            <Button label="Abrir circulo" variant="ghost" onPress={() => router.push(`/(app)/circle/${hit.id}`)} />
+            <Button label="Abrir círculo" variant="ghost" onPress={() => router.push(`/(app)/circle/${hit.id}`)} />
           ) : null}
         </View>
       ))}

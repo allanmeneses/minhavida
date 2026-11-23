@@ -58,7 +58,7 @@ public sealed class MemoryTests : IClassFixture<ApiFactory>
         var visitante = _factory.CreateClient();
         visitante.WithToken((await AuthHelper.RegisterAsync(visitante, name: "Visitante")).Token);
 
-        var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Familia album" })).Content.ReadFromJsonAsync<CircleDto>(Json);
+        var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Família album" })).Content.ReadFromJsonAsync<CircleDto>(Json);
         var inviteEditor = await (await dono.PostAsJsonAsync($"/api/circles/{circle!.Id}/invites", new { email = editorAuth.Email, role = "editor" })).Content.ReadFromJsonAsync<InviteDto>(Json);
         (await editor.PostAsJsonAsync($"/api/circles/invites/{inviteEditor!.Token}/accept", new { })).EnsureSuccessStatusCode();
         var inviteViewer = await (await dono.PostAsJsonAsync($"/api/circles/{circle.Id}/invites", new { email = viewerAuth.Email, role = "viewer" })).Content.ReadFromJsonAsync<InviteDto>(Json);
@@ -66,7 +66,7 @@ public sealed class MemoryTests : IClassFixture<ApiFactory>
 
         var created = await editor.PostAsJsonAsync("/api/memories", new { title = "Almoco", body = "Mesa posta", circleId = circle.Id });
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsJsonAsync("/api/memories", new { title = "Nao", circleId = circle.Id })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsJsonAsync("/api/memories", new { title = "Não", circleId = circle.Id })).StatusCode);
 
         var forViewer = await viewer.GetFromJsonAsync<List<MemoryDto>>($"/api/memories?circleId={circle.Id}", Json);
         Assert.Contains(forViewer!, x => x.Title == "Almoco");

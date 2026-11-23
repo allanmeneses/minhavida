@@ -32,8 +32,8 @@ public sealed class QuotaService(AppDbContext db, TimeProvider clock)
 
         var exists = await db.Users.AnyAsync(user => user.Id == userId, cancellationToken);
         return exists
-            ? "Voce atingiu o limite de armazenamento do plano."
-            : "Conta nao encontrada.";
+            ? "Você atingiu o limite de armazenamento do plano."
+            : "Conta não encontrada.";
     }
 
     public async Task ReleaseStorageAsync(Guid userId, long bytes, CancellationToken cancellationToken)
@@ -72,8 +72,8 @@ public sealed class QuotaService(AppDbContext db, TimeProvider clock)
 
         var exists = await db.Users.AnyAsync(user => user.Id == userId, cancellationToken);
         return exists
-            ? "O plano gratuito inclui ate 3 circulos."
-            : "Conta nao encontrada.";
+            ? "O plano gratuito inclui até 3 círculos."
+            : "Conta não encontrada.";
     }
 
     public Task ReleaseCircleAsync(Guid userId, CancellationToken cancellationToken) =>

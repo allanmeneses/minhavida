@@ -5,7 +5,7 @@ import { LoadingScreen } from '@/components/LoadingScreen';
 export default function Index() {
   const { loading, user } = useAuth();
   if (loading) {
-    return <LoadingScreen label="Abrindo o Circulos..." />;
+    return <LoadingScreen label="Abrindo o Círculos..." />;
   }
   return <Redirect href={user ? '/(app)/home' : '/(auth)/login'} />;
 }

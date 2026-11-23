@@ -101,7 +101,7 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
         dono.WithToken(donoAuth.Token);
         var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Curso", kind = "temporary" }))
             .Content.ReadFromJsonAsync<CircleDto>(Json);
-        (await dono.PostAsJsonAsync($"/api/circles/{circle!.Id}/posts", new { body = "Minha historia" })).EnsureSuccessStatusCode();
+        (await dono.PostAsJsonAsync($"/api/circles/{circle!.Id}/posts", new { body = "Minha história" })).EnsureSuccessStatusCode();
         var a = _factory.CreateClient();
         a.WithToken(donoAuth.Token);
         var b = _factory.CreateClient();
@@ -126,7 +126,7 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
         var client = _factory.CreateClient();
         client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
         var mine = await client.GetFromJsonAsync<List<CircleDto>>("/api/circles", Json);
-        var lasting = mine!.Single(x => x.Name == "Familia");
+        var lasting = mine!.Single(x => x.Name == "Família");
         var denied = await client.PostAsync($"/api/circles/{lasting!.Id}/archive", null);
         Assert.Equal(HttpStatusCode.BadRequest, denied.StatusCode);
 
@@ -149,7 +149,7 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
         var dono = _factory.CreateClient();
         var donoAuth = await AuthHelper.RegisterAsync(dono);
         dono.WithToken(donoAuth.Token);
-        var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Diario", kind = "daily" }))
+        var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Diário", kind = "daily" }))
             .Content.ReadFromJsonAsync<CircleDto>(Json);
         var a = _factory.CreateClient();
         a.WithToken(donoAuth.Token);

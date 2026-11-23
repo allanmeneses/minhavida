@@ -34,7 +34,7 @@ export default function ListDetailScreen() {
   }, [token, listId]);
 
   useEffect(() => {
-    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Lista nao encontrada.'));
+    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Lista não encontrada.'));
     const timer = setInterval(() => {
       void load().catch(() => undefined);
     }, 5000);
@@ -62,7 +62,7 @@ export default function ListDetailScreen() {
                   isDone: false,
                   sortOrder: current.items.length,
                   addedByUserId: null,
-                  addedByName: 'voce',
+                  addedByName: 'você',
                   doneByUserId: null,
                   doneByName: null,
                 },
@@ -106,7 +106,7 @@ export default function ListDetailScreen() {
               ...current,
               items: current.items.map((entry) =>
                 entry.id === item.id
-                  ? { ...entry, isDone: !entry.isDone, doneByName: entry.isDone ? null : 'voce' }
+                  ? { ...entry, isDone: !entry.isDone, doneByName: entry.isDone ? null : 'você' }
                   : entry,
               ),
             }
@@ -217,7 +217,7 @@ export default function ListDetailScreen() {
       )}
       {detail?.canChangeAccess ? (
         <Button
-          label={`Permissao dos membros: ${accessLabel}`}
+          label={`Permissão dos membros: ${accessLabel}`}
           variant="ghost"
           disabled={accessBusy}
           onPress={() => void cycleAccess()}
@@ -227,7 +227,7 @@ export default function ListDetailScreen() {
         ? detail.members.map((member) => (
             <Button
               key={member.userId}
-              label={`Permissao de ${member.name}: ${LIST_ACCESS_LABEL[member.access as ListAccess] ?? member.access}`}
+              label={`Permissão de ${member.name}: ${LIST_ACCESS_LABEL[member.access as ListAccess] ?? member.access}`}
               variant="ghost"
               disabled={accessBusy}
               onPress={() => void cycleGrant(member.userId, member.access)}
@@ -238,11 +238,11 @@ export default function ListDetailScreen() {
         <>
           <TextField label="Item" value={text} onChangeText={setText} placeholder="Arroz" />
           <TextField label="Quantidade" value={quantity} onChangeText={setQuantity} placeholder="2 kg" />
-          <TextField label="Observacao" value={note} onChangeText={setNote} placeholder="tipo 1" />
+          <TextField label="Observação" value={note} onChangeText={setNote} placeholder="tipo 1" />
           <Button label="Adicionar item" onPress={() => void add()} disabled={!text.trim()} />
         </>
       ) : (
-        <Text style={styles.lead}>Voce so ve esta lista.</Text>
+        <Text style={styles.lead}>Você só vê esta lista.</Text>
       )}
       {detail?.items.map((item) => (
         <View key={item.id} style={styles.card}>
@@ -251,7 +251,7 @@ export default function ListDetailScreen() {
           {item.note ? <Text style={styles.lead}>{item.note}</Text> : null}
           <Text style={styles.lead}>
             {item.addedByName ? `adicionou ${item.addedByName}` : 'adicionado'}
-            {item.isDone ? ` · feito por ${item.doneByName ?? 'alguem'}` : ''}
+            {item.isDone ? ` · feito por ${item.doneByName ?? 'alguém'}` : ''}
           </Text>
           {detail.canComplete ? (
             <Button

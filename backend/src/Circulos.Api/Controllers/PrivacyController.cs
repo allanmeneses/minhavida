@@ -23,19 +23,19 @@ public sealed class PrivacyController(AppDbContext db) : ControllerBase
             .ToListAsync(cancellationToken);
         var items = new List<PrivacyItemResponse>
         {
-            new("Diario, documentos e vacinas", "So voce. Ninguem do circulo ve isso sozinho."),
+            new("Diário, documentos e vacinas", "Só você. Ninguém do círculo vê isso sozinho."),
             new(
                 "Perfil",
                 profile.IsPublic
-                    ? "Quem tiver o link ve nome, foto e descricao. Diario, telefone e e-mail ficam de fora."
-                    : "Privado. Ninguem de fora ve seu nome, foto ou descricao."),
+                    ? "Quem tiver o link vê nome, foto e descrição. Diário, telefone e e-mail ficam de fora."
+                    : "Privado. Ninguém de fora vê seu nome, foto ou descrição."),
         };
         foreach (var circle in circles.Where(item => item.Status != CircleStatus.Deleted))
         {
             var who = circle.Visibility == CircleVisibility.Public
-                ? "Quem nao entrou ve so o nome e a descricao do circulo. Quem entrou ve recados e o log."
-                : "So quem esta neste circulo ve o que acontece la.";
-            items.Add(new PrivacyItemResponse($"Circulo {circle.Name}", who));
+                ? "Quem não entrou vê só o nome e a descrição do círculo. Quem entrou vê recados e o log."
+                : "Só quem está neste círculo vê o que acontece lá.";
+            items.Add(new PrivacyItemResponse($"Círculo {circle.Name}", who));
         }
 
         return Ok(new PrivacyOverviewResponse(items));

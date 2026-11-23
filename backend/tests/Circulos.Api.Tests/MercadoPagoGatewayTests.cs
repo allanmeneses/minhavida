@@ -49,7 +49,7 @@ public sealed class MercadoPagoGatewayTests
             "abc",
             "pessoa@exemplo.com",
             29.90m,
-            "Circulos pago mensal",
+            "Círculos pago mensal",
             "https://circulos.example/pricing",
             "https://circulos.example/webhooks/mercadopago?source_news=webhooks",
             "card-token",
@@ -98,7 +98,7 @@ public sealed class MercadoPagoGatewayTests
         var created = await gateway.CreatePixPaymentAsync(new PixPaymentRequest(
             "abc",
             29.90m,
-            "Circulos pago mensal",
+            "Círculos pago mensal",
             "Pessoa E2E",
             "pessoa@exemplo.com",
             DateTime.UtcNow.AddHours(2),
@@ -135,7 +135,7 @@ public sealed class MercadoPagoGatewayTests
             Options.Create(new MercadoPagoOptions
             {
                 BaseUrl = "https://api.mercadopago.com",
-                AccessToken = "TEST-nao-e-credencial-real",
+                AccessToken = "TEST-não-e-credencial-real",
                 WebhookSecret = "test-secret",
             }));
     }

@@ -24,7 +24,7 @@ export default function PublicRecapScreen() {
       .then(setRecap)
       .catch((err) => {
         setRecap(null);
-        setError(err instanceof ApiError ? err.message : 'Recap nao encontrado.');
+        setError(err instanceof ApiError ? err.message : 'Recap não encontrado.');
       });
   }, [shareToken]);
 
@@ -32,9 +32,9 @@ export default function PublicRecapScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <Text style={styles.kicker}>Circulos</Text>
-      <Text style={styles.title}>Historia compartilhada</Text>
-      <Text style={styles.lead}>Esta pagina mostra so a narrativa de quem compartilhou, nao os dados dos outros.</Text>
+      <Text style={styles.kicker}>Círculos</Text>
+      <Text style={styles.title}>História compartilhada</Text>
+      <Text style={styles.lead}>Esta página mostra só a narrativa de quem compartilhou, não os dados dos outros.</Text>
       {error ? <Text style={styles.lead}>{error}</Text> : null}
       {recap ? (
         <>
@@ -54,7 +54,7 @@ export default function PublicRecapScreen() {
           ))}
         </>
       ) : null}
-      <Button label="Entrar no Circulos" variant="ghost" onPress={() => router.push('/(auth)/login')} />
+      <Button label="Entrar no Círculos" variant="ghost" onPress={() => router.push('/(auth)/login')} />
     </ScrollView>
   );
 }

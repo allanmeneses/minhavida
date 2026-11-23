@@ -10,7 +10,7 @@ public static class IcsCalendar
         var text = new StringBuilder();
         text.AppendLine("BEGIN:VCALENDAR");
         text.AppendLine("VERSION:2.0");
-        text.AppendLine("PRODID:-//Circulos//Lembretes//PT");
+        text.AppendLine("PRODID:-//Círculos//Lembretes//PT");
         text.AppendLine("CALSCALE:GREGORIAN");
         text.AppendLine("METHOD:PUBLISH");
         Fold(text, "X-WR-CALNAME:" + Escape(calendarName));

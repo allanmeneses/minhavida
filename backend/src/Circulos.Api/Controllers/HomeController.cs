@@ -149,8 +149,8 @@ public sealed class HomeController(
         if (count >= limit)
         {
             return BadRequest(new ErrorResponse(paid
-                ? "O plano pago inclui ate 20 atalhos."
-                : "O plano gratuito inclui ate 5 atalhos."));
+                ? "O plano pago inclui até 20 atalhos."
+                : "O plano gratuito inclui até 5 atalhos."));
         }
 
         Guid? reminderId = null;
@@ -161,7 +161,7 @@ public sealed class HomeController(
                 cancellationToken);
             if (!exists)
             {
-                return BadRequest(new ErrorResponse("Lembrete nao encontrado."));
+                return BadRequest(new ErrorResponse("Lembrete não encontrado."));
             }
 
             reminderId = linkedReminder;
@@ -195,7 +195,7 @@ public sealed class HomeController(
             cancellationToken);
         if (shortcut is null)
         {
-            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+            return NotFound(new ErrorResponse("Atalho não encontrado."));
         }
 
         var sharedCircleIds = await (
@@ -205,7 +205,7 @@ public sealed class HomeController(
             select share.CircleId).Distinct().ToListAsync(cancellationToken);
         if (shortcut.UserId != userId && sharedCircleIds.Count == 0)
         {
-            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+            return NotFound(new ErrorResponse("Atalho não encontrado."));
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -215,7 +215,7 @@ public sealed class HomeController(
             cancellationToken);
         if (shortcut is null)
         {
-            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+            return NotFound(new ErrorResponse("Atalho não encontrado."));
         }
 
         var owner = await db.Users.FirstAsync(x => x.Id == shortcut.UserId, cancellationToken);
@@ -313,12 +313,12 @@ public sealed class HomeController(
         var shortcut = await db.Shortcuts.FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
         if (shortcut is null)
         {
-            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+            return NotFound(new ErrorResponse("Atalho não encontrado."));
         }
 
         if (shortcut.UserId != userId)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("So quem criou o atalho pode editar."));
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Só quem criou o atalho pode editar."));
         }
 
         var kind = string.IsNullOrWhiteSpace(request.ActionKind)
@@ -332,7 +332,7 @@ public sealed class HomeController(
             var exists = await db.Reminders.AnyAsync(x => x.Id == linkedReminder && x.UserId == userId, cancellationToken);
             if (!exists)
             {
-                return BadRequest(new ErrorResponse("Lembrete nao encontrado."));
+                return BadRequest(new ErrorResponse("Lembrete não encontrado."));
             }
 
             reminderId = linkedReminder;
@@ -414,7 +414,7 @@ public sealed class HomeController(
             cancellationToken);
         if (shortcut is null)
         {
-            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+            return NotFound(new ErrorResponse("Atalho não encontrado."));
         }
 
         var member = await db.CircleMembers.AnyAsync(
@@ -422,7 +422,7 @@ public sealed class HomeController(
             cancellationToken);
         if (!member)
         {
-            return BadRequest(new ErrorResponse("Voce precisa participar do circulo."));
+            return BadRequest(new ErrorResponse("Você precisa participar do círculo."));
         }
 
         var already = await db.ShortcutShares.AnyAsync(
@@ -450,7 +450,7 @@ public sealed class HomeController(
         var shortcut = await db.Shortcuts.FirstOrDefaultAsync(x => x.Id == id && x.UserId == User.GetUserId() && !x.IsDeleted, cancellationToken);
         if (shortcut is null)
         {
-            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+            return NotFound(new ErrorResponse("Atalho não encontrado."));
         }
 
         shortcut.IsActive = false;
@@ -464,7 +464,7 @@ public sealed class HomeController(
         var shortcut = await db.Shortcuts.FirstOrDefaultAsync(x => x.Id == id && x.UserId == User.GetUserId() && !x.IsDeleted, cancellationToken);
         if (shortcut is null)
         {
-            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+            return NotFound(new ErrorResponse("Atalho não encontrado."));
         }
 
         shortcut.IsActive = true;
@@ -478,7 +478,7 @@ public sealed class HomeController(
         var shortcut = await db.Shortcuts.FirstOrDefaultAsync(x => x.Id == id && x.UserId == User.GetUserId() && !x.IsDeleted, cancellationToken);
         if (shortcut is null)
         {
-            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+            return NotFound(new ErrorResponse("Atalho não encontrado."));
         }
 
         shortcut.IsDeleted = true;
@@ -497,7 +497,7 @@ public sealed class HomeController(
         var shortcut = await db.Shortcuts.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId && x.IsDeleted, cancellationToken);
         if (shortcut is null)
         {
-            return NotFound(new ErrorResponse("Atalho nao encontrado."));
+            return NotFound(new ErrorResponse("Atalho não encontrado."));
         }
 
         var user = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
@@ -506,7 +506,7 @@ public sealed class HomeController(
         var count = await db.Shortcuts.CountAsync(x => x.UserId == userId && !x.IsDeleted, cancellationToken);
         if (count >= limit)
         {
-            return BadRequest(new ErrorResponse("Nao ha vaga no teto de atalhos deste plano."));
+            return BadRequest(new ErrorResponse("Não há vaga no teto de atalhos deste plano."));
         }
 
         shortcut.IsDeleted = false;

@@ -79,7 +79,7 @@ public sealed class Rodada10Tests : IClassFixture<ApiFactory>
 
         var lasting = await dono.PostAsJsonAsync("/api/circles", new
         {
-            name = "Familia",
+            name = "Família",
             kind = "lasting",
             endsAt,
         });
@@ -107,7 +107,7 @@ public sealed class Rodada10Tests : IClassFixture<ApiFactory>
         client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
         var invalid = await client.PostAsJsonAsync("/api/circles", new
         {
-            name = "Invalido",
+            name = "Inválido",
             kind = "lasting",
             endsAt = DateTime.UtcNow,
         });
@@ -125,14 +125,14 @@ public sealed class Rodada10Tests : IClassFixture<ApiFactory>
         client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
         var circle = await (await client.PostAsJsonAsync("/api/circles", new { name = "Evento", kind = "temporary" }))
             .Content.ReadFromJsonAsync<JsonElement>(Json);
-        (await client.PostAsJsonAsync($"/api/circles/{circle.GetProperty("id").GetGuid()}/posts", new { body = "Minha historia" }))
+        (await client.PostAsJsonAsync($"/api/circles/{circle.GetProperty("id").GetGuid()}/posts", new { body = "Minha história" }))
             .EnsureSuccessStatusCode();
         (await client.PostAsync($"/api/circles/{circle.GetProperty("id").GetGuid()}/archive", null)).EnsureSuccessStatusCode();
         var recap = await client.GetAsync($"/api/circles/{circle.GetProperty("id").GetGuid()}/recap");
         Assert.Equal(HttpStatusCode.OK, recap.StatusCode);
         using var doc = JsonDocument.Parse(await recap.Content.ReadAsStringAsync());
         Assert.Equal("archived", doc.RootElement.GetProperty("status").GetString());
-        Assert.Contains(doc.RootElement.GetProperty("myTitles").EnumerateArray(), x => x.GetString() == "Minha historia");
+        Assert.Contains(doc.RootElement.GetProperty("myTitles").EnumerateArray(), x => x.GetString() == "Minha história");
         var share = await client.PostAsync($"/api/circles/{circle.GetProperty("id").GetGuid()}/recap/share", null);
         Assert.Equal(HttpStatusCode.OK, share.StatusCode);
     }

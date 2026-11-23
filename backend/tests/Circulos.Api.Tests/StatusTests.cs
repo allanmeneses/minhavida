@@ -31,7 +31,7 @@ public sealed class StatusTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
         Assert.Contains("text/html", page.Content.Headers.ContentType?.ToString());
         var html = await page.Content.ReadAsStringAsync();
-        Assert.Contains("Status do Circulos", html);
+        Assert.Contains("Status do Círculos", html);
         Assert.Contains("Banco", html);
         Assert.Contains("OpenTelemetry", html);
     }

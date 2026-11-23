@@ -11,25 +11,25 @@ import {
 } from './offline.ts';
 
 describe('offline cache e fila', () => {
-  it('guarda leitura de perfil, lembretes, listas, painel, recap e circulos', () => {
+  it('guarda leitura de perfil, lembretes, listas, painel, recap e círculos', () => {
     let cache = emptyCache();
     cache = writeCache(cache, '/api/profile', { displayName: 'Ana' });
     cache = writeCache(cache, '/api/home', { activeCircleCount: 2 });
-    cache = writeCache(cache, '/api/reminders', [{ title: 'Remedio' }]);
+    cache = writeCache(cache, '/api/reminders', [{ title: 'Remédio' }]);
     cache = writeCache(cache, '/api/lists', [{ name: 'Feira' }]);
     cache = writeCache(cache, '/api/lists/abc', { name: 'Feira', items: [] });
     cache = writeCache(cache, '/api/recap/me', { flows: [{ key: 'vaccine', count: 1 }] });
-    cache = writeCache(cache, '/api/circles', [{ name: 'Familia' }]);
+    cache = writeCache(cache, '/api/circles', [{ name: 'Família' }]);
     assert.equal(readCache(cache, '/api/profile').displayName, 'Ana');
     assert.equal(readCache(cache, '/api/home').activeCircleCount, 2);
-    assert.equal(readCache(cache, '/api/reminders')[0].title, 'Remedio');
+    assert.equal(readCache(cache, '/api/reminders')[0].title, 'Remédio');
     assert.equal(readCache(cache, '/api/lists')[0].name, 'Feira');
     assert.equal(readCache(cache, '/api/lists/abc').name, 'Feira');
     assert.equal(readCache(cache, '/api/recap/me').flows[0].key, 'vaccine');
-    assert.equal(readCache(cache, '/api/circles')[0].name, 'Familia');
+    assert.equal(readCache(cache, '/api/circles')[0].name, 'Família');
   });
 
-  it('403 descarta a acao e avisa; a fila nao some num rerender da funcao', () => {
+  it('403 descarta a ação e avisa; a fila não some num rerender da função', () => {
     const action = {
       id: 'a1',
       type: 'add-item',
@@ -48,14 +48,14 @@ describe('offline cache e fila', () => {
     assert.equal(nextPending(queue)?.id, 'a1');
     const afterRerender = sameQueue;
     assert.equal(afterRerender.length, 2);
-    const flushed = applySyncResult(afterRerender, action, 403, 'Esta lista nao permite adicionar itens.');
-    assert.equal(flushed.warning, 'Esta lista nao permite adicionar itens.');
+    const flushed = applySyncResult(afterRerender, action, 403, 'Esta lista não permite adicionar itens.');
+    assert.equal(flushed.warning, 'Esta lista não permite adicionar itens.');
     assert.equal(flushed.queue.length, 1);
     assert.equal(flushed.queue[0].id, 'a2');
     assert.deepEqual(discard(flushed.queue, 'a2'), []);
   });
 
-  it('ultima sincronizada vence: a segunda acao permanece depois da primeira', () => {
+  it('última sincronizada vence: a segunda ação permanece depois da primeira', () => {
     const first = {
       id: '1',
       type: 'complete-item',

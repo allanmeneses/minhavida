@@ -24,7 +24,7 @@ export default function ResetScreen() {
       });
       router.replace('/(auth)/login');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel redefinir a senha.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível redefinir a senha.');
     } finally {
       setBusy(false);
     }
@@ -33,7 +33,7 @@ export default function ResetScreen() {
   return (
     <View style={[styles.page, { backgroundColor: colors.bg }]}>
       <Text style={[styles.title, { color: colors.ink }]}>Nova senha</Text>
-      <TextField label="Codigo do e-mail" value={token} onChangeText={setToken} />
+      <TextField label="Código do e-mail" value={token} onChangeText={setToken} />
       <TextField label="Nova senha" value={password} onChangeText={setPassword} secureTextEntry />
       <Feedback message={error} />
       <Button
@@ -41,6 +41,11 @@ export default function ResetScreen() {
         onPress={() => void submit()}
         loading={busy}
         disabled={!token.trim() || password.length < 8}
+        disabledHint={
+          !token.trim()
+            ? 'Cole o código recebido por e-mail.'
+            : 'A senha precisa ter pelo menos 8 caracteres.'
+        }
       />
       <Link href="/(auth)/login" style={[styles.link, { color: colors.primary }]}>
         Voltar ao login

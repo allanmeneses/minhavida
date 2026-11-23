@@ -48,7 +48,7 @@ public sealed class CalendarController(AppDbContext db, TimeProvider clock) : Co
     [HttpPost]
     [Authorize]
     public IActionResult RejectWrite() =>
-        StatusCode(StatusCodes.Status405MethodNotAllowed, new ErrorResponse("O app le o calendario do aparelho e nunca grava evento la."));
+        StatusCode(StatusCodes.Status405MethodNotAllowed, new ErrorResponse("O app lê o calendário do aparelho e nunca grava evento lá."));
 
     [HttpPut]
     [Authorize]
@@ -143,7 +143,7 @@ public sealed class CalendarController(AppDbContext db, TimeProvider clock) : Co
 
     private static string ToIcs(IReadOnlyList<CalendarEventResponse> events, DateTime stamp) =>
         IcsCalendar.Build(
-            "Lembretes do Circulos",
+            "Lembretes do Círculos",
             events.Select(item => new IcsEvent(
                 $"reminder-{item.ReminderId:N}-{IcsCalendar.Format(item.At)}@circulos",
                 stamp,

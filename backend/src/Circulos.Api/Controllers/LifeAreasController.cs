@@ -62,7 +62,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         var area = await OwnedArea(id, cancellationToken);
         if (area is null)
         {
-            return NotFound(new ErrorResponse("Area nao encontrada."));
+            return NotFound(new ErrorResponse("Área não encontrada."));
         }
 
         var items = await db.LifeEntries
@@ -94,7 +94,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         var area = await OwnedArea(id, cancellationToken);
         if (area is null)
         {
-            return NotFound(new ErrorResponse("Area nao encontrada."));
+            return NotFound(new ErrorResponse("Área não encontrada."));
         }
 
         var userId = User.GetUserId();
@@ -146,7 +146,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         var entry = await OwnedEntry(id, entryId, cancellationToken);
         if (entry is null)
         {
-            return NotFound(new ErrorResponse("Entrada nao encontrada."));
+            return NotFound(new ErrorResponse("Entrada não encontrada."));
         }
 
         var userId = User.GetUserId();
@@ -187,7 +187,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         var entry = await OwnedEntry(id, entryId, cancellationToken);
         if (entry is null)
         {
-            return NotFound(new ErrorResponse("Entrada nao encontrada."));
+            return NotFound(new ErrorResponse("Entrada não encontrada."));
         }
 
         var shareError = await ReplaceSharesAsync(entry, request.CircleIds ?? [], userId, DateTime.UtcNow, cancellationToken);
@@ -208,7 +208,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         var entry = await OwnedEntry(id, entryId, cancellationToken);
         if (entry is null)
         {
-            return NotFound(new ErrorResponse("Entrada nao encontrada."));
+            return NotFound(new ErrorResponse("Entrada não encontrada."));
         }
 
         if (entry.PhotoStorageKey is not null)
@@ -233,7 +233,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         var entry = await OwnedEntry(id, entryId, cancellationToken);
         if (entry is null)
         {
-            return NotFound(new ErrorResponse("Entrada nao encontrada."));
+            return NotFound(new ErrorResponse("Entrada não encontrada."));
         }
 
         if (file is null || file.Length == 0)
@@ -278,7 +278,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         var entry = await OwnedEntry(id, entryId, cancellationToken);
         if (entry is null || entry.PhotoStorageKey is null || entry.PhotoContentType is null)
         {
-            return NotFound(new ErrorResponse("Esta entrada ainda nao tem foto."));
+            return NotFound(new ErrorResponse("Esta entrada ainda não tem foto."));
         }
 
         var stream = await storage.OpenReadAsync(entry.PhotoStorageKey, cancellationToken);
@@ -292,7 +292,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         var area = await OwnedArea(id, cancellationToken);
         if (area is null)
         {
-            return NotFound(new ErrorResponse("Area nao encontrada."));
+            return NotFound(new ErrorResponse("Área não encontrada."));
         }
 
         var entries = await db.LifeEntries
@@ -346,7 +346,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         var area = await OwnedArea(id, cancellationToken);
         if (area is null || area.Kind != LifeAreaKind.Diary)
         {
-            return NotFound(new ErrorResponse("Diario nao encontrado."));
+            return NotFound(new ErrorResponse("Diário não encontrado."));
         }
 
         var pages = await db.DiaryPages.AsNoTracking()
@@ -366,7 +366,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         var area = await OwnedArea(id, cancellationToken);
         if (area is null || area.Kind != LifeAreaKind.Diary)
         {
-            return NotFound(new ErrorResponse("Diario nao encontrado."));
+            return NotFound(new ErrorResponse("Diário não encontrado."));
         }
 
         var term = (q ?? string.Empty).Trim();
@@ -405,7 +405,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         var area = await OwnedArea(id, cancellationToken);
         if (area is null || area.Kind != LifeAreaKind.Diary)
         {
-            return NotFound(new ErrorResponse("Diario nao encontrado."));
+            return NotFound(new ErrorResponse("Diário não encontrado."));
         }
 
         var userId = User.GetUserId();
@@ -455,7 +455,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
                 .ToListAsync(cancellationToken);
             if (allowed.Count != wanted.Length)
             {
-                return "Voce precisa participar do circulo para mostrar a entrada la.";
+                return "Você precisa participar do círculo para mostrar a entrada lá.";
             }
         }
 

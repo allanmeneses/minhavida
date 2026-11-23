@@ -88,7 +88,7 @@ public sealed class DocumentsController(AppDbContext db, IFileStorage storage, Q
                 await storage.DeleteAsync(key, cancellationToken);
             }
 
-            return BadRequest(new ErrorResponse("Conta nao encontrada."));
+            return BadRequest(new ErrorResponse("Conta não encontrada."));
         }
         catch
         {
@@ -107,7 +107,7 @@ public sealed class DocumentsController(AppDbContext db, IFileStorage storage, Q
         var document = await FindOwnedAsync(id, cancellationToken);
         if (document is null)
         {
-            return NotFound(new ErrorResponse("Documento nao encontrado."));
+            return NotFound(new ErrorResponse("Documento não encontrado."));
         }
 
         var stream = await storage.OpenReadAsync(document.StorageKey, cancellationToken);
@@ -122,7 +122,7 @@ public sealed class DocumentsController(AppDbContext db, IFileStorage storage, Q
         var document = await FindOwnedAsync(id, cancellationToken);
         if (document is null)
         {
-            return NotFound(new ErrorResponse("Documento nao encontrado."));
+            return NotFound(new ErrorResponse("Documento não encontrado."));
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);

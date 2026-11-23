@@ -38,7 +38,7 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFi
         var next = RecurrenceCalculator.NextOnOrAfter(rule, start, start, 0);
         if (next is null)
         {
-            return BadRequest(new ErrorResponse("Esta recorrencia nao gera ocorrencias."));
+            return BadRequest(new ErrorResponse("Esta recorrência não gera ocorrências."));
         }
 
         Guid? circleId = null;
@@ -52,7 +52,7 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFi
             var member = circle?.Members.FirstOrDefault(x => x.UserId == User.GetUserId());
             if (circle is null || member is null)
             {
-                return BadRequest(new ErrorResponse("Voce precisa participar do circulo."));
+                return BadRequest(new ErrorResponse("Você precisa participar do círculo."));
             }
 
             if (!CircleAccess.IsWritable(circle))
@@ -115,7 +115,7 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFi
         var reminder = await Owned(id, cancellationToken);
         if (reminder is null)
         {
-            return NotFound(new ErrorResponse("Lembrete nao encontrado."));
+            return NotFound(new ErrorResponse("Lembrete não encontrado."));
         }
 
         var rule = RecurrenceRule.Parse(reminder.RecurrenceJson);
@@ -139,7 +139,7 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFi
         var reminder = await Owned(id, cancellationToken);
         if (reminder is null)
         {
-            return NotFound(new ErrorResponse("Lembrete nao encontrado."));
+            return NotFound(new ErrorResponse("Lembrete não encontrado."));
         }
 
         reminder.CompletedCount += 1;
@@ -196,7 +196,7 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFi
         var reminder = await Owned(id, cancellationToken);
         if (reminder is null)
         {
-            return NotFound(new ErrorResponse("Lembrete nao encontrado."));
+            return NotFound(new ErrorResponse("Lembrete não encontrado."));
         }
 
         reminder.IsPaused = paused;
@@ -241,7 +241,7 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFi
         var reminder = await Owned(id, cancellationToken);
         if (reminder is null)
         {
-            return NotFound(new ErrorResponse("Lembrete nao encontrado."));
+            return NotFound(new ErrorResponse("Lembrete não encontrado."));
         }
 
         if (file is null || file.Length == 0)
@@ -285,7 +285,7 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFi
         var reminder = await Owned(id, cancellationToken);
         if (reminder is null || reminder.PhotoStorageKey is null || reminder.PhotoContentType is null)
         {
-            return NotFound(new ErrorResponse("Este lembrete ainda nao tem foto."));
+            return NotFound(new ErrorResponse("Este lembrete ainda não tem foto."));
         }
 
         var stream = await storage.OpenReadAsync(reminder.PhotoStorageKey, cancellationToken);
@@ -302,7 +302,7 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFi
         var reminder = await Owned(id, cancellationToken);
         if (reminder is null)
         {
-            return NotFound(new ErrorResponse("Lembrete nao encontrado."));
+            return NotFound(new ErrorResponse("Lembrete não encontrado."));
         }
 
         var userId = User.GetUserId();
@@ -313,7 +313,7 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFi
             cancellationToken);
         if (!member)
         {
-            return BadRequest(new ErrorResponse("Voce precisa participar do circulo."));
+            return BadRequest(new ErrorResponse("Você precisa participar do círculo."));
         }
 
         var already = await db.GiftIdeaShares.AnyAsync(

@@ -22,7 +22,7 @@ public sealed class ExportTests : IClassFixture<ApiFactory>
         client.WithToken(auth.Token);
 
         using var content = new MultipartFormDataContent();
-        var bytes = new ByteArrayContent("conteudo secreto do documento"u8.ToArray());
+        var bytes = new ByteArrayContent("conteúdo secreto do documento"u8.ToArray());
         bytes.Headers.ContentType = new MediaTypeHeaderValue("text/plain");
         content.Add(bytes, "file", "nota.txt");
         Assert.Equal(HttpStatusCode.Created, (await client.PostAsync("/api/documents", content)).StatusCode);
@@ -42,7 +42,7 @@ public sealed class ExportTests : IClassFixture<ApiFactory>
         var file = zip.Entries.First(x => x.FullName.StartsWith("files/documents/", StringComparison.Ordinal));
         using var fileStream = file.Open();
         using var reader = new StreamReader(fileStream, Encoding.UTF8);
-        Assert.Equal("conteudo secreto do documento", await reader.ReadToEndAsync());
+        Assert.Equal("conteúdo secreto do documento", await reader.ReadToEndAsync());
     }
 
     [Fact]

@@ -10,7 +10,7 @@ public sealed class MercadoPagoApiFactory : ApiFactory
         base.ConfigureWebHost(builder);
         builder.UseSetting("PAYMENTS_PROVIDER", "MercadoPago");
         builder.UseSetting("Payments:Provider", "MercadoPago");
-        builder.UseSetting("MercadoPago:AccessToken", "TEST-nao-e-credencial-real");
+        builder.UseSetting("MercadoPago:AccessToken", "TEST-não-e-credencial-real");
         builder.UseSetting("MercadoPago:WebhookSecret", "webhook-secret-teste");
     }
 }

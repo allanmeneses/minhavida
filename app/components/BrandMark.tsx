@@ -31,7 +31,7 @@ export function BrandMark({ compact = false, inverted = false }: { compact?: boo
             compact && styles.titleCompact,
             { color: inverted ? colors.white : colors.ink },
           ]}>
-          Circulos
+          Círculos
         </Text>
         {!compact ? (
           <Text style={[styles.subtitle, { color: inverted ? 'rgba(255,255,255,0.82)' : colors.muted }]}>

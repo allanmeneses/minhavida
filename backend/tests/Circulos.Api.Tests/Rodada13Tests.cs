@@ -53,7 +53,7 @@ public sealed class Rodada13Tests : IClassFixture<ApiFactory>
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.StorageUsedBytes, PlanLimits.FreeStorageBytes));
         }
 
-        using var form = TextFile("extra.txt", "nao cabe");
+        using var form = TextFile("extra.txt", "não cabe");
         var blocked = await client.PostAsync("/api/documents", form);
         Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
     }
@@ -70,7 +70,7 @@ public sealed class Rodada13Tests : IClassFixture<ApiFactory>
         Assert.Equal(PlanLimits.PaidStorageBytes, paid.GetProperty("storageLimitBytes").GetInt64());
         Assert.Equal(PlanLimits.PaidShortcutLimit, paid.GetProperty("shortcutLimit").GetInt32());
         var summary = paid.GetProperty("summary").GetString() ?? string.Empty;
-        Assert.Contains("Circulos ilimitados", summary, StringComparison.Ordinal);
+        Assert.Contains("Círculos ilimitados", summary, StringComparison.Ordinal);
         Assert.DoesNotContain("PDF", summary, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("100 membros", summary, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("prioridade", summary, StringComparison.OrdinalIgnoreCase);
@@ -107,7 +107,7 @@ public sealed class Rodada13Tests : IClassFixture<ApiFactory>
         var outroEditor = _factory.CreateClient();
         outroEditor.WithToken(editorAuth.Token);
         var first = editor.PostAsJsonAsync($"/api/circles/{circleId}/posts", new { body = "Durante a trava" });
-        var overlap = outroEditor.PostAsJsonAsync($"/api/circles/{circleId}/posts", new { body = "Tambem durante a trava" });
+        var overlap = outroEditor.PostAsJsonAsync($"/api/circles/{circleId}/posts", new { body = "Também durante a trava" });
         await Task.WhenAll(first, overlap);
         var overlapResponse = await overlap;
         var firstResponse = await first;
@@ -129,14 +129,14 @@ public sealed class Rodada13Tests : IClassFixture<ApiFactory>
 
         var reminder = await editor.PostAsJsonAsync("/api/reminders", new
         {
-            title = "Nao no travado",
+            title = "Não no travado",
             startAt = DateTime.UtcNow.AddHours(2),
             circleId,
             recurrence = new { frequency = "none", interval = 1 },
         });
         Assert.Equal(HttpStatusCode.BadRequest, reminder.StatusCode);
 
-        var memory = await editor.PostAsJsonAsync("/api/memories", new { title = "Nao no travado", circleId });
+        var memory = await editor.PostAsJsonAsync("/api/memories", new { title = "Não no travado", circleId });
         Assert.Equal(HttpStatusCode.BadRequest, memory.StatusCode);
     }
 

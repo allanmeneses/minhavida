@@ -30,7 +30,7 @@ public sealed class InspectableMemoryFileStorage : IFileStorage
         {
             if (!_files.TryGetValue(key, out var bytes))
             {
-                throw new FileNotFoundException("Arquivo nao encontrado no armazenamento.", key);
+                throw new FileNotFoundException("Arquivo não encontrado no armazenamento.", key);
             }
 
             return Task.FromResult<Stream>(new MemoryStream(bytes, writable: false));

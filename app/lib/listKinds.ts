@@ -10,7 +10,7 @@ export const LIST_KIND_LABEL: Record<ListKind, string> = {
 export const LIST_ACCESS = ['view', 'add', 'complete', 'manage'] as const;
 export type ListAccess = (typeof LIST_ACCESS)[number];
 export const LIST_ACCESS_LABEL: Record<ListAccess, string> = {
-  view: 'so o dono edita',
+  view: 'só o dono edita',
   add: 'membros adicionam',
   complete: 'membros marcam feito',
   manage: 'membros editam e excluem',

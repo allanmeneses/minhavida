@@ -22,6 +22,17 @@ import {
 } from '@/lib/api';
 import { hydrateIfPristine } from '@/lib/formDraft';
 import { canArchiveKind, CIRCLE_KIND_LABEL, type CircleKind } from '@/lib/circleKinds';
+import {
+  CIRCLE_STATUS_LABEL,
+  LIVING_KIND_LABEL,
+  LOG_ACTION_LABEL,
+  REPORT_DECISION_LABEL,
+  REPORT_STATUS_LABEL,
+  ROLE_LABEL,
+  SUCCESSION_STATUS_LABEL,
+  TARGET_KIND_LABEL,
+  displayLabel,
+} from '@/lib/labels';
 import { formatPersonTime } from '@/lib/formatPersonTime';
 import {
   LIST_ACCESS,
@@ -118,7 +129,7 @@ export default function CircleDetailScreen() {
   }, [token, circleId]);
 
   useEffect(() => {
-    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Circulo nao encontrado.'));
+    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Círculo não encontrado.'));
   }, [load]);
 
   const isMember = Boolean(detail?.members.some((member) => member.userId === user?.id));
@@ -159,7 +170,7 @@ export default function CircleDetailScreen() {
       token,
       body: JSON.stringify({ email: inviteEmail.trim(), role: 'viewer' }),
     });
-    setOk(`Convite criado. Codigo: ${result.token}`);
+    setOk(`Convite criado. Código: ${result.token}`);
     setInviteEmail('');
     await load();
   }
@@ -202,7 +213,7 @@ export default function CircleDetailScreen() {
       return;
     }
     await api(`/api/circles/${circleId}/membership`, { method: 'DELETE', token });
-    setOk('Voce saiu. Sem rastro para os outros.');
+    setOk('Você saiu. Sem rastro para os outros.');
     router.push('/(app)/circles');
   }
 
@@ -212,10 +223,10 @@ export default function CircleDetailScreen() {
     }
     try {
       await api(`/api/circles/${circleId}/join`, { method: 'POST', token, body: JSON.stringify({}) });
-      setOk(detail?.visibility === 'public' ? 'Voce entrou no circulo.' : 'Pedido de entrada enviado.');
+      setOk(detail?.visibility === 'public' ? 'Você entrou no círculo.' : 'Pedido de entrada enviado.');
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel pedir entrada.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível pedir entrada.');
     }
   }
 
@@ -228,7 +239,7 @@ export default function CircleDetailScreen() {
       token,
       body: JSON.stringify({ memberUserId }),
     });
-    setOk('Dono transferido. Historico e permissoes ficam com o circulo.');
+    setOk('Dono transferido. Histórico e permissões ficam com o círculo.');
     await load();
   }
 
@@ -238,7 +249,7 @@ export default function CircleDetailScreen() {
     }
     const summary = await api<RevealSummary>(`/api/circles/${circleId}/reveal`, { method: 'POST', token });
     setReveal(summary);
-    setOk('Surpresa revelada. O resumo com mensagens e fotos esta visivel.');
+    setOk('Surpresa revelada. O resumo com mensagens e fotos está visível.');
     await load();
   }
 
@@ -247,7 +258,7 @@ export default function CircleDetailScreen() {
       return;
     }
     await api(`/api/circles/${circleId}/keep-memory`, { method: 'POST', token });
-    setOk('Recordacao guardada no seu perfil. A edicao e silenciosa.');
+    setOk('Recordação guardada no seu perfil. A edição é silenciosa.');
   }
 
   async function createMemory() {
@@ -273,7 +284,7 @@ export default function CircleDetailScreen() {
       setOk('Ciclo encerrado. A retrospectiva fica para consulta.');
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel arquivar.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível arquivar.');
     }
   }
 
@@ -285,9 +296,9 @@ export default function CircleDetailScreen() {
     try {
       const created = await api<RecapShareCreated>(`/api/circles/${circleId}/recap/share`, { method: 'POST', token });
       setSharePath(created.path);
-      setOk(`Historia compartilhada: ${created.path}`);
+      setOk(`História compartilhada: ${created.path}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel compartilhar.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível compartilhar.');
     }
   }
 
@@ -302,25 +313,25 @@ export default function CircleDetailScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <Text style={styles.title}>{detail?.name ?? 'Circulo'}</Text>
+      <Text style={styles.title}>{detail?.name ?? 'Círculo'}</Text>
       <Text style={styles.lead}>{detail?.description}</Text>
       {detail ? (
         <Text style={styles.lead}>
-          {CIRCLE_KIND_LABEL[detail.kind as CircleKind] ?? detail.kind} · {detail.status}
+          {CIRCLE_KIND_LABEL[detail.kind as CircleKind] ?? detail.kind} · {displayLabel(detail.status, CIRCLE_STATUS_LABEL)}
           {detail.endsAt ? ` · fim ${new Date(detail.endsAt).toLocaleDateString('pt-BR')}` : ''}
         </Text>
       ) : null}
       {detail?.status === 'archived' ? (
-        <Text style={styles.lead}>Arquivo e retrospectiva ficam visiveis neste app, para qualquer plano.</Text>
+        <Text style={styles.lead}>Arquivo e retrospectiva ficam visíveis neste app, para qualquer plano.</Text>
       ) : null}
       {isLocked ? (
-        <Text style={styles.lead}>Este circulo esta travado. Leituras seguem; ninguem publica entrada nova.</Text>
+        <Text style={styles.lead}>Este círculo está travado. Leituras seguem; ninguém pública entrada nova.</Text>
       ) : null}
       {detail?.ownershipOffer ? (
         <>
           <Text style={styles.section}>Oferta de posse</Text>
           <Text style={styles.lead}>
-            O sistema oferece a posse deste circulo para voce. O primeiro que aceitar vira dono; os outros convites
+            O sistema oferece a posse deste círculo para você. O primeiro que aceitar vira dono; os outros convites
             saem na hora.
           </Text>
           <Button
@@ -331,11 +342,11 @@ export default function CircleDetailScreen() {
               }
               void api(`/api/circles/${circleId}/ownership-offer/accept`, { method: 'POST', token })
                 .then(() => {
-                  setOk('Voce assumiu a posse deste circulo.');
+                  setOk('Você assumiu a posse deste círculo.');
                   return load();
                 })
                 .catch((err) =>
-                  setError(err instanceof ApiError ? err.message : 'Nao foi possivel aceitar a posse.'),
+                  setError(err instanceof ApiError ? err.message : 'Não foi possível aceitar a posse.'),
                 );
             }}
           />
@@ -345,12 +356,13 @@ export default function CircleDetailScreen() {
       <Feedback message={ok} tone="ok" />
       {token && circleId ? (
         <Button
-          label="Denunciar circulo"
+          label="Denunciar"
+          accessibilityLabel="Denunciar círculo"
           variant="ghost"
           onPress={() => {
             void reportTarget(token, 'circle', circleId)
-              .then(() => setOk('Denuncia registrada.'))
-              .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel denunciar.'));
+              .then(() => setOk('Denúncia registrada.'))
+              .catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível denunciar.'));
           }}
         />
       ) : null}
@@ -359,7 +371,7 @@ export default function CircleDetailScreen() {
       ) : null}
       {detail?.isSurprise && reveal ? (
         <>
-          <Text style={styles.section}>Resumo da revelacao</Text>
+          <Text style={styles.section}>Resumo da revelação</Text>
           <Text style={styles.lead}>
             {reveal.messages.length} mensagens · {reveal.photoCount} fotos
           </Text>
@@ -369,7 +381,7 @@ export default function CircleDetailScreen() {
             </Text>
           ))}
           {reveal.revealedAt ? (
-            <Button label="Guardar recordacao no meu perfil" onPress={() => void keepMemory()} />
+            <Button label="Guardar recordação no meu perfil" onPress={() => void keepMemory()} />
           ) : null}
         </>
       ) : null}
@@ -381,23 +393,24 @@ export default function CircleDetailScreen() {
         />
       ) : null}
 
-      <Text style={styles.section}>Quem esta aqui</Text>
+      <Text style={styles.section}>Quem está aqui</Text>
       {detail?.members.map((member) => (
         <View key={member.userId} style={styles.card}>
           <Text style={styles.item}>
-            {member.name} · {member.role}
+            {member.name} · {displayLabel(member.role, ROLE_LABEL)}
           </Text>
           {isOwner && member.userId !== user?.id ? (
             <Button label={`Transferir dono para ${member.name}`} onPress={() => void transferTo(member.userId)} />
           ) : null}
           {token && member.userId !== user?.id ? (
             <Button
-              label={`Denunciar perfil de ${member.name}`}
+              label="Denunciar"
+              accessibilityLabel={`Denunciar perfil de ${member.name}`}
               variant="ghost"
               onPress={() => {
                 void reportTarget(token, 'profile', member.userId)
-                  .then(() => setOk('Denuncia registrada.'))
-                  .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel denunciar.'));
+                  .then(() => setOk('Denúncia registrada.'))
+                  .catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível denunciar.'));
               }}
             />
           ) : null}
@@ -419,7 +432,12 @@ export default function CircleDetailScreen() {
       {isMember ? (
         <>
           <TextField label="Convidar por e-mail" value={inviteEmail} onChangeText={setInviteEmail} />
-          <Button label="Enviar convite" onPress={() => void invite()} disabled={!inviteEmail.trim()} />
+          <Button
+            label="Enviar convite"
+            onPress={() => void invite()}
+            disabled={!inviteEmail.trim()}
+            disabledHint="Informe o e-mail para enviar o convite."
+          />
           {isAdmin ? <Button label="Criar link para WhatsApp" variant="ghost" onPress={() => void inviteLink()} /> : null}
           {shareText ? (
             <Text testID="invite-share-text" style={styles.lead}>
@@ -429,7 +447,12 @@ export default function CircleDetailScreen() {
           {canPost ? (
             <>
               <TextField label="Nova entrada" value={post} onChangeText={setPost} />
-              <Button label="Publicar" onPress={() => void publish()} disabled={!post.trim()} />
+              <Button
+                label="Publicar"
+                onPress={() => void publish()}
+                disabled={!post.trim()}
+                disabledHint="Escreva a entradá para publicar."
+              />
             </>
           ) : null}
         </>
@@ -487,13 +510,13 @@ export default function CircleDetailScreen() {
                           return load();
                         })
                         .catch((err) =>
-                          setError(err instanceof ApiError ? err.message : 'Nao foi possivel adicionar a ideia.'),
+                          setError(err instanceof ApiError ? err.message : 'Não foi possível adicionar a ideia.'),
                         );
                     }}
                   />
                 </>
               ) : (
-                <Text style={styles.lead}>Quem so visualiza nao edita ideias de presente.</Text>
+                <Text style={styles.lead}>Quem só visualiza não edita ideias de presente.</Text>
               )}
             </View>
           ))}
@@ -502,16 +525,16 @@ export default function CircleDetailScreen() {
 
       {isAdmin && circleReports.length > 0 ? (
         <>
-          <Text style={styles.section}>Denuncias do circulo</Text>
+          <Text style={styles.section}>Denúncias do círculo</Text>
           {circleReports.map((item) => (
             <View key={item.id} style={styles.card}>
               <Text style={styles.item}>
-                {item.targetKind} · {item.status}
+                {displayLabel(item.targetKind, TARGET_KIND_LABEL)} · {displayLabel(item.status, REPORT_STATUS_LABEL)}
               </Text>
               {item.status !== 'circle-resolved' ? (
                 <>
                   <Button
-                    label="Manter conteudo"
+                    label="Manter conteúdo"
                     variant="ghost"
                     onPress={() => {
                       if (!token || !circleId) {
@@ -525,7 +548,7 @@ export default function CircleDetailScreen() {
                     }}
                   />
                   <Button
-                    label="Esconder conteudo"
+                    label="Esconder conteúdo"
                     variant="ghost"
                     onPress={() => {
                       if (!token || !circleId) {
@@ -540,7 +563,7 @@ export default function CircleDetailScreen() {
                   />
                 </>
               ) : (
-                <Text style={styles.lead}>{item.circleDecision}</Text>
+                <Text style={styles.lead}>{displayLabel(item.circleDecision, REPORT_DECISION_LABEL)}</Text>
               )}
             </View>
           ))}
@@ -553,12 +576,13 @@ export default function CircleDetailScreen() {
           {isMember && !isLocked ? <Button label="Apagar" variant="danger" onPress={() => void removePost(item.id)} /> : null}
           {token ? (
             <Button
-              label={`Denunciar post ${item.body}`}
+              label="Denunciar"
+              accessibilityLabel={`Denunciar post ${item.body}`}
               variant="ghost"
               onPress={() => {
                 void reportTarget(token, 'post', item.id)
-                  .then(() => setOk('Denuncia registrada.'))
-                  .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel denunciar.'));
+                  .then(() => setOk('Denúncia registrada.'))
+                  .catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível denunciar.'));
               }}
             />
           ) : null}
@@ -567,7 +591,7 @@ export default function CircleDetailScreen() {
 
       {isMember ? (
         <>
-          <Text style={styles.section}>Memorias do circulo</Text>
+          <Text style={styles.section}>Memórias do círculo</Text>
           {memories.map((item) => (
             <Text key={item.id} style={styles.item}>
               {item.title}
@@ -575,15 +599,15 @@ export default function CircleDetailScreen() {
           ))}
           {canCreateList ? (
             <>
-              <TextField label="Titulo da memoria" value={memoryTitle} onChangeText={setMemoryTitle} />
-              <Button label="Guardar memoria no circulo" onPress={() => void createMemory()} disabled={!memoryTitle.trim()} />
+              <TextField label="Título da memória" value={memoryTitle} onChangeText={setMemoryTitle} />
+              <Button label="Guardar memória no círculo" onPress={() => void createMemory()} disabled={!memoryTitle.trim()} />
             </>
           ) : null}
-          <Text style={styles.section}>Perfis deste circulo</Text>
+          <Text style={styles.section}>Perfis deste círculo</Text>
           {living.map((item) => (
             <View key={item.id}>
               <Text style={styles.lead}>
-                {item.name} · {item.kind} · {item.canEdit ? 'pode editar' : 'so visualiza'}
+                {item.name} · {displayLabel(item.kind, LIVING_KIND_LABEL)} · {item.canEdit ? 'pode editar' : 'só visualiza'}
               </Text>
               {item.canEdit ? (
                 <Button
@@ -603,7 +627,7 @@ export default function CircleDetailScreen() {
               ) : null}
             </View>
           ))}
-          <Text style={styles.section}>Listas do circulo</Text>
+          <Text style={styles.section}>Listas do círculo</Text>
           {lists.map((item) => (
             <Pressable
               key={item.id}
@@ -625,11 +649,16 @@ export default function CircleDetailScreen() {
                 onPress={() => setListKind(nextOf(LIST_KINDS, listKind))}
               />
               <Button
-                label={`Permissao: ${LIST_ACCESS_LABEL[listAccess]}`}
+                label={`Permissão: ${LIST_ACCESS_LABEL[listAccess]}`}
                 variant="ghost"
                 onPress={() => setListAccess(nextOf(LIST_ACCESS, listAccess))}
               />
-              <Button label="Criar lista" onPress={() => void createList()} disabled={!listName.trim()} />
+              <Button
+                label="Criar lista"
+                onPress={() => void createList()}
+                disabled={!listName.trim()}
+                disabledHint="Informe o nome da lista para criar."
+              />
             </>
           ) : null}
         </>
@@ -638,15 +667,15 @@ export default function CircleDetailScreen() {
       <Text style={styles.section}>Log</Text>
       {detail?.log.map((item) => (
         <Text key={item.id} style={styles.lead}>
-          {formatPersonTime(item.createdAt)} · {item.action}: {item.detail}
+          {formatPersonTime(item.createdAt)} · {displayLabel(item.action, LOG_ACTION_LABEL)}: {item.detail}
         </Text>
       ))}
 
       {isMember && recap ? (
         <>
           <Text style={styles.section}>Minha retrospectiva</Text>
-          <Text style={styles.lead}>So a sua historia neste circulo. Os dados dos outros nao entram.</Text>
-          {recap.flows.length === 0 ? <Text style={styles.lead}>Voce ainda nao registrou nada aqui.</Text> : null}
+          <Text style={styles.lead}>Só a sua história neste círculo. Os dados dos outros não entram.</Text>
+          {recap.flows.length === 0 ? <Text style={styles.lead}>Você ainda não registrou nada aqui.</Text> : null}
           {recap.flows.map((flow) => (
             <Text key={flow.key} style={styles.lead}>
               {flow.label} · {flow.count}
@@ -657,7 +686,7 @@ export default function CircleDetailScreen() {
               {title}
             </Text>
           ))}
-          <Button label="Compartilhar minha historia" onPress={() => void shareRecap()} />
+          <Button label="Compartilhar minha história" onPress={() => void shareRecap()} />
           {sharePath ? <Text style={styles.lead}>Link: {sharePath}</Text> : null}
         </>
       ) : null}
@@ -668,23 +697,23 @@ export default function CircleDetailScreen() {
 
       {detail ? (
         <Button
-          label="Exportar este circulo"
+          label="Exportar este círculo"
           variant="ghost"
           onPress={() => {
             if (!token || !circleId) {
               return;
             }
             void downloadNamedBlob(`/api/export/circles/${circleId}`, `circulos-${circleId}.zip`, token)
-              .then(() => setOk('Backup do circulo baixado.'))
-              .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel exportar.'));
+              .then(() => setOk('Backup do círculo baixado.'))
+              .catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível exportar.'));
           }}
         />
       ) : null}
       {vote && isMember ? (
         <>
-          <Text style={styles.section}>Votacao de sucessao</Text>
+          <Text style={styles.section}>Votação de sucessão</Text>
           <Text style={styles.lead}>
-            Maioria simples, sem quorum. Prazo de 3 dias. Todos os membros votam. Status: {vote.status}. Encerra em{' '}
+            Maioria simples, sem quorum. Prazo de 3 dias. Todos os membros votam. Status: {displayLabel(vote.status, SUCCESSION_STATUS_LABEL)}. Encerra em{' '}
             {new Date(vote.deadlineAt).toLocaleString('pt-BR')}.
           </Text>
           {vote.replacementBlockedMessage ? (
@@ -706,14 +735,14 @@ export default function CircleDetailScreen() {
                       body: JSON.stringify({ candidateUserId: member.userId }),
                     })
                       .then(() => load())
-                      .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel votar.'));
+                      .catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível votar.'));
                   }}
                 />
               ))
             : null}
           {vote.canRequestReplacement ? (
             <Button
-              label="Pedir nova votacao"
+              label="Pedir nova votação"
               variant="ghost"
               onPress={() => {
                 if (!token || !circleId) {
@@ -722,7 +751,7 @@ export default function CircleDetailScreen() {
                 void api(`/api/circles/${circleId}/succession/replace`, { method: 'POST', token })
                   .then(() => load())
                   .catch((err) =>
-                    setError(err instanceof ApiError ? err.message : 'Nao foi possivel pedir nova votacao.'),
+                    setError(err instanceof ApiError ? err.message : 'Não foi possível pedir nova votação.'),
                   );
               }}
             />
@@ -730,7 +759,7 @@ export default function CircleDetailScreen() {
         </>
       ) : null}
       <Text style={styles.section}>Filtro do log</Text>
-      <TextField label="Acao do log" value={logFilter} onChangeText={setLogFilter} placeholder="created" />
+      <TextField label="Ação do log" value={logFilter} onChangeText={setLogFilter} placeholder="criado" />
       <Button
         label="Filtrar log"
         variant="ghost"
@@ -738,24 +767,27 @@ export default function CircleDetailScreen() {
           if (!token || !circleId) {
             return;
           }
-          const q = logFilter.trim() ? `?action=${encodeURIComponent(logFilter.trim())}` : '';
+          const typed = logFilter.trim().toLowerCase();
+          const action =
+            Object.entries(LOG_ACTION_LABEL).find(([, label]) => label === typed)?.[0] ?? typed;
+          const q = action ? `?action=${encodeURIComponent(action)}` : '';
           void api<CircleDetail['log']>(`/api/circles/${circleId}/log${q}`, { token }).then(setFilteredLog);
         }}
       />
       {filteredLog
         ? filteredLog.map((item) => (
             <Text key={item.id} style={styles.lead}>
-              {formatPersonTime(item.createdAt)} · {item.action}: {item.detail}
+              {formatPersonTime(item.createdAt)} · {displayLabel(item.action, LOG_ACTION_LABEL)}: {item.detail}
             </Text>
           ))
         : null}
       {isOwner ? (
         <>
-          <Text style={styles.section}>Excluir circulo</Text>
-          <Text style={styles.lead}>Exclusao definitiva. Nao da para desfazer. Escreva: excluir definitivo</Text>
-          <TextField label="Confirmacao da exclusao" value={deleteText} onChangeText={setDeleteText} />
+          <Text style={styles.section}>Excluir círculo</Text>
+          <Text style={styles.lead}>Exclusão definitiva. Não dá para desfazer. Escreva: excluir definitivo</Text>
+          <TextField label="Confirmação da exclusão" value={deleteText} onChangeText={setDeleteText} />
           <Button
-            label="Excluir circulo de vez"
+            label="Excluir círculo de vez"
             variant="danger"
             onPress={() => {
               if (!token || !circleId) {
@@ -767,15 +799,15 @@ export default function CircleDetailScreen() {
                 body: JSON.stringify({ confirmation: deleteText.trim() }),
               })
                 .then(() => router.push('/(app)/circles'))
-                .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel excluir.'));
+                .catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível excluir.'));
             }}
             disabled={deleteText.trim().toLowerCase() !== 'excluir definitivo'}
           />
-          <Button label="Sair e abrir votacao" variant="ghost" onPress={() => void leave()} />
+          <Button label="Sair e abrir votação" variant="ghost" onPress={() => void leave()} />
         </>
       ) : null}
       {detail?.members.some((member) => member.userId === user?.id && member.role !== 'owner') ? (
-        <Button label="Sair do circulo" variant="danger" onPress={() => void leave()} />
+        <Button label="Sair do círculo" variant="danger" onPress={() => void leave()} />
       ) : null}
     </ScrollView>
   );

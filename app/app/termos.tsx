@@ -10,58 +10,58 @@ export default function TermsScreen() {
   const router = useRouter();
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <Text style={styles.kicker}>Circulos</Text>
+      <Text style={styles.kicker}>Círculos</Text>
       <Text style={styles.title}>Termos de uso</Text>
-      <Text style={styles.lead}>Ultima atualizacao: 22 de novembro de 2026.</Text>
+      <Text style={styles.lead}>Última atualização: 22 de novembro de 2026.</Text>
       <Text style={styles.lead}>
-        Responsavel: ALLAN WANDERSON MENESES DE SOUSA. Estes termos descrevem o que o aplicativo Circulos
-        faz hoje. Nao ha promessa de recurso que ainda nao existe no codigo.
+        Responsável: ALLAN WANDERSON MENESES DE SOUSA. Estes termos descrevem o que o aplicativo Círculos
+        faz hoje. Não há promessa de recurso que ainda não existe no código.
       </Text>
-      <Text style={styles.section}>1. O servico</Text>
+      <Text style={styles.section}>1. O serviço</Text>
       <Text style={styles.lead}>
-        O Circulos e um hub da vida pessoal. Voce cria uma conta com e-mail e senha, guarda um perfil solo,
-        documentos, fotos, areas de vida, circulos, lembretes e atalhos. O produto funciona no aplicativo
-        (Expo) e no navegador. Nao ha loja de pagamentos ligada nesta versao: o plano gratuito tem limites
-        (3 circulos, 5 atalhos e 100 MB). O plano pago usa Mercado Pago em sandbox, com precos em reais
-        configuraveis. Sem secret, a cobranca fica desligada.
+        O Círculos é um hub da vida pessoal. Você cria uma conta com e-mail e senha, guarda um perfil solo,
+        documentos, fotos, áreas de vida, círculos, lembretes e atalhos. O produto funciona no aplicativo
+        (Expo) e no navegador. Não há loja de pagamentos ligada nesta versão: o plano gratuito tem limites
+        (3 círculos, 5 atalhos e 100 MB). O plano pago usa Mercado Pago em sandbox, com preços em reais
+        configuráveis. Sem secret, a cobrança fica desligada.
       </Text>
       <Text style={styles.section}>2. Cadastro e acesso</Text>
       <Text style={styles.lead}>
-        O cadastro e livre com e-mail, senha e nome. A autenticacao usa JWT. Recuperacao de senha e por
-        e-mail. Nao ha segundo fator nesta versao. Voce e responsavel por manter a senha em segredo. Para
+        O cadastro é livre com e-mail, senha e nome. A autenticação usa JWT. Recuperação de senha é por
+        e-mail. Não há segundo fator nesta versão. Você é responsável por manter a senha em segredo. Para
         excluir a conta, o app pede a senha e confirma por e-mail.
       </Text>
-      <Text style={styles.section}>3. Circulos e conteudo</Text>
+      <Text style={styles.section}>3. Círculos e conteúdo</Text>
       <Text style={styles.lead}>
-        Voce pode criar circulos e convidar pessoas. Circulos publicos aceitam entrada direta. Circulos
-        privados pedem convite ou pedido aceito por um administrador. O dono pode transferir o circulo em
-        vida. Historico e permissoes ficam com o circulo. Entrada apagada deixa rastro de quem apagou e
-        quando. Sair de um circulo nao deixa rastro de participacao para os outros. Listas de compras,
-        desejos, materiais ou outras ficam no perfil (privadas) ou no circulo (compartilhadas). O criador
+        Você pode criar círculos e convidar pessoas. Círculos públicos aceitam entrada direta. Círculos
+        privados pedem convite ou pedido aceito por um administrador. O dono pode transferir o círculo em
+        vida. Histórico e permissões ficam com o círculo. Entrada apagada deixa rastro de quem apagou e
+        quando. Sair de um círculo não deixa rastro de participação para os outros. Listas de compras,
+        desejos, materiais ou outras ficam no perfil (privadas) ou no círculo (compartilhadas). O criador
         da lista escolhe o que os membros podem fazer e pode mudar isso depois.
       </Text>
       <Text style={styles.section}>4. Lembretes e atalhos</Text>
       <Text style={styles.lead}>
-        Lembretes e atalhos sao da sua conta. Um atalho dispara na hora, sem confirmacao, e pode marcar um
-        lembrete de circulo como feito. Som e vibracao no atalho sao um bip padrao e uma vibracao curta.
-        O modo ferias silencia lembretes pelo prazo que voce escolher.
+        Lembretes e atalhos são da sua conta. Um atalho dispara na hora, sem confirmação, e pode marcar um
+        lembrete de círculo como feito. Som e vibração no atalho são um bip padrão e uma vibração curta.
+        O modo férias silencia lembretes pelo prazo que você escolher.
       </Text>
       <Text style={styles.section}>5. Conduta</Text>
       <Text style={styles.lead}>
-        Nao use o Circulos para conteudo ilegal. O app ainda nao tem canal de denuncia interna nem equipe
-        de moderacao automatica. O responsavel pode remover conta ou circulo se houver abuso relatado por
+        Não use o Círculos para conteúdo ilegal. O app ainda não tem canal de denúncia interna nem equipe
+        de moderação automática. O responsável pode remover conta ou círculo se houver abuso relatado por
         e-mail.
       </Text>
       <Text style={styles.section}>6. Disponibilidade</Text>
       <Text style={styles.lead}>
-        O servico e oferecido como esta. Nao ha pagina publica de status nem prazo de suporte. O contato
-        e so por e-mail, sem prazo prometido de resposta.
+        O serviço é oferecido como está. Não há página pública de status nem prazo de suporte. O contato
+        é só por e-mail, sem prazo prometido de resposta.
       </Text>
-      <Text style={styles.section}>7. Alteracoes</Text>
+      <Text style={styles.section}>7. Alterações</Text>
       <Text style={styles.lead}>
-        Estes termos podem mudar quando o app mudar. A versao vigente e a publicada nesta pagina.
+        Estes termos podem mudar quando o app mudar. A versão vigente é a publicada nesta página.
       </Text>
-      <Button label="Politica de privacidade" variant="ghost" onPress={() => router.push('/privacidade' as Href)} />
+      <Button label="Política de privacidade" variant="ghost" onPress={() => router.push('/privacidade' as Href)} />
       <Button label="Voltar" variant="ghost" onPress={() => router.back()} />
     </ScrollView>
   );

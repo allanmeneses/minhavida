@@ -14,7 +14,7 @@ public sealed class JwtTokenService(IConfiguration configuration, TimeProvider c
     public string CreateAccess(User user)
     {
         var section = configuration.GetSection("Jwt");
-        var keyValue = section["Key"] ?? throw new InvalidOperationException("Jwt:Key nao configurada.");
+        var keyValue = section["Key"] ?? throw new InvalidOperationException("Jwt:Key não configurada.");
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyValue));
         var minutes = AccessMinutes();
         var now = clock.GetUtcNow().UtcDateTime;

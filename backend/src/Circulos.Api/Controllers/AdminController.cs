@@ -27,7 +27,7 @@ public sealed class AdminController(
         var admin = await RequireAdmin(cancellationToken);
         if (admin is null)
         {
-            return NotFound(new ErrorResponse("Painel nao encontrado."));
+            return NotFound(new ErrorResponse("Painel não encontrado."));
         }
 
         var snapshot = await stats.SnapshotAsync(cancellationToken);
@@ -40,7 +40,7 @@ public sealed class AdminController(
         var admin = await RequireAdmin(cancellationToken);
         if (admin is null)
         {
-            return NotFound(new ErrorResponse("Painel nao encontrado."));
+            return NotFound(new ErrorResponse("Painel não encontrado."));
         }
 
         var items = await db.ContentReports
@@ -65,7 +65,7 @@ public sealed class AdminController(
         var admin = await RequireAdmin(cancellationToken);
         if (admin is null)
         {
-            return NotFound(new ErrorResponse("Painel nao encontrado."));
+            return NotFound(new ErrorResponse("Painel não encontrado."));
         }
 
         var users = await db.Users.AsNoTracking()
@@ -87,7 +87,7 @@ public sealed class AdminController(
         var admin = await RequireAdmin(cancellationToken);
         if (admin is null)
         {
-            return NotFound(new ErrorResponse("Painel nao encontrado."));
+            return NotFound(new ErrorResponse("Painel não encontrado."));
         }
 
         var items = await db.AdminActions.AsNoTracking()
@@ -110,7 +110,7 @@ public sealed class AdminController(
         var admin = await RequireAdmin(cancellationToken);
         if (admin is null)
         {
-            return NotFound(new ErrorResponse("Painel nao encontrado."));
+            return NotFound(new ErrorResponse("Painel não encontrado."));
         }
 
         var items = await db.AccountAppeals.AsNoTracking()
@@ -137,13 +137,13 @@ public sealed class AdminController(
         var admin = await RequireAdmin(cancellationToken);
         if (admin is null)
         {
-            return NotFound(new ErrorResponse("Painel nao encontrado."));
+            return NotFound(new ErrorResponse("Painel não encontrado."));
         }
 
         var appeal = await db.AccountAppeals.Include(item => item.User).FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (appeal is null)
         {
-            return NotFound(new ErrorResponse("Recurso nao encontrado."));
+            return NotFound(new ErrorResponse("Recurso não encontrado."));
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -186,13 +186,13 @@ public sealed class AdminController(
         var admin = await RequireAdmin(cancellationToken);
         if (admin is null)
         {
-            return NotFound(new ErrorResponse("Painel nao encontrado."));
+            return NotFound(new ErrorResponse("Painel não encontrado."));
         }
 
         var kind = ReportsController.NormalizeKind(request.TargetKind);
         if (kind is null || kind == "post")
         {
-            return BadRequest(new ErrorResponse("Bloqueio vale para perfil ou circulo."));
+            return BadRequest(new ErrorResponse("Bloqueio vale para perfil ou círculo."));
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -202,12 +202,12 @@ public sealed class AdminController(
             var user = await db.Users.Include(item => item.Profile).FirstOrDefaultAsync(item => item.Id == request.TargetId, cancellationToken);
             if (user is null)
             {
-                return NotFound(new ErrorResponse("Pessoa nao encontrada."));
+                return NotFound(new ErrorResponse("Pessoa não encontrada."));
             }
 
             if (user.IsSystemAdmin || adminOptions.Value.Matches(user.Email))
             {
-                return BadRequest(new ErrorResponse("Nao e possivel bloquear o admin do sistema."));
+                return BadRequest(new ErrorResponse("Não é possível bloquear o admin do sistema."));
             }
 
             if (request.Blocked)
@@ -216,8 +216,8 @@ public sealed class AdminController(
                 await sessions.RevokeAllAsync(user.Id, cancellationToken);
                 await email.SendAsync(
                     user.Email,
-                    "Conta bloqueada no Circulos",
-                    "A equipe do Circulos bloqueou esta conta. Voce pode recorrer por e-mail de suporte.",
+                    "Conta bloqueada no Círculos",
+                    "A equipe do Círculos bloqueou esta conta. Você pode recorrer por e-mail de suporte.",
                     cancellationToken);
             }
             else
@@ -231,14 +231,14 @@ public sealed class AdminController(
             var circle = await db.Circles.FirstOrDefaultAsync(item => item.Id == request.TargetId, cancellationToken);
             if (circle is null || circle.Status == CircleStatus.Deleted)
             {
-                return NotFound(new ErrorResponse("Circulo nao encontrado."));
+                return NotFound(new ErrorResponse("Círculo não encontrado."));
             }
 
             if (request.Blocked)
             {
                 if (circle.Status == CircleStatus.Archived)
                 {
-                    return BadRequest(new ErrorResponse("Circulo arquivado nao entra no bloqueio de radar."));
+                    return BadRequest(new ErrorResponse("Círculo arquivado não entra no bloqueio de radar."));
                 }
 
                 circle.Status = CircleStatus.Blocked;
@@ -248,7 +248,7 @@ public sealed class AdminController(
                     CircleId = circle.Id,
                     ActorUserId = admin.Id,
                     Action = "blocked",
-                    Detail = "Circulo bloqueado pela equipe do app.",
+                    Detail = "Círculo bloqueado pela equipe do app.",
                     CreatedAt = DateTime.UtcNow,
                 });
                 if (circle.OwnerUserId is Guid ownerId)
@@ -258,8 +258,8 @@ public sealed class AdminController(
                     {
                         await email.SendAsync(
                             owner.Email,
-                            "Circulo bloqueado no Circulos",
-                            $"O circulo {circle.Name} foi bloqueado pela equipe. Voce pode recorrer por e-mail de suporte.",
+                            "Círculo bloqueado no Círculos",
+                            $"O círculo {circle.Name} foi bloqueado pela equipe. Você pode recorrer por e-mail de suporte.",
                             cancellationToken);
                     }
                 }
@@ -273,7 +273,7 @@ public sealed class AdminController(
                     CircleId = circle.Id,
                     ActorUserId = admin.Id,
                     Action = "unblocked",
-                    Detail = "Circulo desbloqueado pela equipe do app.",
+                    Detail = "Círculo desbloqueado pela equipe do app.",
                     CreatedAt = DateTime.UtcNow,
                 });
             }

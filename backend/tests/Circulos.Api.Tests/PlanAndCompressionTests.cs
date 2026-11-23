@@ -108,13 +108,13 @@ public sealed class PlanAndCompressionTests : IClassFixture<ApiFactory>
         var client = _factory.CreateClient();
         var auth = await AuthHelper.RegisterAsync(client);
         client.WithToken(auth.Token);
-        var created = await client.PostAsJsonAsync("/api/shortcuts", new { label = "Tomei o remedio", color = "#C45C26" });
+        var created = await client.PostAsJsonAsync("/api/shortcuts", new { label = "Tomei o remédio", color = "#C45C26" });
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var shortcut = await created.Content.ReadFromJsonAsync<ShortcutDto>();
         var run = await client.PostAsync($"/api/shortcuts/{shortcut!.Id}/run", null);
         Assert.Equal(HttpStatusCode.OK, run.StatusCode);
         var body = await run.Content.ReadAsStringAsync();
-        Assert.Contains("Tomei o remedio", body);
+        Assert.Contains("Tomei o remédio", body);
 
         var home = await client.GetFromJsonAsync<JsonHome>("/api/home");
         Assert.Contains(home!.Shortcuts, x => x.Id == shortcut.Id);
@@ -126,7 +126,7 @@ public sealed class PlanAndCompressionTests : IClassFixture<ApiFactory>
     {
         var client = _factory.CreateClient();
         client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
-        var created = await client.PostAsJsonAsync("/api/shortcuts", new { label = "Tomei o remedio" });
+        var created = await client.PostAsJsonAsync("/api/shortcuts", new { label = "Tomei o remédio" });
         var shortcut = await created.Content.ReadFromJsonAsync<ShortcutDto>();
         (await client.PostAsync($"/api/shortcuts/{shortcut!.Id}/run", null)).EnsureSuccessStatusCode();
 
@@ -147,7 +147,7 @@ public sealed class PlanAndCompressionTests : IClassFixture<ApiFactory>
         var areas = await client.GetFromJsonAsync<List<JsonArea>>("/api/life-areas");
         var diary = areas!.Single(x => x.Kind == "diary");
         var entries = await client.GetFromJsonAsync<List<JsonEntry>>($"/api/life-areas/{diary.Id}/entries");
-        Assert.Contains(entries!, x => x.Title == "Tomei o remedio");
+        Assert.Contains(entries!, x => x.Title == "Tomei o remédio");
     }
 
     private static MultipartFormDataContent TextFile(string name, string content)

@@ -33,7 +33,7 @@ export default function CalendarScreen() {
   }, [token, from, to]);
 
   useEffect(() => {
-    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Falha ao abrir o calendario.'));
+    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Falha ao abrir o calendário.'));
   }, [load]);
 
   const days = useMemo(() => buildMonth(year, month, data?.events ?? []), [year, month, data]);
@@ -46,14 +46,14 @@ export default function CalendarScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <Text style={styles.title}>Calendario</Text>
+      <Text style={styles.title}>Calendário</Text>
       <Text style={styles.lead}>
-        Lembretes do app neste mes. Exporta .ics para baixar ou assinar. Calendario do aparelho e somente leitura: o app
-        le e nunca grava evento la.
+        Lembretes do app neste mês. Exporta .ics para baixar ou assinar. Calendário do aparelho é somente leitura: o app
+        lê e nunca grava evento lá.
       </Text>
       {deviceCalendarPolicy.writes ? null : (
         <Text style={styles.lead}>
-          No celular o app le o calendario do aparelho. Nesta tela web nao ha eventos do aparelho.
+          No celular o app lê o calendário do aparelho. Nesta tela web não há eventos do aparelho.
         </Text>
       )}
       {deviceEvents.map((event) => (
@@ -62,11 +62,11 @@ export default function CalendarScreen() {
         </Text>
       ))}
       <Feedback message={error} />
-      <Button label="Mes anterior" variant="ghost" onPress={() => move(-1)} />
+      <Button label="Mês anterior" variant="ghost" onPress={() => move(-1)} />
       <Text style={styles.section}>
         {String(month).padStart(2, '0')}/{year}
       </Text>
-      <Button label="Proximo mes" variant="ghost" onPress={() => move(1)} />
+      <Button label="Proximo mês" variant="ghost" onPress={() => move(1)} />
       {days
         .filter((day) => day.inMonth)
         .map((day) => (

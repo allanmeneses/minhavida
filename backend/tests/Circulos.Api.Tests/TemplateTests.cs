@@ -23,7 +23,7 @@ public sealed class TemplateTests : IClassFixture<ApiFactory>
         var list = await client.GetFromJsonAsync<List<JsonElement>>("/api/templates", Json);
         Assert.NotNull(list);
         Assert.Contains(list, x => x.GetProperty("name").GetString() == "Compras da semana");
-        Assert.Contains(list, x => x.GetProperty("name").GetString() == "Tomei o remedio");
+        Assert.Contains(list, x => x.GetProperty("name").GetString() == "Tomei o remédio");
         Assert.All(list, x => Assert.False(x.TryGetProperty("creatorUserId", out _)));
 
         var copy = await client.PostAsync($"/api/templates/{TemplateCatalog.ComprasDaSemanaId}/copy", null);

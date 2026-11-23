@@ -117,7 +117,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 });
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
-var jwtKey = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key nao configurada.");
+var jwtKey = jwtSection["Key"] ?? throw new InvalidOperationException("Jwt:Key não configurada.");
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -195,7 +195,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
-app.MapGet("/", () => Results.Json(new { name = "Circulos", version = "2.0.0" }));
+app.MapGet("/", () => Results.Json(new { name = "Círculos", version = "2.0.0" }));
 app.MapControllers();
 if (PaymentsConfig.IsSimulated(app.Configuration))
 {
@@ -223,18 +223,18 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
             cancellationToken);
         if (!member)
         {
-            return Results.NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return Results.NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var circle = await db.Circles.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (circle is null || circle.Status == CircleStatus.Deleted)
         {
-            return Results.NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return Results.NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         if (circle.OwnerUserId is not null)
         {
-            return Results.Conflict(new ErrorResponse("Circulo ainda tem dono."));
+            return Results.Conflict(new ErrorResponse("Círculo ainda tem dono."));
         }
 
         var now = clock.GetUtcNow().UtcDateTime;

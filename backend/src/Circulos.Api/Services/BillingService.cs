@@ -37,7 +37,7 @@ public sealed class BillingService(
                 PlanLimits.FreeCircleLimit,
                 PlanLimits.FreeStorageBytes,
                 PlanLimits.FreeShortcutLimit,
-                "Limites do plano gratuito da especificacao."),
+                "Limites do plano gratuito da especificação."),
             new PlanOfferResponse(
                 "paid-monthly",
                 "Pago mensal",
@@ -45,7 +45,7 @@ public sealed class BillingService(
                 null,
                 PlanLimits.PaidStorageBytes,
                 PlanLimits.PaidShortcutLimit,
-                "Circulos ilimitados, 1 GB e mais atalhos. Valor em reais, configuravel."),
+                "Círculos ilimitados, 1 GB e mais atalhos. Valor em reais, configuráveis."),
             new PlanOfferResponse(
                 "paid-yearly",
                 "Pago anual",
@@ -53,7 +53,7 @@ public sealed class BillingService(
                 null,
                 PlanLimits.PaidStorageBytes,
                 PlanLimits.PaidShortcutLimit,
-                "Mesmos limites do pago, cobranca anual. Valor em reais, configuravel."),
+                "Mesmos limites do pago, cobrança anual. Valor em reais, configuráveis."),
             Sandbox,
             ProviderName);
     }
@@ -65,8 +65,8 @@ public sealed class BillingService(
         var limit = PlanLimits.StorageLimit(paid);
         var standing = paid;
         var checkout = Enabled
-            ? (standing ? "Assinatura ativa." : "Assine com cartao recorrente no Mercado Pago (sandbox por padrao).")
-            : "Cobranca recorrente ainda nao esta ligada a um gateway.";
+            ? (standing ? "Assinatura ativa." : "Assine com cartão recorrente no Mercado Pago (ambiente de teste por padrão).")
+            : "Cobrança recorrente ainda não está ligada a um gateway.";
         return new PlanResponse(
             paid ? "paid" : "free",
             PlanLimits.CircleLimit(paid),
@@ -87,7 +87,7 @@ public sealed class BillingService(
     {
         if (!Enabled)
         {
-            return ActionResultLike<PlanResponse>.Fail(StatusCodes.Status501NotImplemented, "Cobranca recorrente ainda nao esta ligada a um gateway.");
+            return ActionResultLike<PlanResponse>.Fail(StatusCodes.Status501NotImplemented, "Cobrança recorrente ainda não está ligada a um gateway.");
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
@@ -103,7 +103,7 @@ public sealed class BillingService(
         {
             if (!PaymentsConfig.IsSimulated(configuration))
             {
-                return ActionResultLike<PlanResponse>.Fail(StatusCodes.Status400BadRequest, "Informe o token do cartao.");
+                return ActionResultLike<PlanResponse>.Fail(StatusCodes.Status400BadRequest, "Informe o token do cartão.");
             }
 
             token = FakePaymentGateway.ApprovedCardToken;
@@ -121,7 +121,7 @@ public sealed class BillingService(
                     user.Id.ToString("N"),
                     user.Email,
                     amount,
-                    yearly ? "Circulos pago anual" : "Circulos pago mensal",
+                    yearly ? "Círculos pago anual" : "Círculos pago mensal",
                     backUrl,
                     notification,
                     token,
@@ -143,7 +143,7 @@ public sealed class BillingService(
     {
         if (string.IsNullOrWhiteSpace(user.SubscriptionProviderId))
         {
-            return ActionResultLike<PlanResponse>.Fail(StatusCodes.Status400BadRequest, "Nao ha assinatura para cancelar.");
+            return ActionResultLike<PlanResponse>.Fail(StatusCodes.Status400BadRequest, "Não há assinatura para cancelar.");
         }
 
         await gateway.CancelSubscriptionAsync(user.SubscriptionProviderId, cancellationToken);
@@ -151,8 +151,8 @@ public sealed class BillingService(
         await db.SaveChangesAsync(cancellationToken);
         await email.SendAsync(
             user.Email,
-            "Assinatura do Circulos cancelada",
-            "Sua assinatura foi cancelada. O acesso pago segue ate o fim do ciclo. Este e-mail nao reativa a conta.",
+            "Assinatura do Círculos cancelada",
+            "Sua assinatura foi cancelada. O acesso pago segue até o fim do ciclo. Este e-mail não reativa a conta.",
             cancellationToken);
         return ActionResultLike<PlanResponse>.Ok(ToPlan(user));
     }

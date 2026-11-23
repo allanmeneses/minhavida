@@ -104,7 +104,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
           }
         } catch (err) {
           const status = err instanceof ApiError ? err.status : 0;
-          const message = err instanceof Error ? err.message : 'Esta lista nao permite essa acao.';
+          const message = err instanceof Error ? err.message : 'Esta lista não permite essa ação.';
           if (status === 0) {
             return;
           }

@@ -37,7 +37,7 @@ public sealed class RecapController(AppDbContext db, RecapService recap, CircleA
         var result = await recap.ForCircleAsync(User.GetUserId(), id, cancellationToken);
         if (result is null)
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         return Ok(result);
@@ -52,13 +52,13 @@ public sealed class RecapController(AppDbContext db, RecapService recap, CircleA
         var snapshot = await recap.ForCircleAsync(userId, id, cancellationToken);
         if (snapshot is null)
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var user = await db.Users.FirstAsync(item => item.Id == userId, cancellationToken);
         if (user.Plan == PlanKind.Paid && !PlanLimits.BenefitsActive(user, DateTime.UtcNow))
         {
-            return StatusCode(StatusCodes.Status402PaymentRequired, new ErrorResponse("Assinatura suspensa. Compartilhar retrospectiva fica bloqueado ate voltar a pagar."));
+            return StatusCode(StatusCodes.Status402PaymentRequired, new ErrorResponse("Assinatura suspensa. Compartilhar retrospectiva fica bloqueado até voltar a pagar."));
         }
 
         var share = new RecapShare
@@ -83,7 +83,7 @@ public sealed class RecapController(AppDbContext db, RecapService recap, CircleA
         var share = await db.RecapShares.AsNoTracking().FirstOrDefaultAsync(item => item.Token == token, cancellationToken);
         if (share is null)
         {
-            return NotFound(new ErrorResponse("Recap nao encontrado."));
+            return NotFound(new ErrorResponse("Recap não encontrado."));
         }
 
         Response.Headers.CacheControl = "private, no-store";

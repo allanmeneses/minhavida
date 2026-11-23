@@ -125,7 +125,7 @@ public sealed class ExportController(AppDbContext db, IFileStorage storage, Time
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (circle is null || HiddenSurprise(circle, userId) || circle.Members.All(x => x.UserId != userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var names = await db.Profiles.AsNoTracking()

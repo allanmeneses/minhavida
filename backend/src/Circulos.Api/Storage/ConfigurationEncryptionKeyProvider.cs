@@ -7,7 +7,7 @@ public sealed class ConfigurationEncryptionKeyProvider(IConfiguration configurat
         var value = configuration["Encryption:Key"];
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new InvalidOperationException("Encryption:Key nao configurada.");
+            throw new InvalidOperationException("Encryption:Key não configurada.");
         }
 
         byte[] key;

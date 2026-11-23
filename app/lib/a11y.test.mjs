@@ -13,7 +13,7 @@ describe('leitor de tela', () => {
     const search = readFileSync(join(root, '../app/(app)/search.tsx'), 'utf8');
     const documents = readFileSync(join(root, '../app/(app)/documents.tsx'), 'utf8');
     assert.match(button, /accessibilityRole="button"/);
-    assert.match(button, /accessibilityLabel=\{label\}/);
+    assert.match(button, /accessibilityLabel=\{accessibilityLabel \?\? label\}/);
     assert.match(field, /accessibilityLabel=\{label\}/);
     assert.match(search, /accessibilityLabel=\{`Buscar \$\{term\}`\}/);
     assert.match(search, /entry: 'entrada'/);

@@ -23,7 +23,7 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
             var circle = await db.Circles.Include(x => x.Members).FirstOrDefaultAsync(x => x.Id == cid, cancellationToken);
             if (circle is null || HiddenSurprise(circle, userId) || circle.Members.All(x => x.UserId != userId))
             {
-                return NotFound(new ErrorResponse("Circulo nao encontrado."));
+                return NotFound(new ErrorResponse("Círculo não encontrado."));
             }
 
             var circleLists = await db.SharedLists.AsNoTracking()
@@ -58,17 +58,17 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
             var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
             if (circle is null || HiddenSurprise(circle, userId) || member is null)
             {
-                return NotFound(new ErrorResponse("Circulo nao encontrado."));
+                return NotFound(new ErrorResponse("Círculo não encontrado."));
             }
 
             if (circle.Status != CircleStatus.Active)
             {
-                return BadRequest(new ErrorResponse("Este circulo esta travado."));
+                return BadRequest(new ErrorResponse("Este círculo está travado."));
             }
 
             if (member.Role < CircleRole.Editor)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Seu papel neste circulo nao cria listas."));
+                return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Seu papel neste círculo não cria listas."));
             }
         }
 
@@ -92,7 +92,7 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
     {
         var userId = User.GetUserId();
         var detail = await Detail(id, userId, cancellationToken);
-        return detail is null ? NotFound(new ErrorResponse("Lista nao encontrada.")) : Ok(detail);
+        return detail is null ? NotFound(new ErrorResponse("Lista não encontrada.")) : Ok(detail);
     }
 
     [HttpPut("lists/{id:guid}/access")]
@@ -105,12 +105,12 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
         var access = await Load(id, userId, cancellationToken);
         if (access is null)
         {
-            return NotFound(new ErrorResponse("Lista nao encontrada."));
+            return NotFound(new ErrorResponse("Lista não encontrada."));
         }
 
         if (!CanChangeAccess(access))
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("So o criador altera a permissao desta lista."));
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Só o criador altera a permissão desta lista."));
         }
 
         access.List.MemberAccess = EnumText.ParseListAccess(request.MemberAccess);
@@ -128,17 +128,17 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
         var access = await Load(id, userId, cancellationToken);
         if (access is null)
         {
-            return NotFound(new ErrorResponse("Lista nao encontrada."));
+            return NotFound(new ErrorResponse("Lista não encontrada."));
         }
 
         if (!CanChangeAccess(access))
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("So o criador altera a permissao desta lista."));
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Só o criador altera a permissão desta lista."));
         }
 
         if (access.Circle is null || access.Circle.Members.All(x => x.UserId != request.UserId))
         {
-            return BadRequest(new ErrorResponse("A pessoa precisa ser membro do circulo."));
+            return BadRequest(new ErrorResponse("A pessoa precisa ser membro do círculo."));
         }
 
         var grant = access.List.Grants.FirstOrDefault(x => x.UserId == request.UserId);
@@ -166,12 +166,12 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
         var access = await Load(id, userId, cancellationToken);
         if (access is null)
         {
-            return NotFound(new ErrorResponse("Lista nao encontrada."));
+            return NotFound(new ErrorResponse("Lista não encontrada."));
         }
 
         if (!CanChangeAccess(access))
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("So o criador exclui esta lista."));
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Só o criador exclui esta lista."));
         }
 
         db.SharedLists.Remove(access.List);
@@ -189,12 +189,12 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
         var access = await Load(id, userId, cancellationToken);
         if (access is null)
         {
-            return NotFound(new ErrorResponse("Lista nao encontrada."));
+            return NotFound(new ErrorResponse("Lista não encontrada."));
         }
 
         if (!CanAdd(access))
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta lista nao permite adicionar itens."));
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta lista não permite adicionar itens."));
         }
 
         var item = new SharedListItem
@@ -227,12 +227,12 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
         var item = access?.List.Items.FirstOrDefault(x => x.Id == itemId);
         if (access is null || item is null)
         {
-            return NotFound(new ErrorResponse("Item nao encontrado."));
+            return NotFound(new ErrorResponse("Item não encontrado."));
         }
 
         if (!CanManageItems(access))
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta lista nao permite editar itens."));
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta lista não permite editar itens."));
         }
 
         var lastSyncWins = request.KnownUpdatedAt is DateTime known && known < item.UpdatedAt;
@@ -256,12 +256,12 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
         var item = access?.List.Items.FirstOrDefault(x => x.Id == itemId);
         if (access is null || item is null)
         {
-            return NotFound(new ErrorResponse("Item nao encontrado."));
+            return NotFound(new ErrorResponse("Item não encontrado."));
         }
 
         if (!CanComplete(access))
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta lista nao permite marcar itens."));
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta lista não permite marcar itens."));
         }
 
         if (item.IsDone)
@@ -291,12 +291,12 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
         var item = access?.List.Items.FirstOrDefault(x => x.Id == itemId);
         if (access is null || item is null)
         {
-            return NotFound(new ErrorResponse("Item nao encontrado."));
+            return NotFound(new ErrorResponse("Item não encontrado."));
         }
 
         if (!CanManageItems(access))
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta lista nao permite excluir itens."));
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta lista não permite excluir itens."));
         }
 
         db.SharedListItems.Remove(item);
@@ -314,12 +314,12 @@ public sealed class ListsController(AppDbContext db) : ControllerBase
         var access = await Load(id, userId, cancellationToken);
         if (access is null)
         {
-            return NotFound(new ErrorResponse("Lista nao encontrada."));
+            return NotFound(new ErrorResponse("Lista não encontrada."));
         }
 
         if (!CanManageItems(access))
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta lista nao permite reordenar itens."));
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta lista não permite reordenar itens."));
         }
 
         for (var i = 0; i < request.Ids.Length; i++)

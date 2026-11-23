@@ -1,23 +1,27 @@
 import { StyleSheet } from 'react-native';
 import type { ColorPalette } from '@/constants/theme';
 
-export function screenStyles(colors: ColorPalette) {
+export function screenStyles(colors: ColorPalette, compact = false) {
   return StyleSheet.create({
     page: {
-      paddingBottom: 48,
+      paddingBottom: compact ? 88 : 48,
+      paddingHorizontal: compact ? 4 : 0,
       maxWidth: 720,
       width: '100%',
       alignSelf: 'center',
       gap: 12,
     },
     title: {
-      fontSize: 28,
+      fontSize: compact ? 24 : 28,
       fontWeight: '800',
       color: colors.ink,
+      flexShrink: 1,
     },
     lead: {
       color: colors.muted,
       lineHeight: 22,
+      flexShrink: 1,
+      flexWrap: 'wrap',
     },
     kicker: {
       color: colors.primary,
@@ -37,6 +41,7 @@ export function screenStyles(colors: ColorPalette) {
     item: {
       fontWeight: '700',
       color: colors.ink,
+      flexShrink: 1,
     },
     section: {
       fontWeight: '800',

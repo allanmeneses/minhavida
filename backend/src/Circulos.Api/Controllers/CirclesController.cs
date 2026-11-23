@@ -93,7 +93,7 @@ public sealed class CirclesController(
         var kind = EnumText.ParseCircleKind(request.Kind);
         if (request.EndsAt is not null && kind == CircleKind.Lasting)
         {
-            return BadRequest(new ErrorResponse("Data de fim so vale em circulo temporario ou diario."));
+            return BadRequest(new ErrorResponse("Data de fim só vale em círculo temporário ou diário."));
         }
 
         var quotaError = await quota.TryAddCircleAsync(userId, cancellationToken);
@@ -149,7 +149,7 @@ public sealed class CirclesController(
             Role = CircleRole.Owner,
             JoinedAt = now,
         });
-        db.CircleLogs.Add(Log(circle.Id, userId, "created", "Circulo criado."));
+        db.CircleLogs.Add(Log(circle.Id, userId, "created", "Círculo criado."));
         await db.SaveChangesAsync(cancellationToken);
         circle.Members = await db.CircleMembers.Where(x => x.CircleId == circle.Id).ToListAsync(cancellationToken);
         return Created($"/api/circles/{circle.Id}", ToSummary(circle, CircleRole.Owner, userId));
@@ -163,7 +163,7 @@ public sealed class CirclesController(
         var circle = await LoadCircle(id, cancellationToken);
         if (circle is null || circle.Status == CircleStatus.Deleted || HiddenSurprise(circle, userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
@@ -176,7 +176,7 @@ public sealed class CirclesController(
                 return Ok(PublicPreview(circle));
             }
 
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var names = await MemberNames(circle, cancellationToken);
@@ -199,7 +199,7 @@ public sealed class CirclesController(
         var circle = await LoadCircle(id, cancellationToken);
         if (circle is null || HiddenSurprise(circle, userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
@@ -224,8 +224,8 @@ public sealed class CirclesController(
         await db.SaveChangesAsync(cancellationToken);
         await email.SendAsync(
             request.Email.Trim().ToLowerInvariant(),
-            "Convite para um circulo",
-            $"Use este codigo de convite: {token}",
+            "Convite para um círculo",
+            $"Use este código de convite: {token}",
             cancellationToken);
         return Ok(ShareInvite(token, circle.Name));
     }
@@ -237,7 +237,7 @@ public sealed class CirclesController(
         var circle = await LoadCircle(id, cancellationToken);
         if (circle is null || HiddenSurprise(circle, userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
@@ -273,7 +273,7 @@ public sealed class CirclesController(
             .FirstOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
         if (invite is null || invite.ExpiresAt < DateTime.UtcNow || (invite.AcceptedAt is not null && !invite.IsOpenLink))
         {
-            return NotFound(new ErrorResponse("Convite invalido."));
+            return NotFound(new ErrorResponse("Convite inválido."));
         }
 
         return Ok(new InvitePreviewResponse(invite.Circle.Name, EnumText.Role(invite.Role), invite.IsOpenLink, invite.ExpiresAt));
@@ -290,7 +290,7 @@ public sealed class CirclesController(
             || invite.ExpiresAt < DateTime.UtcNow
             || (invite.AcceptedAt is not null && !invite.IsOpenLink))
         {
-            return BadRequest(new ErrorResponse("Convite invalido."));
+            return BadRequest(new ErrorResponse("Convite inválido."));
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -299,18 +299,18 @@ public sealed class CirclesController(
         await db.Entry(invite.Circle).Collection(x => x.Members).LoadAsync(cancellationToken);
         if (invite.ExpiresAt < DateTime.UtcNow || (invite.AcceptedAt is not null && !invite.IsOpenLink))
         {
-            return BadRequest(new ErrorResponse("Convite invalido."));
+            return BadRequest(new ErrorResponse("Convite inválido."));
         }
 
         var user = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
         if (!invite.IsOpenLink && !string.Equals(user.Email, invite.Email, StringComparison.OrdinalIgnoreCase))
         {
-            return BadRequest(new ErrorResponse("Este convite e para outro e-mail."));
+            return BadRequest(new ErrorResponse("Este convite é para outro e-mail."));
         }
 
         if (HiddenSurprise(invite.Circle, userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         if (invite.Circle.Members.All(x => x.UserId != userId))
@@ -323,7 +323,7 @@ public sealed class CirclesController(
                 Role = invite.Role,
                 JoinedAt = DateTime.UtcNow,
             });
-            db.CircleLogs.Add(Log(invite.CircleId, userId, "joined", "Entrou no circulo por convite."));
+            db.CircleLogs.Add(Log(invite.CircleId, userId, "joined", "Entrou no círculo por convite."));
         }
 
         if (!invite.IsOpenLink)
@@ -345,7 +345,7 @@ public sealed class CirclesController(
         var circle = await LoadCircle(id, cancellationToken);
         if (circle is null || HiddenSurprise(circle, userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         if (circle.Members.Any(x => x.UserId == userId))
@@ -363,7 +363,7 @@ public sealed class CirclesController(
                 Role = CircleRole.Viewer,
                 JoinedAt = DateTime.UtcNow,
             });
-            db.CircleLogs.Add(Log(circle.Id, userId, "joined", "Entrou no circulo publico."));
+            db.CircleLogs.Add(Log(circle.Id, userId, "joined", "Entrou no círculo público."));
             await db.SaveChangesAsync(cancellationToken);
             return NoContent();
         }
@@ -395,7 +395,7 @@ public sealed class CirclesController(
         var actor = circle?.Members.FirstOrDefault(x => x.UserId == userId);
         if (circle is null || actor is null || actor.Role < CircleRole.Admin)
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var join = await db.CircleJoinRequests.FirstOrDefaultAsync(
@@ -403,7 +403,7 @@ public sealed class CirclesController(
             cancellationToken);
         if (join is null)
         {
-            return NotFound(new ErrorResponse("Pedido nao encontrado."));
+            return NotFound(new ErrorResponse("Pedido não encontrado."));
         }
 
         join.Status = "accepted";
@@ -438,18 +438,18 @@ public sealed class CirclesController(
         var owner = circle?.Members.FirstOrDefault(x => x.UserId == userId);
         if (circle is null || HiddenSurprise(circle, userId) || owner is null || owner.Role != CircleRole.Owner || circle.OwnerUserId != userId)
         {
-            return BadRequest(new ErrorResponse("So o dono atual pode transferir o circulo."));
+            return BadRequest(new ErrorResponse("Só o dono atual pode transferir o círculo."));
         }
 
         if (request.MemberUserId == userId)
         {
-            return BadRequest(new ErrorResponse("Escolha outra pessoa do circulo."));
+            return BadRequest(new ErrorResponse("Escolha outra pessoa do círculo."));
         }
 
         var target = circle.Members.FirstOrDefault(x => x.UserId == request.MemberUserId);
         if (target is null)
         {
-            return BadRequest(new ErrorResponse("A pessoa precisa ja fazer parte do circulo."));
+            return BadRequest(new ErrorResponse("A pessoa precisa já fazer parte do círculo."));
         }
 
         owner.Role = CircleRole.Admin;
@@ -457,7 +457,7 @@ public sealed class CirclesController(
         circle.OwnerUserId = target.UserId;
         circle.OwnerLostAt = null;
         circle.OwnershipNextCheckAt = null;
-        db.CircleLogs.Add(Log(circle.Id, userId, "transferred", "Dono transferiu o circulo em vida. Historico e permissoes ficam."));
+        db.CircleLogs.Add(Log(circle.Id, userId, "transferred", "Dono transferiu o círculo em vida. Histórico e permissões ficam."));
 
         var oldOwner = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
         var newOwner = await db.Users.FirstAsync(x => x.Id == target.UserId, cancellationToken);
@@ -491,7 +491,7 @@ public sealed class CirclesController(
         var circle = await LoadCircle(id, cancellationToken);
         if (circle is null)
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
@@ -508,18 +508,18 @@ public sealed class CirclesController(
             member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
             if (circle is null || member is null)
             {
-                return NotFound(new ErrorResponse("Circulo nao encontrado."));
+                return NotFound(new ErrorResponse("Círculo não encontrado."));
             }
 
             var remaining = circle.Members.Where(item => item.UserId != userId).ToList();
             if (remaining.Count == 0)
             {
-                return BadRequest(new ErrorResponse("Exclua o circulo se voce e a unica pessoa nele."));
+                return BadRequest(new ErrorResponse("Exclua o círculo se você é a única pessoa nele."));
             }
 
             if (remaining.Any(item => item.Role >= CircleRole.Admin))
             {
-                return BadRequest(new ErrorResponse("O dono precisa transferir o circulo antes de sair."));
+                return BadRequest(new ErrorResponse("O dono precisa transferir o círculo antes de sair."));
             }
 
             CircleOwnership.MarkLost(circle, DateTime.UtcNow);
@@ -550,12 +550,12 @@ public sealed class CirclesController(
         var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
         if (circle is null || circle.Status == CircleStatus.Deleted || HiddenSurprise(circle, userId) || member is null)
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         if (member.Role < CircleRole.Admin)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("So administrador ou dono liga a busca por perto."));
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Só administrador ou dono liga a busca por perto."));
         }
 
         circle.FindableByLocation = request.FindableByLocation;
@@ -583,13 +583,13 @@ public sealed class CirclesController(
         var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
         if (circle is null || circle.Status == CircleStatus.Deleted || member is null || member.Role != CircleRole.Owner)
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         circle.Status = CircleStatus.Deleted;
         circle.FindableByLocation = false;
         circle.Discoverable = false;
-        db.CircleLogs.Add(Log(circle.Id, userId, "deleted-forever", "Exclusao definitiva. Nao da para desfazer."));
+        db.CircleLogs.Add(Log(circle.Id, userId, "deleted-forever", "Exclusão definitiva. Não dá para desfazer."));
         if (!circle.IsStarter)
         {
             await quota.ReleaseCircleAsync(userId, cancellationToken);
@@ -611,7 +611,7 @@ public sealed class CirclesController(
         var circle = await LoadCircle(id, cancellationToken);
         if (circle is null || circle.Status == CircleStatus.Deleted || HiddenSurprise(circle, userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         if (!CircleAccess.IsWritable(circle))
@@ -621,7 +621,7 @@ public sealed class CirclesController(
 
         if (string.IsNullOrWhiteSpace(request.Body))
         {
-            return BadRequest(new ErrorResponse("A entrada nao pode ficar vazia."));
+            return BadRequest(new ErrorResponse("A entrada não pode ficar vazia."));
         }
 
         var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
@@ -655,7 +655,7 @@ public sealed class CirclesController(
         var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
         if (circle is null || circle.Status == CircleStatus.Deleted || member is null)
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         if (!CircleAccess.IsWritable(circle))
@@ -666,7 +666,7 @@ public sealed class CirclesController(
         var post = circle.Posts.FirstOrDefault(x => x.Id == postId);
         if (post is null)
         {
-            return NotFound(new ErrorResponse("Entrada nao encontrada."));
+            return NotFound(new ErrorResponse("Entrada não encontrada."));
         }
 
         if (post.AuthorUserId != userId && member.Role < CircleRole.Admin)
@@ -696,12 +696,12 @@ public sealed class CirclesController(
         var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
         if (circle is null || member is null || member.Role < CircleRole.Admin)
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         if (!circle.IsSurprise)
         {
-            return BadRequest(new ErrorResponse("Este circulo nao e uma surpresa."));
+            return BadRequest(new ErrorResponse("Este círculo não é uma surpresa."));
         }
 
         circle.RevealedAt ??= DateTime.UtcNow;
@@ -721,17 +721,17 @@ public sealed class CirclesController(
         var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
         if (circle is null || HiddenSurprise(circle, userId) || member is null)
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         if (member.Role < CircleRole.Admin)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("So administrador ou dono arquiva o ciclo."));
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Só administrador ou dono arquiva o ciclo."));
         }
 
         if (circle.Kind != CircleKind.Temporary && circle.Kind != CircleKind.Daily)
         {
-            return BadRequest(new ErrorResponse("So circulos temporarios ou diarios arquivam no fim do ciclo."));
+            return BadRequest(new ErrorResponse("Só círculos temporários ou diários arquivam no fim do ciclo."));
         }
 
         if (circle.Status != CircleStatus.Archived)
@@ -752,7 +752,7 @@ public sealed class CirclesController(
         var circle = await LoadCircle(id, cancellationToken);
         if (circle is null || !CanSeeReveal(circle, userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         return Ok(ToReveal(circle));
@@ -767,14 +767,14 @@ public sealed class CirclesController(
         var circle = await LoadCircle(id, cancellationToken);
         if (circle is null || circle.RevealedAt is null || !CanSeeReveal(circle, userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var existing = await db.Memories.FirstOrDefaultAsync(
             x => x.AuthorUserId == userId && x.SourceCircleId == circle.Id,
             cancellationToken);
         var now = DateTime.UtcNow;
-        var title = $"Recordacao: {circle.Name}";
+        var title = $"Recordação: {circle.Name}";
         var body = string.Join("\n", circle.Posts.OrderBy(x => x.CreatedAt).Select(x => x.Body).Where(x => !string.IsNullOrWhiteSpace(x)));
         if (existing is null)
         {
@@ -826,7 +826,7 @@ public sealed class CirclesController(
         var circle = await LoadCircle(id, cancellationToken);
         if (circle is null || circle.Status == CircleStatus.Deleted || HiddenSurprise(circle, userId) || circle.Members.All(x => x.UserId != userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         IEnumerable<CircleLog> logs = circle.Logs;
@@ -853,7 +853,7 @@ public sealed class CirclesController(
         var circle = await LoadCircle(id, cancellationToken);
         if (circle is null || HiddenSurprise(circle, userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
@@ -884,13 +884,13 @@ public sealed class CirclesController(
         var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
         if (circle is null || member is null || member.Role < CircleRole.Admin)
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var report = await db.ContentReports.FirstOrDefaultAsync(item => item.Id == reportId && item.CircleId == id, cancellationToken);
         if (report is null)
         {
-            return NotFound(new ErrorResponse("Denuncia nao encontrada."));
+            return NotFound(new ErrorResponse("Denúncia não encontrada."));
         }
 
         if (report.Status == "circle-resolved")
@@ -909,7 +909,7 @@ public sealed class CirclesController(
         report.CircleDecision = decision;
         report.CircleReviewerUserId = userId;
         report.CircleReviewedAt = DateTime.UtcNow;
-        db.CircleLogs.Add(Log(id, userId, "report-decided", decision == "hide" ? "Denuncia: conteudo escondido." : "Denuncia: conteudo mantido."));
+        db.CircleLogs.Add(Log(id, userId, "report-decided", decision == "hide" ? "Denúncia: conteúdo escondido." : "Denúncia: conteúdo mantido."));
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return NoContent();
@@ -922,7 +922,7 @@ public sealed class CirclesController(
         var circle = await LoadCircle(id, cancellationToken);
         if (circle is null || HiddenSurprise(circle, userId) || circle.Members.All(x => x.UserId != userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var shares = await db.GiftIdeaShares.AsNoTracking()
@@ -1000,7 +1000,7 @@ public sealed class CirclesController(
         var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
         if (circle is null || HiddenSurprise(circle, userId) || member is null)
         {
-            return (StatusCodes.Status404NotFound, "Circulo nao encontrado.", null);
+            return (StatusCodes.Status404NotFound, "Círculo não encontrado.", null);
         }
 
         if (!CircleAccess.IsWritable(circle))
@@ -1010,7 +1010,7 @@ public sealed class CirclesController(
 
         if (member.Role < CircleRole.Editor)
         {
-            return (StatusCodes.Status403Forbidden, "Quem so visualiza nao edita ideias de presente.", null);
+            return (StatusCodes.Status403Forbidden, "Quem só visualiza não edita ideias de presente.", null);
         }
 
         var share = await db.GiftIdeaShares
@@ -1018,7 +1018,7 @@ public sealed class CirclesController(
             .FirstOrDefaultAsync(item => item.CircleId == circleId && item.ReminderId == reminderId, cancellationToken);
         if (share is null)
         {
-            return (StatusCodes.Status404NotFound, "Ideias de presente nao encontradas.", null);
+            return (StatusCodes.Status404NotFound, "Ideias de presente não encontradas.", null);
         }
 
         return (StatusCodes.Status200OK, null, share);
@@ -1249,7 +1249,7 @@ public sealed class CirclesController(
         var root = (configuration["PUBLIC_BASE_URL"] ?? configuration["PublicBaseUrl"] ?? string.Empty).TrimEnd('/');
         var path = $"/i/{token}";
         var url = string.IsNullOrWhiteSpace(root) ? path : $"{root}{path}";
-        var text = $"Entre no circulo {circleName} no Circulos: {url}";
+        var text = $"Entre no círculo {circleName} no Círculos: {url}";
         return new InviteCreatedResponse(token, text, url);
     }
 

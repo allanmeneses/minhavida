@@ -27,13 +27,13 @@ public sealed class PublicProfileTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.NotFound, (await anonimo.GetAsync($"/api/public/profiles/{auth.UserId}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await anonimo.GetAsync($"/api/public/profiles/{auth.UserId}/photo")).StatusCode);
 
-        var opened = await dono.PutAsJsonAsync("/api/profile", new { displayName = "Ana Costa", isPublic = true, bio = "Corro de manha" });
+        var opened = await dono.PutAsJsonAsync("/api/profile", new { displayName = "Ana Costa", isPublic = true, bio = "Corro de manhã" });
         Assert.Equal(HttpStatusCode.OK, opened.StatusCode);
 
         var publico = await anonimo.GetFromJsonAsync<JsonElement>($"/api/public/profiles/{auth.UserId}", Json);
         Assert.Equal("Ana Costa", publico.GetProperty("displayName").GetString());
         Assert.True(publico.GetProperty("hasPhoto").GetBoolean());
-        Assert.Equal("Corro de manha", publico.GetProperty("description").GetString());
+        Assert.Equal("Corro de manhã", publico.GetProperty("description").GetString());
         Assert.False(publico.TryGetProperty("phone", out _));
         Assert.False(publico.TryGetProperty("secondaryEmail", out _));
         Assert.False(publico.TryGetProperty("birthDate", out _));

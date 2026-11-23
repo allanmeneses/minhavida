@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary } from '@/lib/api';
 import { CIRCLE_KIND_LABEL, CIRCLE_KINDS, type CircleKind } from '@/lib/circleKinds';
+import { CIRCLE_STATUS_LABEL, VISIBILITY_LABEL, displayLabel } from '@/lib/labels';
 import { nextOf } from '@/lib/listKinds';
 import { screenStyles } from '@/lib/screenStyles';
 
@@ -39,7 +40,7 @@ export default function CirclesScreen() {
   }, [token]);
 
   useEffect(() => {
-    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel listar.'));
+    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível listar.'));
   }, [load]);
 
   async function create() {
@@ -70,7 +71,7 @@ export default function CirclesScreen() {
       setSurpriseEmail('');
       router.push(`/(app)/circle/${created.id}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel criar o circulo.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível criar o círculo.');
     }
   }
 
@@ -84,13 +85,13 @@ export default function CirclesScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <Text style={styles.title}>Circulos</Text>
+      <Text style={styles.title}>Círculos</Text>
       <Text style={styles.lead}>Crie o da sua vida. Entrar no de outra pessoa pede convite ou pedido.</Text>
       <Feedback message={error} />
       <TextField label="Nome" value={name} onChangeText={setName} />
-      <TextField label="Descricao" value={description} onChangeText={setDescription} />
+      <TextField label="Descrição" value={description} onChangeText={setDescription} />
       <Button
-        label={visibility === 'private' ? 'Privado' : 'Publico'}
+        label={visibility === 'private' ? 'Privado' : 'Público'}
         variant="ghost"
         onPress={() => setVisibility(visibility === 'private' ? 'public' : 'private')}
       />
@@ -100,7 +101,7 @@ export default function CirclesScreen() {
         onPress={() => setDiscoverable(!discoverable)}
       />
       <Button
-        label={findable ? 'Pode ser encontrado por perto' : 'Nao aparecer na busca por perto'}
+        label={findable ? 'Pode ser encontrado por perto' : 'Não aparecer na busca por perto'}
         variant="ghost"
         onPress={() => setFindable(!findable)}
       />
@@ -125,22 +126,27 @@ export default function CirclesScreen() {
           placeholder="AAAA-MM-DD"
         />
       ) : null}
-      <Button label="Criar circulo" onPress={() => void create()} disabled={!name.trim()} />
+      <Button
+        label="Criar círculo"
+        onPress={() => void create()}
+        disabled={!name.trim()}
+        disabledHint="Informe o nome do círculo para criar."
+      />
 
-      <Text style={styles.section}>Descobrir circulos</Text>
-      <Text style={styles.lead}>Busca por interesse em comum. So aparece quem marcou aceitar ser encontrado.</Text>
-      <TextField label="Buscar circulos" value={query} onChangeText={setQuery} placeholder="corrida, familia" />
+      <Text style={styles.section}>Descobrir círculos</Text>
+      <Text style={styles.lead}>Busca por interesse em comum. Só aparece quem marcou aceitar ser encontrado.</Text>
+      <TextField label="Buscar círculos" value={query} onChangeText={setQuery} placeholder="corrida, família" />
       <Button label="Buscar" variant="ghost" onPress={() => void search()} />
       {found.map((item) => (
         <Pressable
           key={item.id}
           accessibilityRole="button"
-          accessibilityLabel={`Descobrir ${item.name ?? 'circulo'}`}
+          accessibilityLabel={`Descobrir ${item.name ?? 'círculo'}`}
           onPress={() => router.push(`/(app)/circle/${item.id}`)}
           style={styles.card}>
-          <Text style={styles.item}>{item.name ?? 'Circulo'}</Text>
+          <Text style={styles.item}>{item.name ?? 'Círculo'}</Text>
           <Text style={styles.lead}>
-            {item.description || 'Sem descricao'} · {item.visibility}
+            {item.description || 'Sem descrição'} · {displayLabel(item.visibility, VISIBILITY_LABEL)}
           </Text>
         </Pressable>
       ))}
@@ -150,12 +156,12 @@ export default function CirclesScreen() {
         <Pressable
           key={item.id}
           accessibilityRole="button"
-          accessibilityLabel={`Abrir ${item.name ?? 'circulo'}`}
+          accessibilityLabel={`Abrir ${item.name ?? 'círculo'}`}
           onPress={() => router.push(`/(app)/circle/${item.id}`)}
           style={styles.card}>
-          <Text style={styles.item}>{item.name ?? 'Circulo oculto'}</Text>
+          <Text style={styles.item}>{item.name ?? 'Círculo oculto'}</Text>
           <Text style={styles.lead}>
-            {item.visibility} · {CIRCLE_KIND_LABEL[item.kind as CircleKind] ?? item.kind} · {item.status} · {item.memberCount} pessoa(s)
+            {displayLabel(item.visibility, VISIBILITY_LABEL)} · {CIRCLE_KIND_LABEL[item.kind as CircleKind] ?? item.kind} · {displayLabel(item.status, CIRCLE_STATUS_LABEL)} · {item.memberCount} pessoa(s)
           </Text>
         </Pressable>
       ))}

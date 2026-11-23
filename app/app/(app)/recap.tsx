@@ -22,18 +22,18 @@ export default function RecapScreen() {
   }, [token]);
 
   useEffect(() => {
-    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel abrir o recap.'));
+    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível abrir o recap.'));
   }, [load]);
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Resumo de uso</Text>
       <Text style={styles.lead}>
-        O recap so mostra o que voce ja usou. Outros fluxos aparecem quando voce passa a usa-los.
+        O recap só mostra o que você já usou. Outros fluxos aparecem quando você passa a usa-los.
       </Text>
       <Feedback message={error} />
       {recap && recap.flows.length === 0 ? (
-        <Text style={styles.lead}>Ainda nao ha uso para resumir.</Text>
+        <Text style={styles.lead}>Ainda não há uso para resumir.</Text>
       ) : null}
       {recap?.flows.map((flow) => (
         <Text key={flow.key} style={styles.item}>

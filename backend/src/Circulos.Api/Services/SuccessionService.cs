@@ -38,7 +38,7 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
             CircleId = circle.Id,
             ActorUserId = null,
             Action = "succession-opened",
-            Detail = "Sem sucessor. Aberta votacao por maioria simples, sem quorum, prazo de 3 dias. Todos os membros votam.",
+            Detail = "Sem sucessor. Aberta votação por maioria simples, sem quorum, prazo de 3 dias. Todos os membros votam.",
             CreatedAt = now,
         });
         return vote;
@@ -67,13 +67,13 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
         var circle = await db.Circles.Include(item => item.Members).FirstOrDefaultAsync(item => item.Id == circleId, cancellationToken);
         if (circle is null || circle.Status == CircleStatus.Deleted)
         {
-            return (StatusCodes.Status404NotFound, "Circulo nao encontrado.");
+            return (StatusCodes.Status404NotFound, "Círculo não encontrado.");
         }
 
         var members = circle.Members.ToList();
         if (members.All(member => member.UserId != voterId) || members.All(member => member.UserId != candidateId))
         {
-            return (StatusCodes.Status400BadRequest, "So membros do circulo votam e so em membros.");
+            return (StatusCodes.Status400BadRequest, "Só membros do círculo votam é só em membros.");
         }
 
         var vote = await db.Set<SuccessionVote>()
@@ -83,7 +83,7 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
             .FirstOrDefaultAsync(cancellationToken);
         if (vote is null)
         {
-            return (StatusCodes.Status404NotFound, "Nao ha votacao aberta.");
+            return (StatusCodes.Status404NotFound, "Não há votação aberta.");
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
@@ -92,7 +92,7 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
             await transaction.CommitAsync(cancellationToken);
             return vote.WinnerUserId == candidateId
                 ? (StatusCodes.Status204NoContent, null)
-                : (StatusCodes.Status400BadRequest, "A votacao ja elegeu o novo dono.");
+                : (StatusCodes.Status400BadRequest, "A votação já elegeu o novo dono.");
         }
 
         if (vote.Status == SuccessionVoteStatus.Expired || now >= vote.DeadlineAt)
@@ -147,24 +147,24 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
         var circle = await db.Circles.Include(item => item.Members).FirstOrDefaultAsync(item => item.Id == circleId, cancellationToken);
         if (circle is null || circle.Status == CircleStatus.Deleted)
         {
-            return (StatusCodes.Status404NotFound, "Circulo nao encontrado.");
+            return (StatusCodes.Status404NotFound, "Círculo não encontrado.");
         }
 
         if (circle.Members.All(member => member.UserId != requesterId))
         {
-            return (StatusCodes.Status404NotFound, "Circulo nao encontrado.");
+            return (StatusCodes.Status404NotFound, "Círculo não encontrado.");
         }
 
         if (circle.OwnerElectedAt is null || circle.OwnerUserId is null)
         {
-            return (StatusCodes.Status400BadRequest, "So o dono eleito por votacao pode ser substituido assim.");
+            return (StatusCodes.Status400BadRequest, "Só o dono eleito por votação pode ser substituído assim.");
         }
 
         var now = clock.GetUtcNow().UtcDateTime;
         var availableAt = circle.OwnerElectedAt.Value.AddDays(SuccessionVote.ReplacementCooldownDays);
         if (now < availableAt)
         {
-            return (StatusCodes.Status400BadRequest, "O dono eleito so pode ser substituido apos 30 dias da eleicao.");
+            return (StatusCodes.Status400BadRequest, "O dono eleito só pode ser substituído após 30 dias da eleição.");
         }
 
         var open = await db.Set<SuccessionVote>().FirstOrDefaultAsync(
@@ -191,7 +191,7 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
             CircleId = circle.Id,
             ActorUserId = requesterId,
             Action = "succession-opened",
-            Detail = "Membro pediu nova votacao para substituir o dono eleito. Maioria simples, sem quorum.",
+            Detail = "Membro pediu nova votação para substituir o dono eleito. Maioria simples, sem quorum.",
             CreatedAt = now,
         });
         await db.SaveChangesAsync(cancellationToken);
@@ -282,7 +282,7 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
             winnerId,
             now,
             "succession-decided",
-            "Maioria simples, sem quorum, elegeu o novo dono. Historico de votacoes anteriores nao fica visivel.",
+            "Maioria simples, sem quorum, elegeu o novo dono. Histórico de votacoes anteriores não fica visível.",
             cancellationToken);
         vote.Status = SuccessionVoteStatus.Decided;
         vote.WinnerUserId = winnerId;
@@ -319,7 +319,7 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
                 CircleId = circle.Id,
                 ActorUserId = null,
                 Action = "succession-expired",
-                Detail = "Prazo da votacao acabou sem eleger. O circulo segue sem dono; a posse e oferecida as pessoas mais ativas apos 40 dias.",
+                Detail = "Prazo da votação acabou sem eleger. O círculo segue sem dono; a posse é oferecida às pessoas mais ativas após 40 dias.",
                 CreatedAt = now,
             });
         }

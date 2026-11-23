@@ -18,11 +18,11 @@ public sealed class SearchAndShortcutOrderTests : IClassFixture<ApiFactory>
         client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
         var areas = await client.GetFromJsonAsync<List<JsonArea>>("/api/life-areas", Json);
         var diary = areas!.Single(x => x.Kind == "diary");
-        await client.PostAsJsonAsync($"/api/life-areas/{diary.Id}/entries", new { title = "Texto livre da medicacao", body = "nota" });
-        await client.PostAsJsonAsync("/api/circles", new { name = "Clube medicacao", visibility = "public", discoverable = true });
+        await client.PostAsJsonAsync($"/api/life-areas/{diary.Id}/entries", new { title = "Texto livre da medicação", body = "nota" });
+        await client.PostAsJsonAsync("/api/circles", new { name = "Clube medicação", visibility = "public", discoverable = true });
         await client.PostAsJsonAsync("/api/reminders", new
         {
-            title = "Aniversario medicacao",
+            title = "Aniversário medicação",
             kind = "birthday",
             startAt = DateTime.UtcNow.AddDays(20),
             personName = "Ana",
@@ -31,7 +31,7 @@ public sealed class SearchAndShortcutOrderTests : IClassFixture<ApiFactory>
 
         for (var i = 0; i < 2; i++)
         {
-            var first = await client.GetFromJsonAsync<JsonElement>("/api/search?q=medicacao", Json);
+            var first = await client.GetFromJsonAsync<JsonElement>("/api/search?q=medicação", Json);
             Assert.Contains(first.GetProperty("hits").EnumerateArray(), x => x.GetProperty("type").GetString() == "diary");
             Assert.Contains(first.GetProperty("hits").EnumerateArray(), x => x.GetProperty("type").GetString() == "circle");
             Assert.Contains(first.GetProperty("hits").EnumerateArray(), x => x.GetProperty("type").GetString() == "birthday");
@@ -39,10 +39,10 @@ public sealed class SearchAndShortcutOrderTests : IClassFixture<ApiFactory>
 
         await client.GetAsync("/api/search?q=clube");
         var history = await client.GetFromJsonAsync<JsonElement>("/api/search/history", Json);
-        Assert.Equal("medicacao", history.GetProperty("frequent").EnumerateArray().First().GetString());
+        Assert.Equal("medicação", history.GetProperty("frequent").EnumerateArray().First().GetString());
         Assert.Contains(history.GetProperty("recent").EnumerateArray().Select(x => x.GetString()), x => x == "clube");
 
-        var filtered = await client.GetFromJsonAsync<JsonElement>("/api/search?q=medicacao&type=circle", Json);
+        var filtered = await client.GetFromJsonAsync<JsonElement>("/api/search?q=medicação&type=circle", Json);
         Assert.All(filtered.GetProperty("hits").EnumerateArray(), x => Assert.Equal("circle", x.GetProperty("type").GetString()));
     }
 

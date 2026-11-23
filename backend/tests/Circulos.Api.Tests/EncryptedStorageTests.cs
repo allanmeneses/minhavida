@@ -9,7 +9,7 @@ namespace Circulos.Api.Tests;
 
 public sealed class EncryptedStorageTests
 {
-    private const string PlainText = "clausula confidencial que nao pode ficar em claro";
+    private const string PlainText = "clausula confidencial que não pode ficar em claro";
 
     [Fact]
     public async Task ArquivoNoDisco_NaoContemOTextoOriginal()

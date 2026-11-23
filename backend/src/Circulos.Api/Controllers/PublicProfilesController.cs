@@ -18,7 +18,7 @@ public sealed class PublicProfilesController(AppDbContext db, IFileStorage stora
         var profile = await db.Profiles.AsNoTracking().FirstOrDefaultAsync(item => item.UserId == userId, cancellationToken);
         if (profile is null || !profile.IsPublic)
         {
-            return NotFound(new ErrorResponse("Perfil nao encontrado."));
+            return NotFound(new ErrorResponse("Perfil não encontrado."));
         }
 
         Response.Headers.CacheControl = "private, no-store";
@@ -35,7 +35,7 @@ public sealed class PublicProfilesController(AppDbContext db, IFileStorage stora
         var profile = await db.Profiles.AsNoTracking().FirstOrDefaultAsync(item => item.UserId == userId, cancellationToken);
         if (profile is null || !profile.IsPublic || profile.PhotoStorageKey is null || profile.PhotoContentType is null)
         {
-            return NotFound(new ErrorResponse("Perfil nao encontrado."));
+            return NotFound(new ErrorResponse("Perfil não encontrado."));
         }
 
         var stream = await storage.OpenReadAsync(profile.PhotoStorageKey, cancellationToken);

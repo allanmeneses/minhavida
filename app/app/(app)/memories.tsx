@@ -32,7 +32,7 @@ export default function MemoriesScreen() {
   }, [token, skip]);
 
   useEffect(() => {
-    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Falha ao abrir as memorias.'));
+    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Falha ao abrir as memórias.'));
   }, [load]);
 
   async function create() {
@@ -69,18 +69,18 @@ export default function MemoriesScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <Text style={styles.title}>Memorias</Text>
+      <Text style={styles.title}>Memórias</Text>
       <Text style={styles.lead}>Linha do tempo do seu perfil. Foto, texto e data. Edicao e silenciosa.</Text>
       <Feedback message={error} />
-      <TextField label="Titulo" value={title} onChangeText={setTitle} placeholder="Primeiro dia de escola" />
+      <TextField label="Título" value={title} onChangeText={setTitle} placeholder="Primeiro dia de escola" />
       <TextField label="Texto" value={body} onChangeText={setBody} />
       <TextField label="Quando" value={occurredOn} onChangeText={setOccurredOn} placeholder="2018-02-05" />
-      <Button label="Guardar memoria" onPress={() => void create()} disabled={!title.trim()} />
+      <Button label="Guardar memória" onPress={() => void create()} disabled={!title.trim()} />
       {items.map((item) => (
         <MemoryCard key={item.id} item={item} onSave={(next) => void saveSilent(next)} />
       ))}
       {hasMore ? (
-        <Button label="Ver mais memorias" variant="ghost" onPress={() => setSkip((current) => current + pageSize)} />
+        <Button label="Ver mais memórias" variant="ghost" onPress={() => setSkip((current) => current + pageSize)} />
       ) : null}
     </ScrollView>
   );

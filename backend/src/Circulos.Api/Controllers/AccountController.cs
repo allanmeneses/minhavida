@@ -40,7 +40,7 @@ public sealed class AccountController(
 
         if (user.BlockedAt is null)
         {
-            return BadRequest(new ErrorResponse("Esta conta nao esta bloqueada."));
+            return BadRequest(new ErrorResponse("Esta conta não está bloqueada."));
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -83,7 +83,7 @@ public sealed class AccountController(
         await email.SendAsync(
             user.Email,
             "Recebemos seu pedido de suporte",
-            "A equipe vai ler sua mensagem. Nao ha prazo prometido de resposta.",
+            "A equipe vai ler sua mensagem. Não há prazo prometido de resposta.",
             cancellationToken);
         return NoContent();
     }
@@ -112,8 +112,8 @@ public sealed class AccountController(
         await db.SaveChangesAsync(cancellationToken);
         await email.SendAsync(
             user.Email,
-            "Confirme a exclusao da sua conta no Circulos",
-            $"Para apagar seus dados, use este codigo: {token}",
+            "Confirme a exclusão da sua conta no Círculos",
+            $"Para apagar seus dados, use este código: {token}",
             cancellationToken);
         return NoContent();
     }
@@ -131,7 +131,7 @@ public sealed class AccountController(
             .FirstOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
         if (pending is null || pending.UsedAt is not null || pending.ExpiresAt < DateTime.UtcNow)
         {
-            return BadRequest(new ErrorResponse("Esta confirmacao nao e valida."));
+            return BadRequest(new ErrorResponse("Esta confirmação não é válida."));
         }
 
         pending.UsedAt = DateTime.UtcNow;

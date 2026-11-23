@@ -24,19 +24,19 @@ public sealed class RevealTests : IClassFixture<ApiFactory>
         var circle = await (await dono.PostAsJsonAsync("/api/circles", new
         {
             name = "Festa",
-            description = "Nao contar",
+            description = "Não contar",
             isSurprise = true,
             surpriseSubjectEmail = honradoAuth.Email,
         })).Content.ReadFromJsonAsync<CircleDto>(Json);
 
-        (await dono.PostAsJsonAsync($"/api/circles/{circle!.Id}/posts", new { body = "Feliz aniversario" })).EnsureSuccessStatusCode();
+        (await dono.PostAsJsonAsync($"/api/circles/{circle!.Id}/posts", new { body = "Feliz aniversário" })).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.NotFound, (await honrado.GetAsync($"/api/circles/{circle.Id}/reveal-summary")).StatusCode);
 
         var reveal = await dono.PostAsync($"/api/circles/{circle.Id}/reveal", null);
         Assert.Equal(HttpStatusCode.OK, reveal.StatusCode);
         var summary = await reveal.Content.ReadFromJsonAsync<JsonElement>(Json);
         Assert.Equal("Festa", summary.GetProperty("name").GetString());
-        Assert.Contains(summary.GetProperty("messages").EnumerateArray(), x => x.GetProperty("body").GetString() == "Feliz aniversario");
+        Assert.Contains(summary.GetProperty("messages").EnumerateArray(), x => x.GetProperty("body").GetString() == "Feliz aniversário");
 
         var honradoSummary = await honrado.GetFromJsonAsync<JsonElement>($"/api/circles/{circle.Id}/reveal-summary", Json);
         Assert.Equal("Festa", honradoSummary.GetProperty("name").GetString());
@@ -47,13 +47,13 @@ public sealed class RevealTests : IClassFixture<ApiFactory>
         var kept = await honrado.PostAsync($"/api/circles/{circle.Id}/keep-memory", null);
         Assert.Equal(HttpStatusCode.OK, kept.StatusCode);
         var memory = await kept.Content.ReadFromJsonAsync<JsonElement>(Json);
-        Assert.Contains("Recordacao", memory.GetProperty("title").GetString());
-        Assert.Contains("Feliz aniversario", memory.GetProperty("body").GetString());
+        Assert.Contains("Recordação", memory.GetProperty("title").GetString());
+        Assert.Contains("Feliz aniversário", memory.GetProperty("body").GetString());
 
         var edited = await honrado.PutAsJsonAsync($"/api/memories/{memory.GetProperty("id").GetGuid()}", new
         {
             title = "Minha festa",
-            body = "Editei em silencio",
+            body = "Editei em silêncio",
         });
         Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
         var list = await honrado.GetFromJsonAsync<JsonElement>("/api/memories", Json);

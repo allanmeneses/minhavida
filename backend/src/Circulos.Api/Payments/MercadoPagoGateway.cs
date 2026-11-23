@@ -231,7 +231,7 @@ public sealed class MercadoPagoGateway(HttpClient http, IOptions<MercadoPagoOpti
             }
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
-                throw new PaymentGatewayException("Falha de comunicacao com o Mercado Pago.", ex);
+                throw new PaymentGatewayException("Falha de comunicação com o Mercado Pago.", ex);
             }
 
             using (res)

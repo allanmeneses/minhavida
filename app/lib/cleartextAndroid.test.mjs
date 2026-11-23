@@ -7,13 +7,13 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 describe('HTTP em texto puro no Android', () => {
-  it('nao libera HTTP na configuracao de producao do app.json', () => {
+  it('não libera HTTP na configuração de produção do app.json', () => {
     const app = JSON.parse(readFileSync(join(root, 'app.json'), 'utf8'));
     assert.notEqual(app.expo.android.usesCleartextTraffic, true);
     assert.ok(app.expo.plugins.includes('./plugins/withCleartextDebugOnly'));
   });
 
-  it('plugin trava HTTP no release e libera so no debug/emulador', () => {
+  it('plugin trava HTTP no release e libera só no debug/emulador', () => {
     const source = readFileSync(join(root, 'plugins/withCleartextDebugOnly.js'), 'utf8');
     assert.match(source, /android:usesCleartextTraffic'] = 'false'/);
     assert.match(source, /android:usesCleartextTraffic="true"/);

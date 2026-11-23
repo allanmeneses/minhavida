@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = dirname(fileURLToPath(import.meta.url));
 
-describe('transicao instantanea', () => {
+describe('transição instantanea', () => {
   it('stack e abas desligam animacao', () => {
     const stack = readFileSync(join(root, '../app/_layout.tsx'), 'utf8');
     const tabs = readFileSync(join(root, '../app/(app)/_layout.tsx'), 'utf8');

@@ -7,8 +7,8 @@ import { deviceCalendarPolicy, listDeviceEvents } from './deviceCalendar.ts';
 
 const root = dirname(fileURLToPath(import.meta.url));
 
-describe('calendario do aparelho', () => {
-  it('e somente leitura e nunca escreve no calendario nativo', async () => {
+describe('calendário do aparelho', () => {
+  it('e somente leitura e nunca escreve no calendário nativo', async () => {
     assert.equal(deviceCalendarPolicy.mode, 'read-only');
     assert.equal(deviceCalendarPolicy.writes, false);
     assert.deepEqual(await listDeviceEvents(), []);
@@ -20,7 +20,7 @@ describe('calendario do aparelho', () => {
     assert.match(screen, /nunca grava/);
   });
 
-  it('le eventos quando a permissao vem de um leitor injetado', async () => {
+  it('le eventos quando a permissão vem de um leitor injetado', async () => {
     const events = await listDeviceEvents({
       async requestPermission() {
         return true;
