@@ -316,6 +316,31 @@ export default function CircleDetailScreen() {
       {isLocked ? (
         <Text style={styles.lead}>Este circulo esta travado. Leituras seguem; ninguem publica entrada nova.</Text>
       ) : null}
+      {detail?.ownershipOffer ? (
+        <>
+          <Text style={styles.section}>Oferta de posse</Text>
+          <Text style={styles.lead}>
+            O sistema oferece a posse deste circulo para voce. O primeiro que aceitar vira dono; os outros convites
+            saem na hora.
+          </Text>
+          <Button
+            label="Aceitar posse"
+            onPress={() => {
+              if (!token || !circleId) {
+                return;
+              }
+              void api(`/api/circles/${circleId}/ownership-offer/accept`, { method: 'POST', token })
+                .then(() => {
+                  setOk('Voce assumiu a posse deste circulo.');
+                  return load();
+                })
+                .catch((err) =>
+                  setError(err instanceof ApiError ? err.message : 'Nao foi possivel aceitar a posse.'),
+                );
+            }}
+          />
+        </>
+      ) : null}
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />
       {token && circleId ? (

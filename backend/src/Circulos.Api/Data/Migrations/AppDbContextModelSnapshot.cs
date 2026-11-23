@@ -251,8 +251,14 @@ namespace Circulos.Api.Data.Migrations
                     b.Property<DateTime?>("OwnerElectedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("OwnerLostAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("OwnerUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("OwnershipNextCheckAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("RevealedAt")
                         .HasColumnType("timestamp with time zone");
@@ -865,6 +871,44 @@ namespace Circulos.Api.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("onboarding_examples", (string)null);
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.OwnershipOffer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CircleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("OfferedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RoundId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoundId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("CircleId", "UserId", "Status");
+
+                    b.ToTable("ownership_offers", (string)null);
                 });
 
             modelBuilder.Entity("Circulos.Api.Domain.PasswordReset", b =>
@@ -1999,6 +2043,25 @@ namespace Circulos.Api.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.OwnershipOffer", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.Circle", "Circle")
+                        .WithMany()
+                        .HasForeignKey("CircleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Circulos.Api.Domain.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Circle");
 
                     b.Navigation("User");
                 });

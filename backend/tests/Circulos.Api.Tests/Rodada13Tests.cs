@@ -98,32 +98,28 @@ public sealed class Rodada13Tests : IClassFixture<ApiFactory>
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var open = await db.SuccessionVotes.SingleAsync(item => item.CircleId == circleId);
-            open.DeadlineAt = DateTime.UtcNow.AddMinutes(-1);
+            var stored = await db.Circles.SingleAsync(item => item.Id == circleId);
+            stored.Status = CircleStatus.LockedNoOwner;
+            stored.OwnershipNextCheckAt = DateTime.UtcNow.AddDays(40);
             await db.SaveChangesAsync();
         }
 
-        var expire = editor.GetAsync($"/api/circles/{circleId}/succession");
-        var overlap = editor.PostAsJsonAsync($"/api/circles/{circleId}/posts", new { body = "Durante a trava" });
-        await Task.WhenAll(expire, overlap);
-        (await expire).EnsureSuccessStatusCode();
+        var outroEditor = _factory.CreateClient();
+        outroEditor.WithToken(editorAuth.Token);
+        var first = editor.PostAsJsonAsync($"/api/circles/{circleId}/posts", new { body = "Durante a trava" });
+        var overlap = outroEditor.PostAsJsonAsync($"/api/circles/{circleId}/posts", new { body = "Tambem durante a trava" });
+        await Task.WhenAll(first, overlap);
         var overlapResponse = await overlap;
+        var firstResponse = await first;
 
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var stored = await db.Circles.Include(item => item.Posts).SingleAsync(item => item.Id == circleId);
             Assert.Equal(CircleStatus.LockedNoOwner, stored.Status);
-            var during = stored.Posts.Where(post => post.Body == "Durante a trava").ToList();
-            if (overlapResponse.IsSuccessStatusCode)
-            {
-                Assert.Single(during);
-            }
-            else
-            {
-                Assert.Empty(during);
-                Assert.Equal(HttpStatusCode.BadRequest, overlapResponse.StatusCode);
-            }
+            Assert.DoesNotContain(stored.Posts, post => post.Body.Contains("Durante a trava"));
+            Assert.Equal(HttpStatusCode.BadRequest, firstResponse.StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, overlapResponse.StatusCode);
         }
 
         var after = await editor.PostAsJsonAsync($"/api/circles/{circleId}/posts", new { body = "Depois da trava" });

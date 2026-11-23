@@ -18,6 +18,7 @@ public sealed class HomeController(
     BillingService billing,
     ReminderEmailService reminderEmails,
     CircleArchiveService archive,
+    OwnershipOfferService ownershipOffers,
     UsageStats stats,
     OnboardingService onboarding) : ControllerBase
 {
@@ -25,6 +26,7 @@ public sealed class HomeController(
     public async Task<ActionResult<DayPanelResponse>> Home(CancellationToken cancellationToken)
     {
         await archive.ArchiveExpiredAsync(cancellationToken);
+        await ownershipOffers.ProcessDueAsync(cancellationToken);
         var userId = User.GetUserId();
         var emailed = await reminderEmails.DispatchDueAsync(userId, cancellationToken);
         var user = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
@@ -90,6 +92,7 @@ public sealed class HomeController(
         var onThisDay = await OnThisDayAsync(userId, today, cancellationToken);
         var monthly = await MonthlySurpriseAsync(user, today, cancellationToken);
         var onboardingItems = await OnboardingItemsAsync(userId, cancellationToken);
+        var offers = await ownershipOffers.OpenForUserAsync(userId, cancellationToken);
         return Ok(new DayPanelResponse(
             overdue.OrderBy(x => x.At).ToList(),
             dueToday.OrderBy(x => x.At).ToList(),
@@ -104,7 +107,12 @@ public sealed class HomeController(
             onThisDay,
             monthly,
             user.RoutineStreakDays,
-            onboardingItems));
+            onboardingItems,
+            offers.Select(offer => new OwnershipOfferNoticeResponse(
+                offer.CircleId,
+                offer.Circle.Name,
+                offer.OfferedAt,
+                offer.ExpiresAt)).ToList()));
     }
 
     [HttpGet("plan")]

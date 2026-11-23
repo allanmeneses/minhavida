@@ -76,7 +76,7 @@ public sealed class AccountDeletionTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task Exclusao_SemAdminNemSucessor_TravaCirculo()
+    public async Task Exclusao_SemAdminNemSucessor_FicaSemDonoSemTravar()
     {
         var dono = _factory.CreateClient();
         var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono", password: "senha-segura-1");
@@ -92,8 +92,10 @@ public sealed class AccountDeletionTests : IClassFixture<ApiFactory>
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var stored = await db.Circles.Include(x => x.Logs).SingleAsync(x => x.Id == circle!.Id);
         Assert.Null(stored.OwnerUserId);
-        Assert.Equal(CircleStatus.LockedNoOwner, stored.Status);
-        Assert.Contains(stored.Logs, x => x.Action == "locked");
+        Assert.Equal(CircleStatus.Active, stored.Status);
+        Assert.NotNull(stored.OwnerLostAt);
+        Assert.DoesNotContain(stored.Logs, x => x.Action == "locked");
+        Assert.Contains(stored.Logs, x => x.Action == "owner-lost");
     }
 
     [Fact]

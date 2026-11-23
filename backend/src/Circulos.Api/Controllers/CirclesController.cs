@@ -186,7 +186,7 @@ public sealed class CirclesController(
             ? await PendingJoinRequests(circle.Id, cancellationToken)
             : [];
         var shared = await SharedEntriesAsync(circle.Id, cancellationToken);
-        return Ok(ToDetail(circle, names, posts, log, joinRequests, shared));
+        return Ok(ToDetail(circle, names, posts, log, joinRequests, shared, await CurrentOfferAsync(circle.Id, userId, cancellationToken)));
     }
 
     [HttpPost("{id:guid}/invites")]
@@ -455,6 +455,8 @@ public sealed class CirclesController(
         owner.Role = CircleRole.Admin;
         target.Role = CircleRole.Owner;
         circle.OwnerUserId = target.UserId;
+        circle.OwnerLostAt = null;
+        circle.OwnershipNextCheckAt = null;
         db.CircleLogs.Add(Log(circle.Id, userId, "transferred", "Dono transferiu o circulo em vida. Historico e permissoes ficam."));
 
         var oldOwner = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
@@ -478,7 +480,8 @@ public sealed class CirclesController(
             circle.Posts.OrderByDescending(x => x.CreatedAt).Select(ToPost).ToList(),
             circle.Logs.OrderByDescending(x => x.CreatedAt).Select(ToLog).ToList(),
             await PendingJoinRequests(circle.Id, cancellationToken),
-            await SharedEntriesAsync(circle.Id, cancellationToken)));
+            await SharedEntriesAsync(circle.Id, cancellationToken),
+            null));
     }
 
     [HttpDelete("{id:guid}/membership")]
@@ -519,7 +522,7 @@ public sealed class CirclesController(
                 return BadRequest(new ErrorResponse("O dono precisa transferir o circulo antes de sair."));
             }
 
-            circle.OwnerUserId = null;
+            CircleOwnership.MarkLost(circle, DateTime.UtcNow);
             db.CircleMembers.Remove(member);
             if (!circle.IsStarter)
             {
@@ -1096,13 +1099,36 @@ public sealed class CirclesController(
             circle.EndsAt);
     }
 
+    private async Task<OwnershipOfferNoticeResponse?> CurrentOfferAsync(
+        Guid circleId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        var offer = await db.OwnershipOffers.AsNoTracking()
+            .Include(item => item.Circle)
+            .FirstOrDefaultAsync(
+                item => item.CircleId == circleId
+                    && item.UserId == userId
+                    && item.Status == OwnershipOfferStatus.Pending
+                    && item.ExpiresAt > now,
+                cancellationToken);
+        if (offer is null)
+        {
+            return null;
+        }
+
+        return new OwnershipOfferNoticeResponse(offer.CircleId, offer.Circle.Name, offer.OfferedAt, offer.ExpiresAt);
+    }
+
     private static CircleDetailResponse ToDetail(
         Circle circle,
         IReadOnlyList<CircleMemberDto> names,
         IReadOnlyList<CirclePostResponse> posts,
         IReadOnlyList<CircleLogResponse> log,
         IReadOnlyList<CircleJoinRequestDto> joinRequests,
-        IReadOnlyList<SharedLifeEntryResponse> sharedEntries) =>
+        IReadOnlyList<SharedLifeEntryResponse> sharedEntries,
+        OwnershipOfferNoticeResponse? ownershipOffer) =>
         new(
             circle.Id,
             circle.Name,
@@ -1120,7 +1146,8 @@ public sealed class CirclesController(
             log,
             joinRequests,
             sharedEntries,
-            circle.EndsAt);
+            circle.EndsAt,
+            ownershipOffer);
 
     private async Task<List<SharedLifeEntryResponse>> SharedEntriesAsync(Guid circleId, CancellationToken cancellationToken)
     {

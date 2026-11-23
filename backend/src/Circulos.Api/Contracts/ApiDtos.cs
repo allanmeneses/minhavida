@@ -294,6 +294,12 @@ public sealed record CircleSummaryResponse(
 
 public sealed record CircleJoinRequestDto(Guid Id, Guid UserId, string Name, string Status, DateTime CreatedAt);
 
+public sealed record OwnershipOfferNoticeResponse(
+    Guid CircleId,
+    string CircleName,
+    DateTime OfferedAt,
+    DateTime ExpiresAt);
+
 public sealed record CircleDetailResponse(
     Guid Id,
     string? Name,
@@ -311,7 +317,8 @@ public sealed record CircleDetailResponse(
     IReadOnlyList<CircleLogResponse> Log,
     IReadOnlyList<CircleJoinRequestDto> JoinRequests,
     IReadOnlyList<SharedLifeEntryResponse> SharedEntries,
-    DateTime? EndsAt = null);
+    DateTime? EndsAt = null,
+    OwnershipOfferNoticeResponse? OwnershipOffer = null);
 
 public sealed record CirclePostResponse(Guid Id, Guid? AuthorUserId, string Body, bool HasPhoto, DateTime CreatedAt);
 public sealed record CircleLogResponse(Guid Id, Guid? ActorUserId, string Action, string Detail, DateTime CreatedAt);
@@ -636,7 +643,8 @@ public sealed record DayPanelResponse(
     IReadOnlyList<OnThisDayItem> OnThisDay,
     MonthlySurpriseResponse? MonthlySurprise,
     int RoutineStreakDays,
-    IReadOnlyList<OnboardingExampleResponse> Onboarding);
+    IReadOnlyList<OnboardingExampleResponse> Onboarding,
+    IReadOnlyList<OwnershipOfferNoticeResponse> OwnershipOffers);
 
 public static class EnumText
 {

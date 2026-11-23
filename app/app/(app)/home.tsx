@@ -269,6 +269,16 @@ export default function HomeScreen() {
       {(panel?.shortcutNotices ?? []).map((notice) => (
         <Feedback key={notice.id} message={notice.detail} tone="ok" />
       ))}
+      {(panel?.ownershipOffers ?? []).map((offer) => (
+        <View key={offer.circleId} style={styles.card}>
+          <Text style={styles.lead}>O circulo {offer.circleName} oferece a posse para voce.</Text>
+          <Button
+            label={`Abrir ${offer.circleName}`}
+            variant="ghost"
+            onPress={() => router.push(`/(app)/circle/${offer.circleId}` as Href)}
+          />
+        </View>
+      ))}
 
       {(panel?.onboarding ?? []).length > 0 ? (
         <View style={styles.card} testID="onboarding-examples">

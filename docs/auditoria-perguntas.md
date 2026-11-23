@@ -10,10 +10,10 @@ Total de perguntas: 272
 
 ## Totais por status
 
-- feito e testado: 234
-- parcial: 7
-- nao feito: 5
-- decidido nao: 21
+- feito e testado: 236
+- parcial: 5
+- nao feito: 4
+- decidido nao: 22
 - adiado pelo Allan: 5
 - sem resposta clara: 0
 
@@ -24,7 +24,7 @@ Formato: numero. [ordinal da transcricao] pergunta | Allan | status | evidencia 
 1. [1] quando alguem entra num circulo, o que ela enxerga primeiro - o feed de entradas recentes. | Allan: Eu entendo que o feed, pra pessoa saber quem e que ta, quem e a pessoa envolvida. Preciso. | parcial | Detalhe mostra `Quem esta aqui` antes das entradas. Visitante nao ve membros (pergunta 9). Teste `Publico_VisitanteVeSoNomeEDescricao`. Playwright `descobrir circulo e pedir entrada` | Falta: Feed de descoberta adiado (37 a 39)
 2. [2] o circulo tem dono fixo ou roda por consenso? | Allan: O circulo tem um dono fixo, mas esse dono fixo pode mudar. | feito e testado | `POST /api/circles/{id}/transfer`. Testes `Dono_TransfereEmVida_HistoricoEPermissoesFicam`, `TransferenciaSobreposta_SoUmaVence`. Playwright `transferir dono do circulo em vida` | Falta: Nada nesta pergunta
 3. [3] quando o dono muda, o historico de entradas e as permissoes seguem com o circulo ou reset. | Allan: Permanecem com o circulo, independente de qual seja o dono pra posteridade. Pensa que pes. | feito e testado | Historico fica na transferencia (testes da 2). Papel Admin existe. A fala cobre permanencia do historico, nao varios donos | Falta: Nada nesta pergunta
-4. [4] quando um circulo fica sem dono ativo por um tempo, ele arquiva sozinho, avisa alguem, ou. | Allan: Nao entendi, me explica melhor. / Trava tudo pra coisas tao sensiveis assim, realmente po. | parcial | Depois do esclarecimento: trava ate alguem definir. `CircleStatus.LockedNoOwner`. Teste `Exclusao_SemAdminNemSucessor_TravaCirculo` | Falta: Sem trava por inatividade; o Allan nao definiu o prazo
+4. [4] quando um circulo fica sem dono ativo por um tempo, ele arquiva sozinho, avisa alguem, ou. | Allan: Nao entendi, me explica melhor. / Trava tudo pra coisas tao sensiveis assim, realmente po. | feito e testado | Decisao: o sistema nao considera ninguem inativo e nao ha prazo de inatividade. `MembershipRules.ConsidersMemberInactiveByTime` e falso. Testes `Sistema_NaoTemPrazoDeInatividade`, `MembroSemAtividadeHaMuitoTempo_ContinuaMembroComMesmosDireitos` | Falta: Nada nesta pergunta. Circulo sem dono ficou na 330
 5. [5] entrada apagada sai do historico de todo mundo ou fica um rastro de que existiu? | Allan: Precisa ficar um rastro de que existiu. | feito e testado | `EntradaApagada_DeixaRastroNoLog`. Playwright `entrada guarda numero e o log do circulo mostra data` | Falta: Nada nesta pergunta
 6. [6] o rastro mostra quem apagou e quando, ou so que sumiu? | Allan: Mostra quem apagou e quando. | feito e testado | `EntradaApagada_DeixaRastroNoLog`. Playwright `entrada guarda numero e o log do circulo mostra data` | Falta: Nada nesta pergunta
 7. [7] da pra exportar tudo que e seu num circulo, tipo um backup pessoal? | Allan: Sim, da. Precisa de um backup pessoal. | feito e testado | `GET /api/export/me` e `/api/export/circles/{id}`. Testes `Perfil_ExportaJsonEArquivo`, `Circulo_MembroExporta_VisitanteNao`. Playwright `backup do perfil e grafico de armazenamento` | Falta: Dump cifrado para a pessoa abrir ficou fora (58)
@@ -118,7 +118,7 @@ Formato: numero. [ordinal da transcricao] pergunta | Allan | status | evidencia 
 95. [80] a revisao independente e feita por outra pessoa ou por um pipeline automatico? | Allan: Pipeline automatico. | feito e testado | CI: `dotnet test`, `npm test`, `tsc --noEmit`, Playwright, Android, `ci-ok`. `.github/workflows/ci.yml`. `npm test` `CI usa as actions atuais` | Falta: Deploy Azure continua adiado
 96. [81] o que roda nesse pipeline - build, testes unitarios, testes de integracao e checagem de s. | Allan: Sim. | feito e testado | CI: `dotnet test`, `npm test`, `tsc --noEmit`, Playwright, Android, `ci-ok` e `dotnet list --vulnerable`. `.github/workflows/ci.yml` | Falta: Deploy Azure continua adiado
 97. [82] tem checagem de dependencias vulneraveis no pipeline, tipo Dependabot? | Allan: Nao sei o que e isso. | feito e testado | Dependabot, CodeQL e passo `dotnet list --vulnerable` no CI. `npm test` `Dependabot cobre nuget, npm e github-actions`, `CodeQL analisa csharp e javascript`, `CI usa as actions atuais` | Falta: Ligar code scanning no GitHub e do dono da conta
-98. [83] o repositorio e publico ou privado? | Allan: Privado. | nao feito | Allan pediu privado. `gh repo view`: visibility PUBLIC | Falta: Visibilidade da conta no GitHub; nao alterei o repo publico
+98. [83] o repositorio e publico ou privado? | Allan: Privado. | decidido nao | Decisao do Allan: o repositorio continua publico por limite do GitHub. visibilidade PUBLIC | Falta: Nada a fazer neste repo
 99. [84] usa GitHub Actions pro pipeline ou Azure DevOps? | Allan: De. | feito e testado | GitHub Actions em `.github/workflows/ci.yml` | Falta: Nada nesta pergunta
 100. [85] o codigo segue Conventional Commits ou outro padrao de mensagem? | Allan: Conversao. O entrevistador registrou: Conventional Commits. A fala visivel e Conversao. | feito e testado | Decisao: commits curtos em pt-BR, sem Conventional Commits. `docs/contribuicao.md`. `npm test` `commits continuam curtos em pt-BR` | Falta: Nada nesta pergunta
 101. [86] o versionamento e semver, tipo 1.0.0? | Allan: Pode ser indiferente pra mim. O entrevistador adotou semver. Nao ha Beleza, Concordo ou O. | feito e testado | Padrao escolhido sem resposta do Allan, pode ser revisto: semver `1.0.0` em `app.json`, `package.json` e `AppVersion`. Testes `Versionamento_SegueSemver100`, `npm test` `versionamento do app segue semver 1.0.0` | Falta: Nada nesta pergunta
@@ -276,7 +276,7 @@ Formato: numero. [ordinal da transcricao] pergunta | Allan | status | evidencia 
 253. [327] a exclusao da conta tambem apaga os circulos que a pessoa criou ou so o que e dela? | Allan: So o que dela. | feito e testado | `Exclusao_PedeSenhaConfirmaPorEmailEApagaDadosPessoais`, `Exclusao_TransfereCirculoParaAdminEAnonimizaLog` | Falta: SMTP real ainda nao
 254. [328] os circulos que ela criou ficam sem dono ou transferem pra outro membro? | Allan: Transferem pra outro membro. | feito e testado | Transfere para admin ou sucessor. Teste `Exclusao_TransfereCirculoParaAdminEAnonimizaLog` | Falta: Nada nestas perguntas
 255. [329] a transferencia escolhe o membro mais antigo ou a pessoa indica quem assume? | Allan: Podem ser os administradores que ela definiu, ou algum sucessor que ela definiu previamen. | feito e testado | Transfere para admin ou sucessor. Teste `Exclusao_TransfereCirculoParaAdminEAnonimizaLog` | Falta: Nada nestas perguntas
-256. [330] se nao tiver nem administrador nem sucessor, o circulo trava ate alguem do grupo assumir? | Allan: O circulo nunca trava. | parcial | Com membros restantes abre votacao e nao trava na hora. Circulo vazio trava (`Exclusao_SemAdminNemSucessor_TravaCirculo`). Poses 341-342 aceitam trava apos empate repetido | Falta: A fala 'nunca trava' versus trava do circulo vazio; nao inventei dono automatico
+256. [330] se nao tiver nem administrador nem sucessor, o circulo trava ate alguem do grupo assumir? | Allan: O circulo nunca trava. | feito e testado | Sem dono: votacao de 3 dias; se ninguem eleger em 40 dias, oferece a posse as 3 pessoas mais ativas (posts + acoes no log + memorias no circulo; empate pela acao mais recente e depois quem entrou primeiro). Primeiro aceite vira dono e cancela os outros. Menos de 3 membros: oferece a quem existir. Padrao escolhido sem resposta do Allan, pode ser revisto: se ninguem aceitar, reoferta aos proximos mais ativos a cada 40 dias; se a lista acabar, recomeça do topo. Circulo vazio nao trava. `OwnershipOfferService`, `POST /api/circles/{id}/ownership-offer/accept`. Testes `SemDono_39Dias_NaoOferecePosse`, `SemDono_40Dias_OfereceAsTresMaisAtivas`, `OfertaDePosse_PrimeiroAceiteViraDono_SegundoFalha`, `OfertaDePosse_DoisAceitesSobrepostos_SoUmViraDono`, `EleicaoAntesDe40Dias_CancelaOferta`, `SemDono_MenosDeTresMembros_OfereceAQuemExiste`, `Exclusao_SemAdminNemSucessor_FicaSemDonoSemTravar`, `CirculoVazioSemDono_40Dias_NaoInventaDono`. Playwright `aceitar posse oferecida no circulo sem dono` | Falta: Nada nesta pergunta
 257. [331] se nao houver sucessor, quem assume a gestao? | Allan: Pode ser aberta uma votacao pra o... | feito e testado | 22/11: maioria simples, 3 dias, todos votam uma vez. Teste `Votacao_MaioriaSimplesEmTresDiasElege_EPrazoSemMaioriaTrava`. Playwright `votacao de sucessao com prazo`. A fala de 10% da 332 reformulada foi superada em 22/11 | Falta: Nada nestas perguntas
 258. [332 (primeira formula, interrompida)] a votacao e por maioria simples ou precisa de quorum minimo? | Allan: Cinco... | feito e testado | Decisao: maioria simples, sem quorum. Testes `Votacao_SemQuorum_UmVotoNoPrazoElege`, `Votacao_SemQuorum_DurantePrazoNaoFechaSemTodosVotarem`, `Votacao_MaioriaSimplesEmTresDiasElege_EPrazoSemMaioriaTrava`. Playwright `votacao de sucessao com prazo` | Falta: Nada nesta pergunta
 259. [332 (reformulada)] essa votacao tem prazo ou fica aberta ate bater os 10%? | Allan: Fica aberto ate bater os 10%. | feito e testado | 22/11: maioria simples, 3 dias, todos votam uma vez. Teste `Votacao_MaioriaSimplesEmTresDiasElege_EPrazoSemMaioriaTrava`. Playwright `votacao de sucessao com prazo`. A fala de 10% da 332 reformulada foi superada em 22/11 | Falta: Nada nestas perguntas
@@ -306,14 +306,13 @@ Itens com regra ainda aberta, adiados ou sem caber nesta rodada:
 - SMS 2FA (34).
 - Papel Commenter sem endpoint de comentario (abertura).
 - Varios donos simultaneos (3): a 3 cobre permanencia do historico, nao varios donos.
-- Trava por inatividade do dono (4).
 - Aprendizado de sessoes (97).
 - PDF/imagem da retrospectiva (61 reinicio).
-- Repositorio privado (83); hoje o GitHub esta PUBLIC.
+- Repositorio privado (83): decidido nao; permanece publico por limite do GitHub.
 - Nuxt (63 reinicio): cliente ficou Expo.
 - UptimeRobot cadastrado daqui (89).
 - Calendario do aparelho: leitura no celular via `expo-calendar`; a web nao lista eventos nativos.
 - Feed geral e anuncios: decidido nao (20, 40).
 - Dominio de producao (90, 91).
-- Trava do circulo vazio versus a fala 'nunca trava' (330): regra nao clara.
+- Trava apos empate repetido na votacao (341-342) permanece como status `locked` de escrita.
 - Login proprio de pet/grupo: decidido nao em 22/11; permanece a permissao de edicao/visualizacao.

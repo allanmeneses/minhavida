@@ -92,7 +92,9 @@ public sealed class SuccessionAndNearbyTests : IClassFixture<ApiFactory>
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var stored = await db.Circles.SingleAsync(item => item.Id == otherId);
-            Assert.Equal(CircleStatus.LockedNoOwner, stored.Status);
+            Assert.Equal(CircleStatus.Active, stored.Status);
+            Assert.Null(stored.OwnerUserId);
+            Assert.NotNull(stored.OwnerLostAt);
         }
     }
 

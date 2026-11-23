@@ -57,7 +57,11 @@ public sealed class JobWorker(IServiceScopeFactory scopes, TimeProvider clock) :
             try
             {
                 using var scope = scopes.CreateScope();
+                var offers = scope.ServiceProvider.GetRequiredService<OwnershipOfferService>();
+                var archive = scope.ServiceProvider.GetRequiredService<CircleArchiveService>();
                 var queue = scope.ServiceProvider.GetRequiredService<JobQueue>();
+                await offers.ProcessDueAsync(stoppingToken);
+                await archive.ArchiveExpiredAsync(stoppingToken);
                 await queue.ProcessDueAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
