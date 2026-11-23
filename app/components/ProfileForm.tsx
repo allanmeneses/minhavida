@@ -14,7 +14,6 @@ type Values = {
   secondaryEmail: string;
   isPublic: boolean;
   bio: string;
-  findableByLocation: boolean;
 };
 
 type Props = {
@@ -34,7 +33,6 @@ function fromProfile(profile: Profile | null): Values {
     secondaryEmail: profile?.secondaryEmail ?? '',
     isPublic: profile?.isPublic ?? false,
     bio: profile?.bio ?? '',
-    findableByLocation: profile?.findableByLocation ?? false,
   };
 }
 
@@ -91,11 +89,9 @@ export function ProfileForm({ initial, error, ok, busy, accountEmail, onSave }: 
         variant="ghost"
         onPress={() => patch({ isPublic: !shown.isPublic })}
       />
-      <Button
-        label={shown.findableByLocation ? 'Pode ser encontrado por perto' : 'Nao aparecer na busca por perto'}
-        variant="ghost"
-        onPress={() => patch({ findableByLocation: !shown.findableByLocation })}
-      />
+      <Text style={[styles.account, { color: colors.muted }]}>
+        Busca por raio usa a posicao so na hora. O app nao guarda latitude nem longitude da pessoa.
+      </Text>
       <Text style={[styles.account, { color: colors.muted }]}>
         {shown.isPublic
           ? 'Quem visita ve nome, foto e descricao. Telefone, e-mail e diario ficam fora.'

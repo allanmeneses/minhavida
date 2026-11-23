@@ -357,6 +357,45 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         return Ok(pages);
     }
 
+    [HttpGet("{id:guid}/search")]
+    public async Task<ActionResult<IReadOnlyList<SearchHit>>> SearchDiary(
+        Guid id,
+        [FromQuery] string q,
+        CancellationToken cancellationToken)
+    {
+        var area = await OwnedArea(id, cancellationToken);
+        if (area is null || area.Kind != LifeAreaKind.Diary)
+        {
+            return NotFound(new ErrorResponse("Diario nao encontrado."));
+        }
+
+        var term = (q ?? string.Empty).Trim();
+        if (term.Length < 1)
+        {
+            return Ok(Array.Empty<SearchHit>());
+        }
+
+        var lowered = term.ToLowerInvariant();
+        var hits = new List<SearchHit>();
+        var pages = await db.DiaryPages.AsNoTracking()
+            .Where(x => x.LifeAreaId == id
+                && (x.Title.ToLower().Contains(lowered) || x.Body.ToLower().Contains(lowered)))
+            .OrderByDescending(x => x.UpdatedAt)
+            .Take(40)
+            .ToListAsync(cancellationToken);
+        hits.AddRange(pages.Select(page => new SearchHit("diary", page.Id, page.Title, page.Body)));
+        var entries = await db.LifeEntries.AsNoTracking()
+            .Where(x => x.LifeAreaId == id
+                && (x.Title.ToLower().Contains(lowered)
+                    || (x.Body != null && x.Body.ToLower().Contains(lowered))
+                    || x.TagsJson.ToLower().Contains(lowered)))
+            .OrderByDescending(x => x.UpdatedAt)
+            .Take(40)
+            .ToListAsync(cancellationToken);
+        hits.AddRange(entries.Select(entry => new SearchHit("diary", entry.Id, entry.Title, entry.Body)));
+        return Ok(hits);
+    }
+
     [HttpPost("{id:guid}/pages")]
     public async Task<ActionResult<DiaryPageResponse>> CreatePage(
         Guid id,

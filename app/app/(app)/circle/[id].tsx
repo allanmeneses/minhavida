@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +12,7 @@ import {
   downloadNamedBlob,
   type CircleDetail,
   type CircleRecap,
+  type GiftIdeaShare,
   type LivingProfileItem,
   type MemoryItem,
   type RecapShareCreated,
@@ -19,6 +20,7 @@ import {
   type SharedListSummary,
   type SuccessionVote,
 } from '@/lib/api';
+import { hydrateIfPristine } from '@/lib/formDraft';
 import { canArchiveKind, CIRCLE_KIND_LABEL, type CircleKind } from '@/lib/circleKinds';
 import { formatPersonTime } from '@/lib/formatPersonTime';
 import {
@@ -60,7 +62,10 @@ export default function CircleDetailScreen() {
   const [logFilter, setLogFilter] = useState('');
   const [filteredLog, setFilteredLog] = useState<CircleDetail['log'] | null>(null);
   const [shareText, setShareText] = useState<string | null>(null);
-  const [giftIdeas, setGiftIdeas] = useState<{ title: string; personName: string | null; ideas: string[] }[]>([]);
+  const [giftIdeas, setGiftIdeas] = useState<GiftIdeaShare[]>([]);
+  const [giftIdeaDraft, setGiftIdeaDraft] = useState('');
+  const giftIdeaDirty = useRef(false);
+  const shownGiftIdea = hydrateIfPristine(giftIdeaDirty.current, giftIdeaDraft, giftIdeaDraft);
   const [circleReports, setCircleReports] = useState<
     { id: string; targetKind: string; status: string; circleDecision: string | null }[]
   >([]);
@@ -101,7 +106,7 @@ export default function CircleDetailScreen() {
       setVote(null);
     }
     try {
-      setGiftIdeas(await api(`/api/circles/${circleId}/gift-ideas`, { token }));
+      setGiftIdeas(await api<GiftIdeaShare[]>(`/api/circles/${circleId}/gift-ideas`, { token }));
     } catch {
       setGiftIdeas([]);
     }
@@ -127,6 +132,7 @@ export default function CircleDetailScreen() {
         member.userId === user?.id && (member.role === 'editor' || member.role === 'admin' || member.role === 'owner'),
     ),
   );
+  const canEditGiftIdeas = canCreateList;
 
   async function createList() {
     if (!token || !circleId || !listName.trim()) {
@@ -413,9 +419,48 @@ export default function CircleDetailScreen() {
         <>
           <Text style={styles.section}>Ideias de presente</Text>
           {giftIdeas.map((item) => (
-            <Text key={item.title} style={styles.lead}>
-              {item.title}: {item.ideas.join(', ')}
-            </Text>
+            <View key={item.reminderId} style={styles.card}>
+              <Text style={styles.lead}>
+                {item.title}: {item.ideas.join(', ')}
+              </Text>
+              {canEditGiftIdeas ? (
+                <>
+                  <TextField
+                    label={`Nova ideia para ${item.title}`}
+                    value={shownGiftIdea}
+                    onChangeText={(value) => {
+                      giftIdeaDirty.current = true;
+                      setGiftIdeaDraft(value);
+                    }}
+                  />
+                  <Button
+                    label="Adicionar ideia"
+                    variant="ghost"
+                    disabled={!shownGiftIdea.trim()}
+                    onPress={() => {
+                      if (!token || !circleId || !shownGiftIdea.trim()) {
+                        return;
+                      }
+                      void api(`/api/circles/${circleId}/gift-ideas/${item.reminderId}/ideas`, {
+                        method: 'POST',
+                        token,
+                        body: JSON.stringify({ idea: shownGiftIdea.trim() }),
+                      })
+                        .then(() => {
+                          giftIdeaDirty.current = false;
+                          setGiftIdeaDraft('');
+                          return load();
+                        })
+                        .catch((err) =>
+                          setError(err instanceof ApiError ? err.message : 'Nao foi possivel adicionar a ideia.'),
+                        );
+                    }}
+                  />
+                </>
+              ) : (
+                <Text style={styles.lead}>Quem so visualiza nao edita ideias de presente.</Text>
+              )}
+            </View>
           ))}
         </>
       ) : null}
@@ -604,28 +649,49 @@ export default function CircleDetailScreen() {
         <>
           <Text style={styles.section}>Votacao de sucessao</Text>
           <Text style={styles.lead}>
-            Maioria simples. Prazo de 3 dias. Todos os membros votam. Status: {vote.status}. Encerra em{' '}
+            Maioria simples, sem quorum. Prazo de 3 dias. Todos os membros votam. Status: {vote.status}. Encerra em{' '}
             {new Date(vote.deadlineAt).toLocaleString('pt-BR')}.
           </Text>
-          {detail?.members.map((member) => (
+          {vote.replacementBlockedMessage ? (
+            <Text style={styles.lead}>{vote.replacementBlockedMessage}</Text>
+          ) : null}
+          {vote.status === 'open'
+            ? detail?.members.map((member) => (
+                <Button
+                  key={member.userId}
+                  label={`Votar em ${member.name}`}
+                  variant="ghost"
+                  onPress={() => {
+                    if (!token || !circleId) {
+                      return;
+                    }
+                    void api(`/api/circles/${circleId}/succession/votes`, {
+                      method: 'POST',
+                      token,
+                      body: JSON.stringify({ candidateUserId: member.userId }),
+                    })
+                      .then(() => load())
+                      .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel votar.'));
+                  }}
+                />
+              ))
+            : null}
+          {vote.canRequestReplacement ? (
             <Button
-              key={member.userId}
-              label={`Votar em ${member.name}`}
+              label="Pedir nova votacao"
               variant="ghost"
               onPress={() => {
                 if (!token || !circleId) {
                   return;
                 }
-                void api(`/api/circles/${circleId}/succession/votes`, {
-                  method: 'POST',
-                  token,
-                  body: JSON.stringify({ candidateUserId: member.userId }),
-                })
+                void api(`/api/circles/${circleId}/succession/replace`, { method: 'POST', token })
                   .then(() => load())
-                  .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel votar.'));
+                  .catch((err) =>
+                    setError(err instanceof ApiError ? err.message : 'Nao foi possivel pedir nova votacao.'),
+                  );
               }}
             />
-          ))}
+          ) : null}
         </>
       ) : null}
       <Text style={styles.section}>Filtro do log</Text>

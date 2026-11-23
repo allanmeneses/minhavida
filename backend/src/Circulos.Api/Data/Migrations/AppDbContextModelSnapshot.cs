@@ -248,6 +248,9 @@ namespace Circulos.Api.Data.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<DateTime?>("OwnerElectedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("OwnerUserId")
                         .HasColumnType("uuid");
 
@@ -1153,6 +1156,34 @@ namespace Circulos.Api.Data.Migrations
                     b.ToTable("reminders", (string)null);
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.ReminderEmailReceipt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("FireAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ReminderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ReminderId", "UserId", "FireAt")
+                        .IsUnique();
+
+                    b.ToTable("reminder_email_receipts", (string)null);
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.RoutineTemplate", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2042,6 +2073,25 @@ namespace Circulos.Api.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.ReminderEmailReceipt", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.Reminder", "Reminder")
+                        .WithMany()
+                        .HasForeignKey("ReminderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Circulos.Api.Domain.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reminder");
 
                     b.Navigation("User");
                 });

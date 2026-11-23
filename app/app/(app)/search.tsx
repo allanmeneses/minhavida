@@ -65,7 +65,8 @@ export default function SearchScreen() {
       <Button label="Buscar agora" onPress={() => void run()} disabled={!query.trim()} />
       <Text style={styles.section}>Por perto</Text>
       <Text style={styles.lead}>
-        So aparece quem deu permissao explicita de ser encontrado. Distancia arredondada, sem coordenada exata.
+        So circulos que marcaram aceitar localizacao. A posicao da busca vale so nesta hora, sem gravar latitude nem
+        longitude da pessoa. Distancia arredondada, sem coordenada exata.
       </Text>
       <TextField label="Latitude" value={lat} onChangeText={setLat} />
       <TextField label="Longitude" value={lng} onChangeText={setLng} />

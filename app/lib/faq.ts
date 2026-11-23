@@ -7,7 +7,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: 'O que e o Circulos?',
     answer:
-      'Um hub da vida pessoal. Voce comeca pelo perfil solo, registra o dia a dia e, se quiser, compartilha em circulos de familia, amizade, cuidado ou evento.',
+      'Um hub da vida pessoal. Voce comeca pelo perfil solo, registra o dia a dia e, se quiser, compartilha em circulos de familia, amizade, cuidado ou evento. Nao ha feed geral nem anuncios.',
   },
   {
     question: 'Por onde eu comeco?',
@@ -52,7 +52,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: 'Onde ficam as memorias e o calendario?',
     answer:
-      'Memorias sao a linha do tempo de fotos e textos no perfil ou no circulo, com a mesma permissao de entrada. Lembretes aparecem no calendario do app e da web. Da para baixar um arquivo .ics ou usar a assinatura. Modelos prontos de lista e lembrete estao em portugues, gratuitos, e quem copia pode editar.',
+      'Memorias sao a linha do tempo de fotos e textos no perfil ou no circulo, com a mesma permissao de entrada. Lembretes aparecem no calendario do app e da web. Da para baixar um arquivo .ics ou usar a assinatura. O app le o calendario do aparelho e nunca grava evento la. Modelos prontos de lista e lembrete estao em portugues, gratuitos, e quem copia pode editar.',
   },
   {
     question: 'Quanto custa o plano pago?',

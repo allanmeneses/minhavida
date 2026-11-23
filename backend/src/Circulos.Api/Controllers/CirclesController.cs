@@ -912,6 +912,89 @@ public sealed class CirclesController(
             System.Text.Json.JsonSerializer.Deserialize<string[]>(item.Reminder.GiftIdeasJson) ?? [])).ToList());
     }
 
+    [HttpPost("{id:guid}/gift-ideas/{reminderId:guid}/ideas")]
+    public async Task<ActionResult<GiftIdeaShareResponse>> AddGiftIdea(
+        Guid id,
+        Guid reminderId,
+        [FromBody] AddGiftIdeaRequest request,
+        CancellationToken cancellationToken)
+    {
+        var idea = request.Idea.Trim();
+        if (idea.Length == 0)
+        {
+            return BadRequest(new ErrorResponse("Informe a ideia."));
+        }
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await CircleRowLock.AcquireAsync(db, id, cancellationToken);
+        var (status, error, share) = await GiftIdeaEditorAsync(id, reminderId, cancellationToken);
+        if (error is not null)
+        {
+            return StatusCode(status, new ErrorResponse(error));
+        }
+
+        var ideas = System.Text.Json.JsonSerializer.Deserialize<string[]>(share!.Reminder.GiftIdeasJson)?.ToList() ?? [];
+        ideas.Add(idea);
+        share.Reminder.GiftIdeasJson = System.Text.Json.JsonSerializer.Serialize(ideas);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Ok(new GiftIdeaShareResponse(share.ReminderId, share.Reminder.Title, share.Reminder.PersonName, ideas.ToArray()));
+    }
+
+    [HttpPut("{id:guid}/gift-ideas/{reminderId:guid}")]
+    public async Task<ActionResult<GiftIdeaShareResponse>> ReplaceGiftIdeas(
+        Guid id,
+        Guid reminderId,
+        [FromBody] ReplaceGiftIdeasRequest request,
+        CancellationToken cancellationToken)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await CircleRowLock.AcquireAsync(db, id, cancellationToken);
+        var (status, error, share) = await GiftIdeaEditorAsync(id, reminderId, cancellationToken);
+        if (error is not null)
+        {
+            return StatusCode(status, new ErrorResponse(error));
+        }
+
+        var ideas = (request.Ideas ?? [])
+            .Select(item => item.Trim())
+            .Where(item => item.Length > 0)
+            .ToArray();
+        share!.Reminder.GiftIdeasJson = System.Text.Json.JsonSerializer.Serialize(ideas);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return Ok(new GiftIdeaShareResponse(share.ReminderId, share.Reminder.Title, share.Reminder.PersonName, ideas));
+    }
+
+    private async Task<(int Status, string? Error, GiftIdeaShare? Share)> GiftIdeaEditorAsync(
+        Guid circleId,
+        Guid reminderId,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(circleId, cancellationToken);
+        var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
+        if (circle is null || HiddenSurprise(circle, userId) || member is null)
+        {
+            return (StatusCodes.Status404NotFound, "Circulo nao encontrado.", null);
+        }
+
+        if (member.Role < CircleRole.Editor)
+        {
+            return (StatusCodes.Status403Forbidden, "Quem so visualiza nao edita ideias de presente.", null);
+        }
+
+        var share = await db.GiftIdeaShares
+            .Include(item => item.Reminder)
+            .FirstOrDefaultAsync(item => item.CircleId == circleId && item.ReminderId == reminderId, cancellationToken);
+        if (share is null)
+        {
+            return (StatusCodes.Status404NotFound, "Ideias de presente nao encontradas.", null);
+        }
+
+        return (StatusCodes.Status200OK, null, share);
+    }
+
     private Task<Circle?> LoadCircle(Guid id, CancellationToken cancellationToken) =>
         db.Circles
             .Include(x => x.Members)

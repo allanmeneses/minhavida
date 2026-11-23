@@ -30,7 +30,7 @@ export const TOUR_SCREENS: TourScreen[] = [
   },
   {
     title: 'Memorias e calendario',
-    body: 'O album do perfil e do circulo guarda recordacoes. Na surpresa, a revelacao mostra mensagens e fotos, e cada um guarda a recordacao no proprio perfil. Lembretes aparecem no calendario, com exportacao .ics.',
+    body: 'O album do perfil e do circulo guarda recordacoes. Na surpresa, a revelacao mostra mensagens e fotos, e cada um guarda a recordacao no proprio perfil. Lembretes aparecem no calendario, com exportacao .ics. O app le o calendario do aparelho e nunca grava evento la.',
   },
   {
     title: 'Conta e backup',

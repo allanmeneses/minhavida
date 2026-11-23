@@ -10,6 +10,7 @@ public enum SuccessionVoteStatus
 public sealed class SuccessionVote
 {
     public const int DeadlineDays = 3;
+    public const int ReplacementCooldownDays = 30;
 
     public Guid Id { get; set; }
     public Guid CircleId { get; set; }

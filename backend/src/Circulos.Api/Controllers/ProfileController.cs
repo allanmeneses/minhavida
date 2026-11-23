@@ -56,8 +56,7 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage, Quo
         profile.IsPublic = request.IsPublic;
         profile.Bio = EmptyToNull(request.Bio);
         profile.FindableByLocation = request.FindableByLocation;
-        profile.Latitude = request.FindableByLocation ? request.Latitude : null;
-        profile.Longitude = request.FindableByLocation ? request.Longitude : null;
+        LocationPrivacy.ClearUserCoordinates(profile);
         profile.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync(cancellationToken);

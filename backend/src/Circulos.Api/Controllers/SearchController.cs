@@ -52,6 +52,38 @@ public sealed class SearchController(AppDbContext db, TimeProvider clock) : Cont
 
                 hits.Add(new SearchHit(kind, entry.Id, entry.Title, entry.Body));
             }
+
+            if (filter is null or "" or "diary")
+            {
+                var pages = await db.DiaryPages.AsNoTracking()
+                    .Where(x => x.UserId == userId)
+                    .Where(x => x.Title.ToLower().Contains(lowered) || x.Body.ToLower().Contains(lowered))
+                    .OrderByDescending(x => x.UpdatedAt)
+                    .Take(20)
+                    .ToListAsync(cancellationToken);
+                hits.AddRange(pages.Select(page => new SearchHit("diary", page.Id, page.Title, page.Body)));
+
+                var memberCircleIds = await db.CircleMembers.AsNoTracking()
+                    .Where(x => x.UserId == userId && x.Circle.Status == CircleStatus.Active)
+                    .Select(x => x.CircleId)
+                    .ToListAsync(cancellationToken);
+                var shared = await db.LifeEntryShares.AsNoTracking()
+                    .Include(x => x.LifeEntry)
+                    .ThenInclude(x => x.LifeArea)
+                    .Where(x => memberCircleIds.Contains(x.CircleId)
+                        && x.LifeEntry.UserId != userId
+                        && x.LifeEntry.LifeArea.Kind == LifeAreaKind.Diary
+                        && (x.LifeEntry.Title.ToLower().Contains(lowered)
+                            || (x.LifeEntry.Body != null && x.LifeEntry.Body.ToLower().Contains(lowered))
+                            || x.LifeEntry.TagsJson.ToLower().Contains(lowered)))
+                    .Take(20)
+                    .ToListAsync(cancellationToken);
+                hits.AddRange(shared.Select(item => new SearchHit(
+                    "diary",
+                    item.LifeEntry.Id,
+                    item.LifeEntry.Title,
+                    item.LifeEntry.Body)));
+            }
         }
 
         if (filter is null or "" or "circle")

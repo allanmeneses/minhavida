@@ -21,6 +21,6 @@ public sealed class OutboxEmailSender(AppDbContext db, ILogger<OutboxEmailSender
             SentAt = DateTime.UtcNow,
         });
         await db.SaveChangesAsync(cancellationToken);
-        logger.LogInformation("E-mail para {To}: {Subject}", to, subject);
+        logger.LogInformation("E-mail para {To}: {Subject}", to, LocationPrivacy.Redact(subject));
     }
 }

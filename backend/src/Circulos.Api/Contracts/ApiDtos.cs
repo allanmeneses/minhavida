@@ -562,7 +562,23 @@ public sealed record SuccessionVoteResponse(
     Guid? WinnerUserId,
     int MemberCount,
     IReadOnlyList<SuccessionTallyResponse> Tallies,
-    Guid? MyVote);
+    Guid? MyVote,
+    bool CanRequestReplacement = false,
+    string? ReplacementBlockedMessage = null);
+
+public sealed class AddGiftIdeaRequest
+{
+    [Required]
+    [MinLength(1)]
+    [MaxLength(200)]
+    public string Idea { get; set; } = string.Empty;
+}
+
+public sealed class ReplaceGiftIdeasRequest
+{
+    [Required]
+    public string[] Ideas { get; set; } = [];
+}
 
 public sealed class DeleteCircleRequest
 {

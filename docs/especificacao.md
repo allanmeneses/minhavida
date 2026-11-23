@@ -187,7 +187,14 @@ Pedido do dono em 22/11/2026, fora da transcricao original.
 - Fila: simples (tabela) ou NATS com JetStream, a criterio de quem implementa. (76)
 - Observabilidade: precisa ser gratuito. Entrevistador sugeriu OpenTelemetry + Grafana Cloud, sem Ok. Retencao indefinida por enquanto. (77, 78)
 - Pagina de status automatica; provedor o gratuito mais usado (entrevistador registrou UptimeRobot). (87, 88, 89)
-- Conventional Commits: fala visivel Conversao; entrevistador registrou Conventional Commits. Semver: dono indiferente. (85, 86)
+- Commits: curtos em pt-BR, sem Conventional Commits (`docs/contribuicao.md`). Semver: dono indiferente. (85, 86)
+- Sem feed geral e sem anuncios, em qualquer plano. (20, 40)
+- Localizacao da pessoa nao fica salva; busca por raio usa a posicao so na hora. (12)
+- Lembrete do circulo chega so aos membros, no app e por e-mail se ligado; sem SMS. (13)
+- Calendario do aparelho e somente leitura. (46)
+- Ideias de presente: editor adiciona e edita; viewer so ve. (229)
+- Diario tem busca por palavra-chave, com permissao de circulo. (245)
+- Votacao por maioria simples, sem quorum. Dono eleito so pode ser substituido apos 30 dias. (332, 345)
 - Desenvolver: o entrevistador implementa; o dono gerencia o quanto for necessario. (93, 94)
 
 ## Outros

@@ -14,6 +14,34 @@ Numero da pergunta: transcricao. A segunda serie 60-69 aparece como `N (reinicio
 
 A auditoria pergunta a pergunta desta rodada esta em `docs/auditoria-perguntas.md` (272 linhas, conferidas no codigo).
 
+## Rodada 12 (decisoes da auditoria)
+
+Pedido: implementar as 10 decisoes aprovadas para perguntas que estavam em sem resposta clara.
+
+Totais da auditoria depois desta rodada (contagem no arquivo): feito e testado 227, parcial 10, nao feito 5, decidido nao 21, adiado pelo Allan 5, sem resposta clara 4. Soma 272.
+
+| Item | Status | Origem | Evidencia |
+| --- | --- | --- | --- |
+| Localizacao da pessoa nao persiste | feito e testado | 12 | `LocationPrivacy`. Testes `Localizacao_NaoPersisteLatLongDoUsuario_NemEmLog`, `Localizacao_RedigeCoordenadaEmTextoDeLog`. Playwright `busca por raio com e sem permissao`. |
+| Lembrete so para membros, app e e-mail, sem SMS | feito e testado | 13 | Testes `Lembrete_Circulo_SoMembrosRecebemNoAppEEmail_SemSms`, `Lembrete_DoisMembrosSobrepostos_CadaUmRecebeUmEmail`. `npm test` `nao ha SMS de lembrete no cliente`. |
+| Sem feed geral | decidido nao | 20 | Teste `FeedGeral_EAnuncios_NaoExistem`. `npm test` `nao ha feed geral nem anuncios no app`. |
+| Nunca havera anuncios | decidido nao | 40 | Mesmo teste. README e `docs/planos.md`. |
+| Calendario do aparelho somente leitura | feito e testado | 46 | Teste `Calendario_NuncaGravaNoAparelho`. `npm test` `e somente leitura e nunca escreve no calendario nativo`. Playwright `calendario mostra lembrete e baixa ics`. |
+| Commits curtos em pt-BR | feito e testado | 85 | `docs/contribuicao.md`. `npm test` `commits continuam curtos em pt-BR`. |
+| Ideias de presente: editor edita, viewer so ve | feito e testado | 229 | Testes `IdeiasDePresente_EditorAdiciona_ViewerRecebe403`, `IdeiasDePresente_DoisEditoresSobrepostos_AsDuasIdeiasFicam`. Playwright `ideias de presente: editor adiciona e viewer so ve`. |
+| Busca por palavra-chave no diario | feito e testado | 245 | Teste `Diario_BuscaPorPalavraChave_RespeitaCirculo`. Playwright `busca no diario por palavra-chave`. |
+| Votacao por maioria simples, sem quorum | feito e testado | 332 | Testes `Votacao_SemQuorum_UmVotoNoPrazoElege`, `Votacao_SemQuorum_DurantePrazoNaoFechaSemTodosVotarem`. |
+| Substituir dono eleito apos 30 dias | feito e testado | 345 | Teste `AdminEleito_SubstituicaoAntesEDepoisDe30Dias`. Playwright `votacao de sucessao com prazo`. |
+
+Perguntas que continuam sem resposta clara: 86 (semver), 99 (gesto do atalho), 276 (primeira formula do teto de upload), 285 (primeira formula da animacao).
+
+Testes locais observados nesta rodada (comandos e exit code):
+
+- `dotnet test --nologo` (backend): Passed 189, Failed 0, Skipped 0, exit 0.
+- `npm test` (app): 41 pass, 0 fail, exit 0.
+- `npx tsc --noEmit` (app): exit 0.
+- `npx playwright test` (app): 59 passed (1.5m), exit 0.
+
 ## Rodada 11 (fechar auditoria e engajamento)
 
 Pedido: fechar linhas parciais e nao feito da auditoria, sem tocar em decidido nao / adiado / sem resposta clara; itens de engajamento aprovados em 22/11/2026.
@@ -431,7 +459,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | Fila tabela ou NATS | parcial | 75, 76 | `sent_emails` funciona como outbox de e-mail. Sem worker, sem NATS, sem fila de retrospectiva. |
 | Observabilidade gratuita (OTel + Grafana, sem Ok) | feito e testado | 77, 78 | OpenTelemetry traces e metricas, desligado por padrao. Grafana Cloud nao foi ligado. Ver secao Rodada 6. |
 | Pagina de status (UptimeRobot registrado pelo entrevistador) | feito e testado | 87, 88, 89 | `/health`, `/api/status` e HTML `/status`. Cadastro no UptimeRobot nao foi feito daqui. Ver secao Rodada 6. |
-| Conventional Commits | nao feito | 85, 86 | Mensagens curtas nesta branch, sem prefixo `feat:`/`fix:`. Semver: dono indiferente. |
+| Conventional Commits | decidido nao | 85 | Commits curtos em pt-BR em `docs/contribuicao.md`. Semver (86) segue sem resposta clara. |
 | PWA com atalho na tela inicial | nao feito | abertura | Sem manifesto PWA, sem service worker. |
 | TokTok Aluguel / limite do bot | fora de escopo | abertura | Outro produto. |
 | Quem desenvolve / tempo por semana | fora de escopo de codigo | 93, 94 | Processo, nao produto. |

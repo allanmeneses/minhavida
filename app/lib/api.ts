@@ -145,13 +145,14 @@ export type SuccessionVote = {
   memberCount: number;
   tallies: { candidateUserId: string; votes: number }[];
   myVote: string | null;
+  canRequestReplacement?: boolean;
+  replacementBlockedMessage?: string | null;
 };
-export type NearbyHit = {
-  kind: string;
-  id: string;
-  name: string;
-  description: string | null;
-  distanceKm: number;
+export type GiftIdeaShare = {
+  reminderId: string;
+  title: string;
+  personName: string | null;
+  ideas: string[];
 };
 export type PlanOffer = {
   id: string;
@@ -293,6 +294,13 @@ export type ShortcutNotice = {
   createdAt: string;
 };
 export type SearchHit = { type: string; id: string; title: string; detail: string | null };
+export type NearbyHit = {
+  kind: string;
+  id: string;
+  name: string;
+  description: string | null;
+  distanceKm: number;
+};
 export type SearchResponse = {
   hits: SearchHit[];
   history: { recent: string[]; frequent: string[] };

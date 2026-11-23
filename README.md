@@ -24,8 +24,14 @@ O modelo gira em torno de `User`. Perfil, documentos, areas de vida, circulos, l
 - Foto pela camera, galeria ou arquivo, comprimida no padrao Instagram
 - Exclusao de conta com senha e confirmacao por e-mail (LGPD)
 - Limites do plano gratuito (3 circulos, 5 atalhos, 100 MB) e checkout Mercado Pago em sandbox (`PAYMENTS_PROVIDER` simulado por padrao)
+- Busca por raio so de circulos, com a posicao da pessoa so na hora (sem gravar latitude nem longitude)
+- Lembretes do circulo para membros, no app e por e-mail se ligado; sem SMS
+- Diario com busca por palavra-chave; ideias de presente editaveis por editor, so leitura para viewer
+- Votacao de sucessao por maioria simples, sem quorum; dono eleito so substitui apos 30 dias
 
-Nao ha URL publica permanente para arquivo. Foto e documento so saem pelo backend, com autenticacao.
+Nao ha URL publica permanente para arquivo. Foto e documento so saem pelo backend, com autenticacao. Nao ha feed geral nem anuncios. O app le o calendario do aparelho e nunca grava evento la.
+
+Mensagens de commit: curtas em pt-BR, ver `docs/contribuicao.md`.
 
 ## Roadmap
 
