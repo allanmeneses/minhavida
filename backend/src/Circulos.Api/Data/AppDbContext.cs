@@ -39,6 +39,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<SuccessionVote> SuccessionVotes => Set<SuccessionVote>();
     public DbSet<SuccessionBallot> SuccessionBallots => Set<SuccessionBallot>();
     public DbSet<LivingProfileGrant> LivingProfileGrants => Set<LivingProfileGrant>();
+    public DbSet<UsageCounter> UsageCounters => Set<UsageCounter>();
+    public DbSet<ContentReport> ContentReports => Set<ContentReport>();
+    public DbSet<AdminAction> AdminActions => Set<AdminAction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,6 +58,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.CalendarFeedToken).HasMaxLength(64);
             entity.Property(x => x.SubscriptionProviderId).HasMaxLength(80);
             entity.Property(x => x.PaidUntil).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.BlockedAt).HasColumnType("timestamp with time zone");
             entity.HasIndex(x => x.CalendarFeedToken).IsUnique().HasFilter("\"CalendarFeedToken\" IS NOT NULL");
             entity.HasOne(x => x.Profile)
                 .WithOne(x => x.User)
@@ -181,6 +185,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 .OnDelete(DeleteBehavior.Cascade);
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.RevealedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.EndsAt).HasColumnType("timestamp with time zone");
             entity.HasOne(x => x.Owner)
                 .WithMany()
                 .HasForeignKey(x => x.OwnerUserId)
@@ -575,6 +580,43 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Subject).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Body).HasMaxLength(8000).IsRequired();
             entity.Property(x => x.SentAt).HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<UsageCounter>(entity =>
+        {
+            entity.ToTable("usage_counters");
+            entity.HasKey(x => x.Metric);
+            entity.Property(x => x.Metric).HasMaxLength(40).IsRequired();
+        });
+
+        modelBuilder.Entity<ContentReport>(entity =>
+        {
+            entity.ToTable("content_reports");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.TargetKind, x.TargetId });
+            entity.HasIndex(x => x.CreatedAt);
+            entity.Property(x => x.TargetKind).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Note).HasMaxLength(500);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.Reporter)
+                .WithMany()
+                .HasForeignKey(x => x.ReporterUserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AdminAction>(entity =>
+        {
+            entity.ToTable("admin_actions");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.CreatedAt);
+            entity.Property(x => x.Action).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.TargetKind).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Detail).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.Admin)
+                .WithMany()
+                .HasForeignKey(x => x.AdminUserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

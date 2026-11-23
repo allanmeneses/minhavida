@@ -12,7 +12,7 @@ Fora da transcricao original, o dono fechou estas ambiguidades:
 - Somos sem raca: o correto e Sem rastro.
 - E definitiva? e So uma?: sem contexto, nao confirmadas. Nenhuma regra de produto parte delas.
 - Pergunta 229 primeira formula: cortada. Nao inventar a resposta.
-- 22/11/2026: perfil publico mostra nome, foto e descricao; revelacao agendada nao tera; exclusao de circulo e definitiva; conflito offline ultima sincronizacao vence; votacao de sucessao por maioria simples em 3 dias com todos os membros; busca por raio so com permissao explicita; pet/grupo edita quem tem grant de edicao; billing Mercado Pago; precos aprovados R$ 29,90 mensal e R$ 299,00 anual (`docs/planos.md`); Azure e SMTP real ainda nao.
+- 22/11/2026: perfil publico mostra nome, foto e descricao; revelacao agendada nao tera; exclusao de circulo e definitiva; conflito offline ultima sincronizacao vence; votacao de sucessao por maioria simples em 3 dias com todos os membros; busca por raio so com permissao explicita; pet/grupo edita quem tem grant de edicao (sem login proprio); billing Mercado Pago; precos aprovados R$ 29,90 mensal e R$ 299,00 anual (`docs/planos.md`); Azure e SMTP real ainda nao; feedback do atalho some em 1 segundo; estatisticas anonimas internas (atalhos, entradas, circulos ativos) so para admin do sistema; circulo temporario pode ter data de fim e arquiva sozinho; arquivo e retrospectiva ficam no proprio app, para qualquer plano, sem PDF/imagem; feed de descoberta com silenciar adiado; denuncia e bloqueio pela equipe do app; cookie httpOnly so na web, nativo segue Bearer.
 
 ## Visao
 
@@ -52,9 +52,9 @@ Comecar pelo perfil solo, nao pelo circulo. (95)
 - Documentos e fotos pessoais criptografados no servidor, chave gerenciada pelo app. (31 reformulada, 57, 57 reformulada)
 - Recuperacao de senha so por e-mail no inicio. Segundo fator fica fora do escopo inicial. (33, 34)
 - Autenticacao JWT. (69 reinicio)
-- Sugestao do entrevistador (sem Beleza/Concordo/Ok visivel): access token de 15 minutos, refresh de 7 dias, renovacao silenciosa, cookie httpOnly. (70, 71, 72)
+- Access token de 15 minutos, refresh de 7 dias, renovacao silenciosa. Cookie httpOnly so na web; o app nativo continua com Bearer. (70, 71, 72; 22/11/2026)
 - WebSocket para notificacao em tempo real, sempre com TLS. (73, 74)
-- Estatisticas de uso anonimas podem ser guardadas so para o proprio app, nunca vendidas. (43, 44)
+- Estatisticas de uso anonimas so internas, nunca vendidas nem expostas fora: atalhos disparados, entradas criadas, circulos ativos, agregado, tela/endpoint so para admin do sistema. (43, 44; 22/11/2026)
 - Repositorio privado. (83)
 - Pipeline automatico: build, testes unitarios, integracao, checagem de seguranca, Dependabot. GitHub Actions. (79 a 84)
 - Testes automatizados desde o inicio; nada sobe sem teste, validacao, revisao independente (pipeline), deploy e teste de novo. (79, 80)
@@ -65,12 +65,12 @@ Comecar pelo perfil solo, nao pelo circulo. (95)
 - Sem dono ativo em caso sensivel (cuidado de idoso, medicacao): trava e espera. Ninguem assume sozinho. Alguem precisa definir o responsavel. (4)
 - Circulo nunca trava na exclusao de conta: transfere para administrador ou sucessor nomeado; se nao houver, abre votacao. (327 a 331, 330)
 - Vida util: temporario (evento, curso, remedio), duradouro (anos) ou diario (cria, cumpre, some). (16)
-- Temporario encerrado: dados arquivados para consulta, com retrospectiva automatica no fim do ciclo. (17, 18)
+- Temporario encerrado: dados arquivados para consulta, com retrospectiva automatica no fim do ciclo. Data de fim opcional; ao chegar, o circulo arquiva sozinho. (16 a 18, 27; 22/11/2026)
 - Compartilhar retrospectiva: a pessoa conta a historia dela, nao os dados dos outros. (19, 20)
-- Arquivamento pode ser beneficio de plano. Retencao no gratuito: indefinida (o entrevistador registrou eterna). (26, 27)
+- Arquivo e retrospectiva ficam no proprio app, para qualquer plano, sem PDF/imagem e sem ser beneficio exclusivo do pago. Interpretacao de 22/11/2026 ('no proprio sistema'). (17, 18, 26, 61 reinicio)
 - Publico versus privado: criar o circulo da propria vida e livre. Entrar em circulo de outro pede pedido ou convite. Circulos privados: so administradores controlam permanencia. Circulos publicos: qualquer pessoa pode entrar, mas quem ainda nao entrou ve so nome e descricao, nao as entradas. (8, 9)
 - Busca por interesse em comum e, com opt-in, por localizacao. Decidido em 22/11/2026: buscar o que tem por perto por raio; so aparece quem/o que tiver permissao explicita de ser encontrado (desligado por padrao); sem coordenada exata a terceiros. Circulos que nao querem ser encontrados ficam invisiveis por padrao. (10, 11, 12, 12 reformulada)
-- Feed de descoberta existe, so com dados internos do app, com opcao de silenciar sugestoes. (37, 38, 39)
+- Feed de descoberta com silenciar: adiado em 22/11/2026; pede moderacao antes. (37, 38, 39)
 - Entrada apagada deixa rastro de que existiu, com quem apagou e quando. (5, 6)
 - Log de atividades visivel para todos do circulo, para sempre, com data/hora no fuso da pessoa. Filtro por acao e por pessoa: decisao padrao da Rodada 8. (267 a 271)
 - Circulo surpresa (aniversario): o aniversariante nao ve nome nem descricao. Na revelacao, resumo com mensagens e fotos. Cada participante pode guardar a recordacao no proprio perfil, editavel em silencio. Sair de um circulo e direito de esquecer para si; o circulo segue para os outros. Revelacao agendada por data: nao tera (decidido em 22/11/2026). (229 reformulada a 236, 230)
@@ -93,7 +93,7 @@ Pedido do dono em 22/11/2026, fora da transcricao original.
 
 - Niveis citados na abertura: convite por link com so ver, ver e comentar, ou editar junto.
 - Cadastro da conta e livre para criar o proprio circulo. Participar de circulo alheio e por pedido ou convite. (8)
-- Denuncia interna no circulo. Quem decide: dono/admins e tambem a equipe do app, que pode bloquear o circulo e tira-lo do radar. Aviso ao dono no bloqueio. Recurso existe, com revisao humana, sem prazo definido (fala: Fica aberto 100 prazo). (21, 21 reformulada, 22, 23, 24, 25)
+- Denuncia em perfil, circulo e post. A equipe do app (admin do sistema) bloqueia e desbloqueia com registro. Aviso ao dono no bloqueio. Recurso por e-mail; sem tela de apelacao nesta rodada. (21, 21 reformulada, 22, 23, 24, 25; 22/11/2026)
 - Exclusao da conta: so apaga o que e da pessoa. Circulos que ela criou transferem para administradores ou sucessor que ela definiu. (325 a 329)
 - Sucessao sem sucessor: votacao. Decidido em 22/11/2026: maioria simples, prazo de 3 dias, todos os membros do circulo votam (um voto por membro). (331 a 344, 336)
 - Pergunta 345 (remover admin recem-eleito) nao teve decisao: o dono encerrou com Cansar esse pedido.
@@ -125,7 +125,7 @@ Pedido do dono em 22/11/2026, fora da transcricao original.
 
 - Atalhos de uma acao, varios na mesma tela. Reordenar: subir/descer (decisao padrao da Rodada 8; sem arrastar livre). (98, 102, 103)
 - Disparo: icone na tela inicial do celular e tecla no computador. Sem gesto de balancar ou desenhar. Aceito com Concordo. (100)
-- Executa direto, sem confirmacao. Feedback visual de que recebeu o estimulo. Sugestao de 1 segundo sem Ok. Cor muda por tipo de acao. So o nome da acao (fala: So comandacao). (101, 104, 105, 106, 107)
+- Executa direto, sem confirmacao. Feedback visual some depois de 1 segundo (22/11/2026). Cor muda por tipo de acao. So o nome da acao (fala: So comandacao). (101, 104, 105, 106, 107)
 - Som e vibracao opcionais: bip padrao, vibracao curta. (109, 200, 201)
 - Desativar some da tela principal ate reativar, mas continua acessivel. Excluir de vez e possivel; entradas ja criadas ficam no historico; atalho excluido pode ser alterado/recuperado. (202 a 207)
 - Teto de atalhos (decisao padrao da Rodada 8, alinhado a `docs/planos.md`): 5 no gratuito, 20 no pago. (108, 208)

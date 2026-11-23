@@ -12,11 +12,18 @@ namespace Circulos.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api")]
-public sealed class HomeController(AppDbContext db, TimeProvider clock, BillingService billing, ReminderEmailService reminderEmails) : ControllerBase
+public sealed class HomeController(
+    AppDbContext db,
+    TimeProvider clock,
+    BillingService billing,
+    ReminderEmailService reminderEmails,
+    CircleArchiveService archive,
+    UsageStats stats) : ControllerBase
 {
     [HttpGet("home")]
     public async Task<ActionResult<DayPanelResponse>> Home(CancellationToken cancellationToken)
     {
+        await archive.ArchiveExpiredAsync(cancellationToken);
         var userId = User.GetUserId();
         var emailed = await reminderEmails.DispatchDueAsync(userId, cancellationToken);
         var user = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
@@ -265,6 +272,7 @@ public sealed class HomeController(AppDbContext db, TimeProvider clock, BillingS
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await stats.IncrementAsync(UsageStats.ShortcutRun, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return Ok(new { received = true, label = shortcut.Label });
     }

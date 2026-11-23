@@ -29,7 +29,8 @@ public static class Nearby
                 .Where(profile => profile.FindableByLocation
                     && profile.Latitude != null
                     && profile.Longitude != null
-                    && profile.UserId != viewerId)
+                    && profile.UserId != viewerId
+                    && profile.User.BlockedAt == null)
                 .ToListAsync(cancellationToken);
             hits.AddRange(people
                 .Select(profile => new

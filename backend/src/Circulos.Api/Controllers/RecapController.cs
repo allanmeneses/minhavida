@@ -11,7 +11,7 @@ namespace Circulos.Api.Controllers;
 
 [ApiController]
 [Authorize]
-public sealed class RecapController(AppDbContext db, RecapService recap) : ControllerBase
+public sealed class RecapController(AppDbContext db, RecapService recap, CircleArchiveService archive) : ControllerBase
 {
     [HttpGet("api/recap/me")]
     public async Task<ActionResult<ProfileRecapResponse>> Mine(CancellationToken cancellationToken)
@@ -22,6 +22,7 @@ public sealed class RecapController(AppDbContext db, RecapService recap) : Contr
     [HttpGet("api/circles/{id:guid}/recap")]
     public async Task<ActionResult<CircleRecapResponse>> Circle(Guid id, CancellationToken cancellationToken)
     {
+        await archive.ArchiveIfDueAsync(id, cancellationToken);
         var result = await recap.ForCircleAsync(User.GetUserId(), id, cancellationToken);
         if (result is null)
         {

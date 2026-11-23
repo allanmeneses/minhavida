@@ -153,6 +153,10 @@ export default function AppLayout() {
         name="recap"
         options={{ title: 'Resumo de uso', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
+      <Tabs.Screen
+        name="admin"
+        options={{ title: 'Painel interno', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
     </Tabs>
   );
 }

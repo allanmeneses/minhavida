@@ -27,6 +27,7 @@ export default function CirclesScreen() {
   const [findable, setFindable] = useState(false);
   const [surprise, setSurprise] = useState(false);
   const [surpriseEmail, setSurpriseEmail] = useState('');
+  const [endsAt, setEndsAt] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -61,6 +62,7 @@ export default function CirclesScreen() {
           kind,
           isSurprise: surprise,
           surpriseSubjectEmail: surprise ? surpriseEmail.trim() || null : null,
+          endsAt: kind !== 'lasting' && endsAt.trim() ? new Date(endsAt.trim()).toISOString() : null,
         }),
       });
       setName('');
@@ -114,6 +116,14 @@ export default function CirclesScreen() {
       />
       {surprise ? (
         <TextField label="E-mail de quem vai se surpreender" value={surpriseEmail} onChangeText={setSurpriseEmail} />
+      ) : null}
+      {kind !== 'lasting' ? (
+        <TextField
+          label="Data de fim"
+          value={endsAt}
+          onChangeText={setEndsAt}
+          placeholder="AAAA-MM-DD"
+        />
       ) : null}
       <Button label="Criar circulo" onPress={() => void create()} disabled={!name.trim()} />
 

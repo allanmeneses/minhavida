@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Platform } from 'react-native';
 import {
   api,
   setRefreshAccess,
@@ -50,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const storeSession = useCallback(async (result: AuthResponse) => {
-    if (!result.token || !result.refreshToken) {
+    if (!result.token) {
       throw new Error('Sessao incompleta.');
     }
     await writeSession(result.token, result.refreshToken);
@@ -61,20 +62,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setRefreshAccess(async () => {
       const stored = refreshRef.current ?? (await readRefreshToken());
-      if (!stored) {
+      if (!stored && Platform.OS !== 'web') {
         return null;
       }
       try {
         const result = await api<AuthResponse>('/api/auth/refresh', {
           method: 'POST',
-          body: JSON.stringify({ refreshToken: stored }),
+          body: JSON.stringify({ refreshToken: stored ?? '' }),
           skipRefresh: true,
         });
-        if (!result.token || !result.refreshToken) {
+        if (!result.token) {
           return null;
         }
         await writeSession(result.token, result.refreshToken);
-        refreshRef.current = result.refreshToken;
+        refreshRef.current = result.refreshToken ?? stored;
         tokenRef.current = result.token;
         setToken(result.token);
         return result.token;
@@ -104,16 +105,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await applySession(stored);
       } catch {
         const refresh = refreshRef.current ?? (await readRefreshToken());
-        if (refresh) {
+        if (refresh || Platform.OS === 'web') {
           try {
             const result = await api<AuthResponse>('/api/auth/refresh', {
               method: 'POST',
-              body: JSON.stringify({ refreshToken: refresh }),
+              body: JSON.stringify({ refreshToken: refresh ?? '' }),
               skipRefresh: true,
             });
-            if (result.token && result.refreshToken && active) {
+            if (result.token && active) {
               await writeSession(result.token, result.refreshToken);
-              refreshRef.current = result.refreshToken;
+              refreshRef.current = result.refreshToken ?? refresh;
               await applySession(result.token);
               return;
             }
@@ -170,11 +171,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     const refresh = refreshRef.current ?? (await readRefreshToken());
-    if (refresh) {
+    if (refresh || Platform.OS === 'web') {
       try {
         await api('/api/auth/logout', {
           method: 'POST',
-          body: JSON.stringify({ refreshToken: refresh }),
+          body: JSON.stringify({ refreshToken: refresh ?? '' }),
           skipRefresh: true,
         });
       } catch {

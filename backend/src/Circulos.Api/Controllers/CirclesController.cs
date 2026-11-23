@@ -17,11 +17,13 @@ public sealed class CirclesController(
     QuotaService quota,
     IEmailSender email,
     IFileStorage storage,
-    SuccessionService succession) : ControllerBase
+    SuccessionService succession,
+    CircleArchiveService archive) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<CircleSummaryResponse>>> Mine(CancellationToken cancellationToken)
     {
+        await archive.ArchiveExpiredAsync(cancellationToken);
         var userId = User.GetUserId();
         var memberships = await db.CircleMembers
             .AsNoTracking()
@@ -87,6 +89,12 @@ public sealed class CirclesController(
         CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
+        var kind = EnumText.ParseCircleKind(request.Kind);
+        if (request.EndsAt is not null && kind == CircleKind.Lasting)
+        {
+            return BadRequest(new ErrorResponse("Data de fim so vale em circulo temporario ou diario."));
+        }
+
         var quotaError = await quota.TryAddCircleAsync(userId, cancellationToken);
         if (quotaError is not null)
         {
@@ -126,8 +134,9 @@ public sealed class CirclesController(
             Longitude = request.FindableByLocation ? request.Longitude : null,
             IsSurprise = request.IsSurprise,
             SurpriseSubjectUserId = subjectId,
-            Kind = EnumText.ParseCircleKind(request.Kind),
+            Kind = kind,
             Status = CircleStatus.Active,
+            EndsAt = request.EndsAt?.ToUniversalTime(),
             CreatedAt = now,
         };
         db.Circles.Add(circle);
@@ -148,6 +157,7 @@ public sealed class CirclesController(
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CircleDetailResponse>> Get(Guid id, CancellationToken cancellationToken)
     {
+        await archive.ArchiveIfDueAsync(id, cancellationToken);
         var userId = User.GetUserId();
         var circle = await LoadCircle(id, cancellationToken);
         if (circle is null || circle.Status == CircleStatus.Deleted || HiddenSurprise(circle, userId))
@@ -802,7 +812,8 @@ public sealed class CirclesController(
             EnumText.Kind(circle.Kind),
             EnumText.Status(circle.Status),
             EnumText.Role(role),
-            circle.Members.Count);
+            circle.Members.Count,
+            circle.EndsAt);
     }
 
     private static CircleDetailResponse ToDetail(
@@ -828,7 +839,8 @@ public sealed class CirclesController(
             posts,
             log,
             joinRequests,
-            sharedEntries);
+            sharedEntries,
+            circle.EndsAt);
 
     private async Task<List<SharedLifeEntryResponse>> SharedEntriesAsync(Guid circleId, CancellationToken cancellationToken)
     {
@@ -905,7 +917,8 @@ public sealed class CirclesController(
             [],
             [],
             [],
-            []);
+            [],
+            circle.EndsAt);
 
     private static CirclePostResponse ToPost(CirclePost post) =>
         new(post.Id, post.AuthorUserId, post.Body, post.PhotoStorageKey is not null, post.CreatedAt);

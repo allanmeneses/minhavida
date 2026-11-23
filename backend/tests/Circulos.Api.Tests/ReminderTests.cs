@@ -151,7 +151,7 @@ public sealed class ReminderTests : IClassFixture<ApiFactory>
         var client = _factory.CreateClient();
         var auth = await AuthHelper.RegisterAsync(client);
         client.WithToken(auth.Token);
-        var start = DateTime.UtcNow.AddHours(-2);
+        var start = OverdueOnThisUtcDay();
         await client.PostAsJsonAsync("/api/reminders", new
         {
             title = "Atrasado",
@@ -191,6 +191,19 @@ public sealed class ReminderTests : IClassFixture<ApiFactory>
 
         var home = await client.GetFromJsonAsync<JsonElement>("/api/home", Json);
         Assert.DoesNotContain(home.GetProperty("overdue").EnumerateArray(), x => x.GetProperty("title").GetString() == "Passado");
+    }
+
+    private static DateTime OverdueOnThisUtcDay()
+    {
+        var now = DateTime.UtcNow;
+        var start = now.AddMinutes(-5);
+        if (start.Date == now.Date)
+        {
+            return start;
+        }
+
+        var today = now.Date.AddSeconds(1);
+        return today < now ? today : now.AddMilliseconds(-1);
     }
 
     private sealed record ReminderDto(Guid Id, string Title, DateTime NextFireAt, bool IsPaused);

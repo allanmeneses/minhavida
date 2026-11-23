@@ -43,9 +43,15 @@ export async function writeRefreshToken(token: string): Promise<void> {
   await write(REFRESH_KEY, token);
 }
 
-export async function writeSession(access: string, refresh: string): Promise<void> {
+export async function writeSession(access: string, refresh: string | null): Promise<void> {
   await writeToken(access);
-  await writeRefreshToken(refresh);
+  if (Platform.OS === 'web') {
+    await remove(REFRESH_KEY);
+    return;
+  }
+  if (refresh) {
+    await writeRefreshToken(refresh);
+  }
 }
 
 export async function clearToken(): Promise<void> {

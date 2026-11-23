@@ -35,7 +35,7 @@ export function setWriteCache(handler: ((path: string, value: unknown) => void) 
   writeCacheHandler = handler;
 }
 
-export type AuthUser = { id: string; email: string; name: string };
+export type AuthUser = { id: string; email: string; name: string; isSystemAdmin?: boolean };
 export type AuthResponse = {
   token: string | null;
   refreshToken: string | null;
@@ -93,6 +93,7 @@ export type CircleSummary = {
   status: string;
   role: string;
   memberCount: number;
+  endsAt?: string | null;
 };
 export type CircleJoinRequest = {
   id: string;
@@ -118,6 +119,7 @@ export type CircleDetail = {
   log: { id: string; action: string; detail: string; createdAt: string; actorUserId: string | null }[];
   joinRequests: CircleJoinRequest[];
   sharedEntries: SharedLifeEntry[];
+  endsAt?: string | null;
 };
 export type SharedLifeEntry = {
   id: string;
@@ -167,6 +169,29 @@ export type PlanCatalog = {
   paidYearly: PlanOffer;
   sandbox: boolean;
   provider: string;
+};
+export type AdminStats = {
+  shortcutsTriggered: number;
+  entriesCreated: number;
+  activeCircles: number;
+};
+export type AdminReport = {
+  id: string;
+  reporterUserId: string;
+  reporterEmail: string;
+  targetKind: string;
+  targetId: string;
+  note: string | null;
+  createdAt: string;
+};
+export type AdminActionItem = {
+  id: string;
+  adminUserId: string;
+  action: string;
+  targetKind: string;
+  targetId: string;
+  detail: string;
+  createdAt: string;
 };
 export type RecapFlow = { key: string; label: string; count: number };
 export type ProfileRecap = { flows: RecapFlow[] };
@@ -361,13 +386,20 @@ export async function api<T>(path: string, options: Options = {}): Promise<T> {
   if (options.token) {
     headerInit.Authorization = `Bearer ${options.token}`;
   }
+  if (Platform.OS === 'web') {
+    headerInit['X-Client'] = 'web';
+  }
   if (options.body && !isFormDataBody(options.body) && !headerInit['Content-Type']) {
     headerInit['Content-Type'] = 'application/json';
   }
 
   let response: Response;
   try {
-    response = await fetch(`${API_URL}${path}`, { ...options, headers: headerInit });
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: headerInit,
+      credentials: Platform.OS === 'web' ? 'include' : options.credentials,
+    });
   } catch {
     if (method === 'GET') {
       const cached = readCacheHandler?.(path);
