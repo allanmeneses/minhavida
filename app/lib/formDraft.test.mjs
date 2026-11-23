@@ -32,4 +32,16 @@ describe('hydrateIfPristine', () => {
     assert.equal(afterRerender.tags, 'treino, manha');
     assert.equal(afterRerender.title, 'Corrida');
   });
+
+  it('keeps typed gift idea when only the save function identity changes', () => {
+    const typed = 'Planta que a pessoa digitou';
+    const incoming = '';
+    assert.equal(hydrateIfPristine(true, typed, incoming), 'Planta que a pessoa digitou');
+  });
+
+  it('keeps typed diary search when only the search function identity changes', () => {
+    const typed = 'segredo-xyz';
+    const incoming = '';
+    assert.equal(hydrateIfPristine(true, typed, incoming), 'segredo-xyz');
+  });
 });

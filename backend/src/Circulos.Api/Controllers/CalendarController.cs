@@ -45,6 +45,19 @@ public sealed class CalendarController(AppDbContext db, TimeProvider clock) : Co
         return File(System.Text.Encoding.UTF8.GetBytes(ics), "text/calendar; charset=utf-8", "circulos-lembretes.ics");
     }
 
+    [HttpPost]
+    [Authorize]
+    public IActionResult RejectWrite() =>
+        StatusCode(StatusCodes.Status405MethodNotAllowed, new ErrorResponse("O app le o calendario do aparelho e nunca grava evento la."));
+
+    [HttpPut]
+    [Authorize]
+    public IActionResult RejectPut() => RejectWrite();
+
+    [HttpDelete]
+    [Authorize]
+    public IActionResult RejectDelete() => RejectWrite();
+
     [HttpGet("feed/{token}")]
     [AllowAnonymous]
     public async Task<IActionResult> Feed(string token, CancellationToken cancellationToken)

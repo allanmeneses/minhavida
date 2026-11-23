@@ -19,6 +19,7 @@ public sealed class Circle
     public CircleKind Kind { get; set; } = CircleKind.Lasting;
     public CircleStatus Status { get; set; } = CircleStatus.Active;
     public DateTime? EndsAt { get; set; }
+    public DateTime? OwnerElectedAt { get; set; }
     public DateTime CreatedAt { get; set; }
 
     public User? Owner { get; set; }

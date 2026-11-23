@@ -24,7 +24,7 @@ export function entryExample(kind: string | undefined): EntryExample {
       };
     case 'diary':
       return {
-        hint: 'Exemplo: um paragrafo do dia. Sem busca e sem versao.',
+        hint: 'Exemplo: um paragrafo do dia. Busca por palavra-chave. Sem versao.',
         titlePlaceholder: 'Corrida de manha',
         showWhen: false,
         showWhere: false,

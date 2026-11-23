@@ -77,7 +77,6 @@ public sealed class SuccessionAndNearbyTests : IClassFixture<ApiFactory>
         (await viewer.PostAsJsonAsync($"/api/circles/invites/{invite.GetProperty("token").GetString()}/accept", new { })).EnsureSuccessStatusCode();
         (await segundo.PostAsJsonAsync($"/api/circles/invites/{invite2.GetProperty("token").GetString()}/accept", new { })).EnsureSuccessStatusCode();
         (await lockedDono.DeleteAsync($"/api/circles/{otherId}/membership")).EnsureSuccessStatusCode();
-        (await viewer.PostAsJsonAsync($"/api/circles/{otherId}/succession/votes", new { candidateUserId = viewerAuth.UserId })).EnsureSuccessStatusCode();
 
         using (var scope = _factory.Services.CreateScope())
         {
@@ -143,13 +142,23 @@ public sealed class SuccessionAndNearbyTests : IClassFixture<ApiFactory>
         var hits = await outro.GetFromJsonAsync<List<JsonElement>>(
             "/api/search/nearby?lat=-23.56&lng=-46.64&radiusKm=20",
             Json);
-        Assert.Contains(hits!, item => item.GetProperty("kind").GetString() == "person" && item.GetProperty("name").GetString() == "Perto");
+        Assert.DoesNotContain(hits!, item => item.GetProperty("kind").GetString() == "person");
         Assert.Contains(hits!, item => item.GetProperty("kind").GetString() == "circle" && item.GetProperty("name").GetString() == "Corrida");
         foreach (var hit in hits!)
         {
             Assert.False(hit.TryGetProperty("latitude", out _));
             Assert.False(hit.TryGetProperty("longitude", out _));
             Assert.True(hit.GetProperty("distanceKm").GetDouble() >= 0);
+        }
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var profile = await db.Profiles.SingleAsync(item => item.UserId == donoAuth.UserId);
+            Assert.Null(profile.Latitude);
+            Assert.Null(profile.Longitude);
+            Assert.False(await db.SearchQueries.AnyAsync(item => item.Term.Contains("23.56") || item.Term.Contains("46.64")));
+            Assert.False(await db.CircleLogs.AnyAsync(item => item.Detail.Contains("23.55") || item.Detail.Contains("46.63")));
         }
 
         (await dono.PutAsJsonAsync("/api/profile", new { displayName = "Perto", findableByLocation = false })).EnsureSuccessStatusCode();

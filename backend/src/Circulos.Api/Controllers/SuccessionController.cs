@@ -29,7 +29,7 @@ public sealed class SuccessionController(AppDbContext db, SuccessionService succ
             return NotFound(new ErrorResponse("Nao ha votacao aberta."));
         }
 
-        return Ok(ToResponse(vote, circle.Members.Count, userId));
+        return Ok(ToResponse(vote, circle, userId));
     }
 
     [HttpPost("votes")]
@@ -47,8 +47,35 @@ public sealed class SuccessionController(AppDbContext db, SuccessionService succ
         return NoContent();
     }
 
-    private static SuccessionVoteResponse ToResponse(SuccessionVote vote, int memberCount, Guid userId) =>
-        new(
+    [HttpPost("replace")]
+    public async Task<IActionResult> RequestReplacement(Guid id, CancellationToken cancellationToken)
+    {
+        var (status, error) = await succession.RequestReplacementAsync(id, User.GetUserId(), cancellationToken);
+        if (error is not null)
+        {
+            return StatusCode(status, new ErrorResponse(error));
+        }
+
+        return NoContent();
+    }
+
+    private static SuccessionVoteResponse ToResponse(SuccessionVote vote, Circle circle, Guid userId)
+    {
+        var now = DateTime.UtcNow;
+        var availableAt = circle.OwnerElectedAt?.AddDays(SuccessionVote.ReplacementCooldownDays);
+        var open = vote.Status == SuccessionVoteStatus.Open;
+        var canReplace = !open
+            && circle.OwnerUserId is not null
+            && circle.OwnerElectedAt is not null
+            && availableAt is { } when
+            && now >= when;
+        var blocked = !open
+            && circle.OwnerElectedAt is not null
+            && availableAt is { } until
+            && now < until
+                ? "O dono eleito so pode ser substituido apos 30 dias da eleicao."
+                : null;
+        return new(
             vote.Id,
             vote.Status switch
             {
@@ -59,11 +86,14 @@ public sealed class SuccessionController(AppDbContext db, SuccessionService succ
             vote.OpenedAt,
             vote.DeadlineAt,
             vote.WinnerUserId,
-            memberCount,
+            circle.Members.Count,
             vote.Ballots
                 .GroupBy(ballot => ballot.CandidateUserId)
                 .Select(group => new SuccessionTallyResponse(group.Key, group.Count()))
                 .OrderByDescending(item => item.Votes)
                 .ToList(),
-            vote.Ballots.FirstOrDefault(ballot => ballot.VoterUserId == userId)?.CandidateUserId);
+            vote.Ballots.FirstOrDefault(ballot => ballot.VoterUserId == userId)?.CandidateUserId,
+            canReplace,
+            blocked);
+    }
 }

@@ -31,8 +31,14 @@ public sealed class HomeController(
         var now = clock.GetUtcNow().UtcDateTime;
         var onVacation = user.VacationUntil is { } until && until > now;
 
+        var memberCircleIds = await db.CircleMembers.AsNoTracking()
+            .Where(x => x.UserId == userId && x.Circle.Status == CircleStatus.Active)
+            .Select(x => x.CircleId)
+            .ToListAsync(cancellationToken);
         var reminders = await db.Reminders.AsNoTracking()
-            .Where(x => x.UserId == userId && !x.IsPaused)
+            .Where(x => !x.IsPaused
+                && (x.UserId == userId
+                    || (x.CircleId != null && memberCircleIds.Contains(x.CircleId.Value))))
             .ToListAsync(cancellationToken);
 
         var overdue = new List<DayPanelItem>();

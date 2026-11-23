@@ -38,7 +38,7 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
             CircleId = circle.Id,
             ActorUserId = null,
             Action = "succession-opened",
-            Detail = "Sem sucessor. Aberta votacao por maioria simples, prazo de 3 dias. Todos os membros votam.",
+            Detail = "Sem sucessor. Aberta votacao por maioria simples, sem quorum, prazo de 3 dias. Todos os membros votam.",
             CreatedAt = now,
         });
         return vote;
@@ -137,6 +137,68 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
         return (StatusCodes.Status204NoContent, null);
     }
 
+    public async Task<(int Status, string? Error)> RequestReplacementAsync(
+        Guid circleId,
+        Guid requesterId,
+        CancellationToken cancellationToken)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await CircleRowLock.AcquireAsync(db, circleId, cancellationToken);
+        var circle = await db.Circles.Include(item => item.Members).FirstOrDefaultAsync(item => item.Id == circleId, cancellationToken);
+        if (circle is null || circle.Status == CircleStatus.Deleted)
+        {
+            return (StatusCodes.Status404NotFound, "Circulo nao encontrado.");
+        }
+
+        if (circle.Members.All(member => member.UserId != requesterId))
+        {
+            return (StatusCodes.Status404NotFound, "Circulo nao encontrado.");
+        }
+
+        if (circle.OwnerElectedAt is null || circle.OwnerUserId is null)
+        {
+            return (StatusCodes.Status400BadRequest, "So o dono eleito por votacao pode ser substituido assim.");
+        }
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        var availableAt = circle.OwnerElectedAt.Value.AddDays(SuccessionVote.ReplacementCooldownDays);
+        if (now < availableAt)
+        {
+            return (StatusCodes.Status400BadRequest, "O dono eleito so pode ser substituido apos 30 dias da eleicao.");
+        }
+
+        var open = await db.Set<SuccessionVote>().FirstOrDefaultAsync(
+            vote => vote.CircleId == circleId && vote.Status == SuccessionVoteStatus.Open,
+            cancellationToken);
+        if (open is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return (StatusCodes.Status204NoContent, null);
+        }
+
+        var vote = new SuccessionVote
+        {
+            Id = Guid.NewGuid(),
+            CircleId = circle.Id,
+            OpenedAt = now,
+            DeadlineAt = now.AddDays(SuccessionVote.DeadlineDays),
+            Status = SuccessionVoteStatus.Open,
+        };
+        db.Set<SuccessionVote>().Add(vote);
+        db.CircleLogs.Add(new CircleLog
+        {
+            Id = Guid.NewGuid(),
+            CircleId = circle.Id,
+            ActorUserId = requesterId,
+            Action = "succession-opened",
+            Detail = "Membro pediu nova votacao para substituir o dono eleito. Maioria simples, sem quorum.",
+            CreatedAt = now,
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return (StatusCodes.Status204NoContent, null);
+    }
+
     public async Task CloseIfDueAsync(SuccessionVote vote, CancellationToken cancellationToken)
     {
         if (vote.Status != SuccessionVoteStatus.Open)
@@ -161,28 +223,47 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
             return;
         }
 
-        var grouped = vote.Ballots.GroupBy(ballot => ballot.CandidateUserId)
-            .Select(group => new { UserId = group.Key, Count = group.Count() })
-            .OrderByDescending(item => item.Count)
-            .ToList();
-        var leader = grouped.FirstOrDefault();
-        if (leader is null || leader.Count * 2 <= memberCount)
+        var uniqueVoters = vote.Ballots.Select(ballot => ballot.VoterUserId).Distinct().Count();
+        if (uniqueVoters < memberCount)
         {
             return;
         }
 
-        await ElectAsync(circle, vote, leader.UserId, now, cancellationToken);
+        var leader = UniqueLeader(vote);
+        if (leader is null)
+        {
+            return;
+        }
+
+        await ElectAsync(circle, vote, leader.Value, now, cancellationToken);
     }
 
     private async Task ElectAsync(Circle circle, SuccessionVote vote, Guid winnerId, DateTime now, CancellationToken cancellationToken)
     {
         var member = circle.Members.First(item => item.UserId == winnerId);
         var winner = await db.Users.FirstAsync(item => item.Id == winnerId, cancellationToken);
+        var previousOwnerId = circle.OwnerUserId;
+        if (previousOwnerId is Guid previous && previous != winnerId)
+        {
+            var previousMember = circle.Members.FirstOrDefault(item => item.UserId == previous);
+            if (previousMember is not null)
+            {
+                previousMember.Role = CircleRole.Admin;
+            }
+
+            var previousUser = await db.Users.FirstAsync(item => item.Id == previous, cancellationToken);
+            if (!circle.IsStarter && previousUser.OwnedCircleCount > 0)
+            {
+                previousUser.OwnedCircleCount -= 1;
+            }
+        }
+
         circle.OwnerUserId = winnerId;
         circle.Owner = winner;
         circle.Status = CircleStatus.Active;
+        circle.OwnerElectedAt = now;
         member.Role = CircleRole.Owner;
-        if (!circle.IsStarter)
+        if (!circle.IsStarter && previousOwnerId != winnerId)
         {
             winner.OwnedCircleCount += 1;
         }
@@ -195,7 +276,7 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
             CircleId = circle.Id,
             ActorUserId = winnerId,
             Action = "succession-decided",
-            Detail = "Maioria simples elegeu o novo dono. Historico de votacoes anteriores nao fica visivel.",
+            Detail = "Maioria simples, sem quorum, elegeu o novo dono. Historico de votacoes anteriores nao fica visivel.",
             CreatedAt = now,
         });
         await db.SaveChangesAsync(cancellationToken);
@@ -208,15 +289,10 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
             return;
         }
 
-        var memberCount = circle.Members.Count;
-        var grouped = vote.Ballots.GroupBy(ballot => ballot.CandidateUserId)
-            .Select(group => new { UserId = group.Key, Count = group.Count() })
-            .OrderByDescending(item => item.Count)
-            .ToList();
-        var leader = grouped.FirstOrDefault();
-        if (leader is not null && leader.Count * 2 > memberCount)
+        var leader = UniqueLeader(vote);
+        if (leader is not null)
         {
-            await ElectAsync(circle, vote, leader.UserId, now, cancellationToken);
+            await ElectAsync(circle, vote, leader.Value, now, cancellationToken);
             return;
         }
 
@@ -231,11 +307,31 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
                 CircleId = circle.Id,
                 ActorUserId = null,
                 Action = "locked",
-                Detail = "Prazo da votacao acabou sem maioria simples. O circulo espera um responsavel.",
+                Detail = "Prazo da votacao acabou sem votos ou com empate. O circulo espera um responsavel.",
                 CreatedAt = now,
             });
         }
 
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static Guid? UniqueLeader(SuccessionVote vote)
+    {
+        var grouped = vote.Ballots.GroupBy(ballot => ballot.CandidateUserId)
+            .Select(group => new { UserId = group.Key, Count = group.Count() })
+            .OrderByDescending(item => item.Count)
+            .ToList();
+        var leader = grouped.FirstOrDefault();
+        if (leader is null || leader.Count <= 0)
+        {
+            return null;
+        }
+
+        if (grouped.Count(item => item.Count == leader.Count) != 1)
+        {
+            return null;
+        }
+
+        return leader.UserId;
     }
 }

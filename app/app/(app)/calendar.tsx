@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, downloadNamedBlob, type CalendarMonth } from '@/lib/api';
 import { buildMonth, shiftMonth } from '@/lib/calendarMonth';
+import { deviceCalendarPolicy, listDeviceEvents, type DeviceCalendarEvent } from '@/lib/deviceCalendar';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function CalendarScreen() {
@@ -17,6 +18,7 @@ export default function CalendarScreen() {
   const [month, setMonth] = useState(now.getUTCMonth() + 1);
   const [data, setData] = useState<CalendarMonth | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deviceEvents, setDeviceEvents] = useState<DeviceCalendarEvent[]>([]);
 
   const from = `${year}-${String(month).padStart(2, '0')}-01`;
   const toDate = new Date(Date.UTC(year, month, 0));
@@ -27,6 +29,7 @@ export default function CalendarScreen() {
       return;
     }
     setData(await api<CalendarMonth>(`/api/calendar?from=${from}&to=${to}`, { token }));
+    setDeviceEvents(await listDeviceEvents());
   }, [token, from, to]);
 
   useEffect(() => {
@@ -44,7 +47,20 @@ export default function CalendarScreen() {
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Calendario</Text>
-      <Text style={styles.lead}>Lembretes do app neste mes. Exporta .ics para baixar ou assinar.</Text>
+      <Text style={styles.lead}>
+        Lembretes do app neste mes. Exporta .ics para baixar ou assinar. Calendario do aparelho e somente leitura: o app
+        le e nunca grava evento la.
+      </Text>
+      {deviceCalendarPolicy.writes ? null : (
+        <Text style={styles.lead}>
+          No celular o app le o calendario do aparelho. Nesta tela web nao ha eventos do aparelho.
+        </Text>
+      )}
+      {deviceEvents.map((event) => (
+        <Text key={event.id} style={styles.lead}>
+          Aparelho: {event.title}
+        </Text>
+      ))}
       <Feedback message={error} />
       <Button label="Mes anterior" variant="ghost" onPress={() => move(-1)} />
       <Text style={styles.section}>

@@ -18,6 +18,7 @@ import {
   type DocumentItem,
   type LifeArea,
   type LifeEntry,
+  type SearchHit,
 } from '@/lib/api';
 import { entryExample } from '@/lib/entryExamples';
 import { screenStyles } from '@/lib/screenStyles';
@@ -44,6 +45,8 @@ export default function LifeAreaScreen() {
   const [pageTitle, setPageTitle] = useState('');
   const [pageBody, setPageBody] = useState('');
   const [pages, setPages] = useState<{ id: string; title: string; body: string }[]>([]);
+  const [diaryQuery, setDiaryQuery] = useState('');
+  const [diaryHits, setDiaryHits] = useState<SearchHit[]>([]);
   const example = entryExample(area?.kind);
 
   const load = useCallback(async () => {
@@ -274,6 +277,31 @@ export default function LifeAreaScreen() {
           {pages.map((page) => (
             <Text key={page.id} style={styles.item}>
               {page.title}
+            </Text>
+          ))}
+          <TextField
+            label="Palavra-chave"
+            value={diaryQuery}
+            onChangeText={setDiaryQuery}
+            placeholder="palavra-chave"
+          />
+          <Button
+            label="Buscar no diario"
+            variant="ghost"
+            disabled={!diaryQuery.trim()}
+            onPress={() => {
+              if (!token || !id || !diaryQuery.trim()) {
+                return;
+              }
+              void api<SearchHit[]>(
+                `/api/life-areas/${id}/search?q=${encodeURIComponent(diaryQuery.trim())}`,
+                { token },
+              ).then(setDiaryHits);
+            }}
+          />
+          {diaryHits.map((hit) => (
+            <Text key={hit.id} style={styles.lead}>
+              {hit.title}
             </Text>
           ))}
           <Button label="Exportar texto" variant="ghost" onPress={() => void exportDiary()} />

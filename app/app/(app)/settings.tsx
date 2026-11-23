@@ -267,7 +267,10 @@ export default function SettingsScreen() {
       ) : null}
 
       <Text style={styles.section}>Lembretes por e-mail</Text>
-      <Text style={styles.lead}>Opcional. Padrao: so no aplicativo. O envio usa a caixa local, sem SMTP real.</Text>
+      <Text style={styles.lead}>
+        Lembretes do circulo chegam so aos membros, no app e por e-mail se a pessoa ligar. Sem SMS. Padrao: so no
+        aplicativo. O envio usa a caixa local, sem SMTP real.
+      </Text>
       {emailRemindersLoaded ? (
         <Button
           label={emailReminders ? 'Lembrete por e-mail: ligado' : 'Lembrete por e-mail: so no app'}

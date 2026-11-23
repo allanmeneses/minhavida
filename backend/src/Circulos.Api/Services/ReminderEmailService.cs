@@ -18,8 +18,14 @@ public sealed class ReminderEmailService(AppDbContext db, TimeProvider clock, IE
             return [];
         }
 
+        var memberCircleIds = await db.CircleMembers
+            .Where(x => x.UserId == userId && x.Circle.Status == CircleStatus.Active)
+            .Select(x => x.CircleId)
+            .ToListAsync(cancellationToken);
         var reminders = await db.Reminders
-            .Where(x => x.UserId == userId && !x.IsPaused)
+            .Where(x => !x.IsPaused
+                && (x.UserId == userId
+                    || (x.CircleId != null && memberCircleIds.Contains(x.CircleId.Value))))
             .ToListAsync(cancellationToken);
         var sent = new List<string>();
         foreach (var reminder in reminders)
@@ -32,7 +38,10 @@ public sealed class ReminderEmailService(AppDbContext db, TimeProvider clock, IE
                 continue;
             }
 
-            if (reminder.LastEmailedFireAt is { } last && last == reminder.NextFireAt)
+            var already = await db.ReminderEmailReceipts.AnyAsync(
+                x => x.ReminderId == reminder.Id && x.UserId == userId && x.FireAt == reminder.NextFireAt,
+                cancellationToken);
+            if (already || (reminder.LastEmailedFireAt is { } last && last == reminder.NextFireAt && reminder.UserId == userId))
             {
                 continue;
             }
@@ -40,9 +49,21 @@ public sealed class ReminderEmailService(AppDbContext db, TimeProvider clock, IE
             await email.SendAsync(
                 user.Email,
                 $"Lembrete: {reminder.Title}",
-                $"O lembrete {reminder.Title} pede atencao agora. Voce escolheu receber por e-mail.",
+                $"O lembrete {reminder.Title} pede atencao agora. Voce escolheu receber por e-mail. Sem SMS.",
                 cancellationToken);
-            reminder.LastEmailedFireAt = reminder.NextFireAt;
+            db.ReminderEmailReceipts.Add(new ReminderEmailReceipt
+            {
+                Id = Guid.NewGuid(),
+                ReminderId = reminder.Id,
+                UserId = userId,
+                FireAt = reminder.NextFireAt,
+                SentAt = now,
+            });
+            if (reminder.UserId == userId)
+            {
+                reminder.LastEmailedFireAt = reminder.NextFireAt;
+            }
+
             sent.Add(reminder.Title);
         }
 

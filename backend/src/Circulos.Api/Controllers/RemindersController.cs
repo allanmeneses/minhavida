@@ -73,6 +73,17 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFi
             CreatedAt = clock.GetUtcNow().UtcDateTime,
         };
         db.Reminders.Add(reminder);
+        if (circleId is Guid shareCircle && (request.GiftIdeas?.Length ?? 0) > 0)
+        {
+            db.GiftIdeaShares.Add(new GiftIdeaShare
+            {
+                Id = Guid.NewGuid(),
+                ReminderId = reminder.Id,
+                CircleId = shareCircle,
+                CreatedAt = reminder.CreatedAt,
+            });
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         return Created($"/api/reminders/{reminder.Id}", ToResponse(reminder, reminder.CreatedAt));
     }

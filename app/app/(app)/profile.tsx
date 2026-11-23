@@ -41,7 +41,6 @@ export default function ProfileScreen() {
     secondaryEmail: string;
     isPublic: boolean;
     bio: string;
-    findableByLocation: boolean;
   }) {
     if (!token) {
       return;
@@ -60,9 +59,6 @@ export default function ProfileScreen() {
           secondaryEmail: values.secondaryEmail.trim() ? values.secondaryEmail.trim() : null,
           isPublic: values.isPublic,
           bio: values.bio.trim() ? values.bio.trim() : null,
-          findableByLocation: values.findableByLocation,
-          latitude: values.findableByLocation ? -23.55 : null,
-          longitude: values.findableByLocation ? -46.63 : null,
         }),
       });
       setProfile(next);

@@ -48,6 +48,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<GiftIdeaShare> GiftIdeaShares => Set<GiftIdeaShare>();
     public DbSet<DiaryPage> DiaryPages => Set<DiaryPage>();
     public DbSet<SupportMessage> SupportMessages => Set<SupportMessage>();
+    public DbSet<ReminderEmailReceipt> ReminderEmailReceipts => Set<ReminderEmailReceipt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -195,6 +196,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.RevealedAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.EndsAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.OwnerElectedAt).HasColumnType("timestamp with time zone");
             entity.HasOne(x => x.Owner)
                 .WithMany()
                 .HasForeignKey(x => x.OwnerUserId)
@@ -713,6 +715,23 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Email).HasMaxLength(256).IsRequired();
             entity.Property(x => x.Body).HasMaxLength(4000).IsRequired();
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<ReminderEmailReceipt>(entity =>
+        {
+            entity.ToTable("reminder_email_receipts");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.ReminderId, x.UserId, x.FireAt }).IsUnique();
+            entity.Property(x => x.FireAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.SentAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.Reminder)
+                .WithMany()
+                .HasForeignKey(x => x.ReminderId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

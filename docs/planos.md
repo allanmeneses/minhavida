@@ -2,6 +2,8 @@
 
 Status: **aprovado** pelo Allan em 22/11/2026. Precos em reais: R$ 29,90 mensal e R$ 299,00 anual. Os valores nao ficam fixos no codigo da cobranca: vêm de `Plans:PaidMonthlyReais` e `Plans:PaidYearlyReais` (arquivo de configuracao ou secret do ambiente). Padrao no codigo: 29,90 e 299,00.
 
+Nenhum plano inclui anuncios. Nunca havera anuncios no Circulos. Tambem nao existe feed geral tipo rede social.
+
 ## Gratis
 
 - Ate 3 circulos criados pela pessoa. Eu e Familia do primeiro acesso nao entram nessa cota.
