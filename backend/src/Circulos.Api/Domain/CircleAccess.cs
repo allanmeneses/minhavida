@@ -2,7 +2,7 @@ namespace Circulos.Api.Domain;
 
 public static class CircleAccess
 {
-    public const string LockedMessage = "Este circulo esta travado.";
+    public const string LockedMessage = "Este círculo está travado.";
 
     public static bool HiddenSurprise(Circle circle, Guid userId) =>
         circle.IsSurprise && circle.RevealedAt is null && circle.SurpriseSubjectUserId == userId;

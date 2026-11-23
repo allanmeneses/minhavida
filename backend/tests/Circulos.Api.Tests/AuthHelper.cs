@@ -32,7 +32,7 @@ internal static class AuthHelper
         }
 
         var parsed = JsonSerializer.Deserialize<AuthResponseDto>(body, JsonOptions)
-            ?? throw new InvalidOperationException("Resposta de cadastro invalida.");
+            ?? throw new InvalidOperationException("Resposta de cadastro inválida.");
 
         return new AuthResult(parsed.Token!, parsed.RefreshToken, parsed.User!.Id, parsed.User.Email, parsed.User.Name);
     }

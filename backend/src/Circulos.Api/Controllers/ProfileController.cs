@@ -19,7 +19,7 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage, Quo
         var profile = await db.Profiles.FirstOrDefaultAsync(x => x.UserId == User.GetUserId(), cancellationToken);
         if (profile is null)
         {
-            return NotFound(new ErrorResponse("Perfil nao encontrado."));
+            return NotFound(new ErrorResponse("Perfil não encontrado."));
         }
 
         return Ok(ToResponse(profile));
@@ -34,19 +34,19 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage, Quo
         {
             if (birthDate > DateOnly.FromDateTime(DateTime.UtcNow))
             {
-                return BadRequest(new ErrorResponse("A data de nascimento nao pode ser no futuro."));
+                return BadRequest(new ErrorResponse("A data de nascimento não pode ser no futuro."));
             }
 
             if (birthDate < new DateOnly(1900, 1, 1))
             {
-                return BadRequest(new ErrorResponse("Informe uma data de nascimento valida."));
+                return BadRequest(new ErrorResponse("Informe uma data de nascimento válida."));
             }
         }
 
         var profile = await db.Profiles.FirstOrDefaultAsync(x => x.UserId == User.GetUserId(), cancellationToken);
         if (profile is null)
         {
-            return NotFound(new ErrorResponse("Perfil nao encontrado."));
+            return NotFound(new ErrorResponse("Perfil não encontrado."));
         }
 
         profile.DisplayName = request.DisplayName.Trim();
@@ -82,7 +82,7 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage, Quo
         var profile = await db.Profiles.FirstOrDefaultAsync(x => x.UserId == User.GetUserId(), cancellationToken);
         if (profile is null)
         {
-            return NotFound(new ErrorResponse("Perfil nao encontrado."));
+            return NotFound(new ErrorResponse("Perfil não encontrado."));
         }
 
         await using var original = file.OpenReadStream();
@@ -119,7 +119,7 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage, Quo
         var profile = await db.Profiles.FirstOrDefaultAsync(x => x.UserId == User.GetUserId(), cancellationToken);
         if (profile is null || profile.PhotoStorageKey is null || profile.PhotoContentType is null)
         {
-            return NotFound(new ErrorResponse("Este perfil ainda nao tem foto."));
+            return NotFound(new ErrorResponse("Este perfil ainda não tem foto."));
         }
 
         var stream = await storage.OpenReadAsync(profile.PhotoStorageKey, cancellationToken);
@@ -133,7 +133,7 @@ public sealed class ProfileController(AppDbContext db, IFileStorage storage, Quo
         var profile = await db.Profiles.FirstOrDefaultAsync(x => x.UserId == User.GetUserId(), cancellationToken);
         if (profile is null)
         {
-            return NotFound(new ErrorResponse("Perfil nao encontrado."));
+            return NotFound(new ErrorResponse("Perfil não encontrado."));
         }
 
         if (profile.PhotoStorageKey is not null)

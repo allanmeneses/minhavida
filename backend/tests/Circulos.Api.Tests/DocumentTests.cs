@@ -72,7 +72,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         dono.WithToken(donoAuth.Token);
 
         Guid documentId;
-        using (var form = CreateTextFile("privado.txt", "so o dono ve"))
+        using (var form = CreateTextFile("privado.txt", "só o dono ve"))
         {
             var upload = await dono.PostAsync("/api/documents", form);
             upload.EnsureSuccessStatusCode();
@@ -108,7 +108,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         autenticado.WithToken(auth.Token);
 
         Guid documentId;
-        using (var form = CreateTextFile("segredo.txt", "conteudo privado"))
+        using (var form = CreateTextFile("segredo.txt", "conteúdo privado"))
         {
             var upload = await autenticado.PostAsync("/api/documents", form);
             var created = await upload.Content.ReadFromJsonAsync<DocumentDto>(Json);
@@ -123,7 +123,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task Upload_ArquivoSalvoNaoEstaLegivel()
     {
-        const string secret = "texto-privado-que-nao-pode-aparecer-em-claro-" + "9f3c2a";
+        const string secret = "texto-privado-que-não-pode-aparecer-em-claro-" + "9f3c2a";
         var client = _factory.CreateClient();
         var auth = await AuthHelper.RegisterAsync(client);
         client.WithToken(auth.Token);
@@ -153,7 +153,7 @@ public sealed class DocumentTests : IClassFixture<ApiFactory>
         var client = _factory.CreateClient();
         var auth = await AuthHelper.RegisterAsync(client);
         client.WithToken(auth.Token);
-        using (var form = CreateTextFile("nota.txt", "conteudo privado da nota"))
+        using (var form = CreateTextFile("nota.txt", "conteúdo privado da nota"))
         {
             (await client.PostAsync("/api/documents", form)).EnsureSuccessStatusCode();
         }

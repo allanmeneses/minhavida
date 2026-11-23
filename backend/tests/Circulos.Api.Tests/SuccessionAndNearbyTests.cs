@@ -135,7 +135,7 @@ public sealed class SuccessionAndNearbyTests : IClassFixture<ApiFactory>
         var circle = await (await dono.PostAsJsonAsync("/api/circles", new
         {
             name = "Corrida",
-            description = "Grupo da manha",
+            description = "Grupo da manhã",
             findableByLocation = true,
             latitude = -23.55,
             longitude = -46.63,

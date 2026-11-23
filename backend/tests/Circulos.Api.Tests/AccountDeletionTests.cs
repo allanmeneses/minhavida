@@ -30,7 +30,7 @@ public sealed class AccountDeletionTests : IClassFixture<ApiFactory>
 
         var ask = await client.PostAsJsonAsync("/api/account/deletion-requests", new { password = "senha-segura-1" });
         Assert.Equal(HttpStatusCode.NoContent, ask.StatusCode);
-        var token = await LastEmailToken(auth.Email, "Para apagar seus dados, use este codigo: ");
+        var token = await LastEmailToken(auth.Email, "Para apagar seus dados, use este código: ");
 
         var confirm = await client.PostAsJsonAsync("/api/account/deletion-requests/confirm", new { token });
         Assert.Equal(HttpStatusCode.NoContent, confirm.StatusCode);
@@ -41,7 +41,7 @@ public sealed class AccountDeletionTests : IClassFixture<ApiFactory>
         Assert.Empty(await db.Documents.Where(x => x.UserId == auth.UserId).ToListAsync());
         var closing = await db.SentEmails.OrderByDescending(x => x.SentAt).FirstAsync(x => x.To == auth.Email && x.Subject.Contains("encerrada"));
         Assert.DoesNotContain("http", closing.Body, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("nao reativa", closing.Body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("não reativa", closing.Body, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class AccountDeletionTests : IClassFixture<ApiFactory>
         (await dono.PostAsJsonAsync($"/api/circles/{circle.Id}/posts", new { body = "Nota" })).EnsureSuccessStatusCode();
 
         (await dono.PostAsJsonAsync("/api/account/deletion-requests", new { password = "senha-segura-1" })).EnsureSuccessStatusCode();
-        var token = await LastEmailToken(donoAuth.Email, "Para apagar seus dados, use este codigo: ");
+        var token = await LastEmailToken(donoAuth.Email, "Para apagar seus dados, use este código: ");
         (await dono.PostAsJsonAsync("/api/account/deletion-requests/confirm", new { token })).EnsureSuccessStatusCode();
 
         using var scope = _factory.Services.CreateScope();
@@ -85,7 +85,7 @@ public sealed class AccountDeletionTests : IClassFixture<ApiFactory>
         var circle = await created.Content.ReadFromJsonAsync<CircleDto>();
 
         (await dono.PostAsJsonAsync("/api/account/deletion-requests", new { password = "senha-segura-1" })).EnsureSuccessStatusCode();
-        var token = await LastEmailToken(donoAuth.Email, "Para apagar seus dados, use este codigo: ");
+        var token = await LastEmailToken(donoAuth.Email, "Para apagar seus dados, use este código: ");
         (await dono.PostAsJsonAsync("/api/account/deletion-requests/confirm", new { token })).EnsureSuccessStatusCode();
 
         using var scope = _factory.Services.CreateScope();
@@ -105,10 +105,10 @@ public sealed class AccountDeletionTests : IClassFixture<ApiFactory>
         var auth = await AuthHelper.RegisterAsync(client, password: "senha-segura-1");
         client.WithToken(auth.Token);
         (await client.PostAsJsonAsync("/api/account/deletion-requests", new { password = "senha-segura-1" })).EnsureSuccessStatusCode();
-        var token = await LastEmailToken(auth.Email, "Para apagar seus dados, use este codigo: ");
+        var token = await LastEmailToken(auth.Email, "Para apagar seus dados, use este código: ");
 
         var confirmTask = client.PostAsJsonAsync("/api/account/deletion-requests/confirm", new { token });
-        using var form = TextFile("corrida.txt", "arquivo no meio da exclusao");
+        using var form = TextFile("corrida.txt", "arquivo no meio da exclusão");
         var uploadTask = client.PostAsync("/api/documents", form);
         await Task.WhenAll(confirmTask, uploadTask);
         var confirm = await confirmTask;
@@ -116,7 +116,7 @@ public sealed class AccountDeletionTests : IClassFixture<ApiFactory>
 
         Assert.True(
             confirm.StatusCode is HttpStatusCode.NoContent or HttpStatusCode.BadRequest,
-            $"confirmacao devolveu {(int)confirm.StatusCode}");
+            $"confirmação devolveu {(int)confirm.StatusCode}");
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var userGone = !await db.Users.AnyAsync(x => x.Id == auth.UserId);

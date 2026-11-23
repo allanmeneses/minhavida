@@ -59,7 +59,7 @@ public sealed class EncryptedFileStorage(IFileStorage inner, IEncryptionKeyProvi
 
         if (packed[0] != Version)
         {
-            throw new CryptographicException("Versao de cifra nao suportada.");
+            throw new CryptographicException("Versão de cifra não suportada.");
         }
 
         var nonce = packed.AsSpan(1, NonceSize);

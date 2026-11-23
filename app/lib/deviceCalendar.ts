@@ -55,7 +55,7 @@ async function nativeBridge(): Promise<DeviceCalendarBridge> {
         const events = await Calendar.getEventsAsync(ids, from, to);
         return events.map((event: { id: string; title?: string | null; startDate: string | Date }) => ({
           id: event.id,
-          title: event.title ?? 'Sem titulo',
+          title: event.title ?? 'Sem título',
           startDate: typeof event.startDate === 'string' ? event.startDate : event.startDate.toISOString(),
         }));
       },

@@ -3,8 +3,8 @@ export type CircleKind = (typeof CIRCLE_KINDS)[number];
 
 export const CIRCLE_KIND_LABEL: Record<CircleKind, string> = {
   lasting: 'Duradouro',
-  temporary: 'Temporario',
-  daily: 'Diario',
+  temporary: 'Temporário',
+  daily: 'Diário',
 };
 
 export function canArchiveKind(kind: string): boolean {

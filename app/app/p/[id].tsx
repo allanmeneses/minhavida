@@ -29,15 +29,15 @@ export default function PublicProfileScreen() {
       .then(setProfile)
       .catch((err) => {
         setProfile(null);
-        setError(err instanceof ApiError ? err.message : 'Perfil nao encontrado.');
+        setError(err instanceof ApiError ? err.message : 'Perfil não encontrado.');
       });
   }, [userId]);
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <Text style={styles.kicker}>Circulos</Text>
-      <Text style={styles.title}>Perfil publico</Text>
-      <Text style={styles.lead}>Quem visita ve nome, foto e descricao. Telefone, e-mail e diario ficam fora.</Text>
+      <Text style={styles.kicker}>Círculos</Text>
+      <Text style={styles.title}>Perfil público</Text>
+      <Text style={styles.lead}>Quem visita vê nome, foto e descrição. Telefone, e-mail e diário ficam fora.</Text>
       {error ? <Text style={styles.lead}>{error}</Text> : null}
       <Feedback message={ok} tone="ok" />
       {profile ? (
@@ -57,16 +57,17 @@ export default function PublicProfileScreen() {
       ) : null}
       {token && profile ? (
         <Button
-          label="Denunciar perfil"
+          label="Denunciar"
+          accessibilityLabel="Denunciar perfil"
           variant="ghost"
           onPress={() => {
             void reportTarget(token, 'profile', profile.userId)
-              .then(() => setOk('Denuncia registrada.'))
-              .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel denunciar.'));
+              .then(() => setOk('Denúncia registrada.'))
+              .catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível denunciar.'));
           }}
         />
       ) : (
-        <Button label="Entrar no Circulos" variant="ghost" onPress={() => router.push('/(auth)/login')} />
+        <Button label="Entrar no Círculos" variant="ghost" onPress={() => router.push('/(auth)/login')} />
       )}
     </ScrollView>
   );

@@ -32,7 +32,7 @@ public sealed class PasswordResetTests : IClassFixture<ApiFactory>
         await AuthHelper.RegisterAsync(client, email, "senha-antiga-1");
         (await client.PostAsJsonAsync("/api/auth/forgot-password", new { email })).EnsureSuccessStatusCode();
 
-        var token = await LastEmailToken(email, "Use este codigo para redefinir a senha: ");
+        var token = await LastEmailToken(email, "Use este código para redefinir a senha: ");
         var reset = await client.PostAsJsonAsync("/api/auth/reset-password", new { token, password = "senha-nova-99" });
         Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
 

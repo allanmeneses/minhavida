@@ -72,8 +72,8 @@ export default function AppLayout() {
       <Tabs.Screen
         name="circles"
         options={{
-          title: 'Circulos',
-          tabBarLabel: 'Circulos',
+          title: 'Círculos',
+          tabBarLabel: 'Círculos',
           tabBarIcon: ({ color }) => (
             <SymbolView
               name={{ ios: 'circle.grid.3x3', android: 'group', web: 'group' }}
@@ -120,11 +120,11 @@ export default function AppLayout() {
       />
       <Tabs.Screen
         name="life/[id]"
-        options={{ title: 'Area', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+        options={{ title: 'Área', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
       <Tabs.Screen
         name="circle/[id]"
-        options={{ title: 'Circulo', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+        options={{ title: 'Círculo', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
       <Tabs.Screen
         name="lists"
@@ -136,11 +136,11 @@ export default function AppLayout() {
       />
       <Tabs.Screen
         name="memories"
-        options={{ title: 'Memorias', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+        options={{ title: 'Memórias', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
       <Tabs.Screen
         name="calendar"
-        options={{ title: 'Calendario', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+        options={{ title: 'Calendário', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
       <Tabs.Screen
         name="templates"

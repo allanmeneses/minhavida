@@ -10,6 +10,8 @@ import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, uploadNativeFile, type LifeArea, type Profile } from '@/lib/api';
+import { AREA_KIND_LABEL, displayLabel } from '@/lib/labels';
+
 export default function ProfileScreen() {
   const { token, user, profile, setProfile, bumpPhoto, photoRevision } = useAuth();
   const { colors } = useTheme();
@@ -30,7 +32,7 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     void loadAreas().catch((err) => {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel abrir as areas.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível abrir as áreas.');
     });
   }, [loadAreas]);
 
@@ -64,7 +66,7 @@ export default function ProfileScreen() {
       setProfile(next);
       setOk('Perfil atualizado.');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel salvar o perfil.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível salvar o perfil.');
     } finally {
       setBusy(false);
     }
@@ -94,7 +96,7 @@ export default function ProfileScreen() {
       bumpPhoto();
       setOk('Foto atualizada.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nao foi possivel enviar a foto.');
+      setError(err instanceof Error ? err.message : 'Não foi possível enviar a foto.');
     } finally {
       setPhotoBusy(false);
     }
@@ -112,7 +114,7 @@ export default function ProfileScreen() {
       bumpPhoto();
       setOk('Foto removida.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nao foi possivel remover a foto.');
+      setError(err instanceof Error ? err.message : 'Não foi possível remover a foto.');
     } finally {
       setPhotoBusy(false);
     }
@@ -133,7 +135,7 @@ export default function ProfileScreen() {
   async function pickFromCamera() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      setError('Precisamos da camera para tirar a foto.');
+      setError('Precisamos da câmera para tirar a foto.');
       return;
     }
     const picked = await ImagePicker.launchCameraAsync({
@@ -160,7 +162,7 @@ export default function ProfileScreen() {
         <Text style={[styles.kicker, { color: colors.primary }]}>Perfil solo</Text>
         <Text style={[styles.title, { color: colors.ink }]}>Sua vida, no seu ritmo</Text>
         <Text style={[styles.lead, { color: colors.muted }]}>
-          O perfil nasce privado. Vacinas, lembretes, documentos e o diario ficam aqui.
+          O perfil nasce privado. Vacinas, lembretes, documentos e o diário ficam aqui.
         </Text>
 
         <View style={styles.photoRow}>
@@ -172,7 +174,7 @@ export default function ProfileScreen() {
           />
           <View style={styles.photoActions}>
             <Button label={photoBusy ? 'Enviando...' : 'Galeria'} onPress={() => void pickFromLibrary()} loading={photoBusy} />
-            <Button label="Camera" variant="ghost" onPress={() => void pickFromCamera()} loading={photoBusy} />
+            <Button label="Câmera" variant="ghost" onPress={() => void pickFromCamera()} loading={photoBusy} />
             {profile?.hasPhoto ? (
               <Button label="Remover foto" variant="danger" onPress={() => void removePhoto()} loading={photoBusy} />
             ) : null}
@@ -188,7 +190,7 @@ export default function ProfileScreen() {
           onSave={(values) => void save(values)}
         />
 
-        <Text style={[styles.section, { color: colors.ink }]}>Areas de vida</Text>
+        <Text style={[styles.section, { color: colors.ink }]}>Áreas de vida</Text>
         {areas.map((area) => (
           <Pressable
             key={area.id}
@@ -197,23 +199,28 @@ export default function ProfileScreen() {
             onPress={() => router.push(`/(app)/life/${area.id}`)}
             style={[styles.area, { borderBottomColor: colors.line }]}>
             <Text style={[styles.areaName, { color: colors.ink }]}>{area.name}</Text>
-            <Text style={[styles.lead, { color: colors.muted }]}>{area.kind}</Text>
+            {displayLabel(area.kind, AREA_KIND_LABEL) &&
+            displayLabel(area.kind, AREA_KIND_LABEL) !== area.name ? (
+              <Text style={[styles.lead, { color: colors.muted }]}>
+                Tipo: {displayLabel(area.kind, AREA_KIND_LABEL)}
+              </Text>
+            ) : null}
           </Pressable>
         ))}
         <Feedback message={null} />
         <AreaComposer value={newArea} onChange={setNewArea} onCreate={() => void createArea()} />
         {profile?.isPublic && user?.id ? (
           <Text style={[styles.lead, { color: colors.muted }]}>
-            Link publico: /p/{user.id}. Quem visita ve nome, foto e descricao.
+            Link público: /p/{user.id}. Quem visita vê nome, foto e descrição.
           </Text>
         ) : (
           <Text style={[styles.lead, { color: colors.muted }]}>
-            O perfil esta privado. Ninguem de fora ve nome nem foto.
+            O perfil está privado. Ninguém de fora vê nome nem foto.
           </Text>
         )}
         <Button label="Resumo de uso" variant="ghost" onPress={() => router.push('/(app)/recap' as Href)} />
         <Button label="Listas" variant="ghost" onPress={() => router.push('/(app)/lists' as Href)} />
-        <Button label="Memorias" variant="ghost" onPress={() => router.push('/(app)/memories' as Href)} />
+        <Button label="Memórias" variant="ghost" onPress={() => router.push('/(app)/memories' as Href)} />
         <Button label="Pet e grupo" variant="ghost" onPress={() => router.push('/(app)/living' as Href)} />
         <Button label="Modelos" variant="ghost" onPress={() => router.push('/(app)/templates' as Href)} />
       </View>
@@ -232,8 +239,14 @@ function AreaComposer({
 }) {
   return (
     <View style={{ gap: 8 }}>
-      <TextField label="Nova area" value={value} onChangeText={onChange} placeholder="Ex.: Corrida" />
-      <Button label="Criar area" variant="ghost" onPress={onCreate} disabled={!value.trim()} />
+      <TextField label="Nova área" value={value} onChangeText={onChange} placeholder="Ex.: Corrida" />
+      <Button
+        label="Criar área"
+        variant="ghost"
+        onPress={onCreate}
+        disabled={!value.trim()}
+        disabledHint="Informe o nome da área para criar."
+      />
     </View>
   );
 }

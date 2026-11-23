@@ -10,7 +10,7 @@ export default function FaqScreen() {
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.kicker}>Ajuda</Text>
       <Text style={styles.title}>FAQ</Text>
-      <Text style={styles.lead}>Role ate achar o assunto. Nao ha busca nesta lista.</Text>
+      <Text style={styles.lead}>Role até achar o assunto. Não há busca nesta lista.</Text>
       {FAQ_ITEMS.map((item) => (
         <View key={item.question} style={styles.card}>
           <Text style={styles.section}>{item.question}</Text>

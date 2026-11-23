@@ -40,7 +40,7 @@ public sealed class AuthController(
             var exists = await db.Users.AnyAsync(x => x.Email == normalized, cancellationToken);
             if (exists)
             {
-                return Conflict(new ErrorResponse("Ja existe uma conta com este e-mail."));
+                return Conflict(new ErrorResponse("Já existe uma conta com este e-mail."));
             }
 
             var now = clock.GetUtcNow().UtcDateTime;
@@ -69,7 +69,7 @@ public sealed class AuthController(
         }
         catch (Exception ex) when (IsEmailUniqueViolation(ex) || IsBusyWrite(ex))
         {
-            return Conflict(new ErrorResponse("Ja existe uma conta com este e-mail."));
+            return Conflict(new ErrorResponse("Já existe uma conta com este e-mail."));
         }
     }
 
@@ -138,18 +138,18 @@ public sealed class AuthController(
     {
         if (!googleOptions.Value.Enabled)
         {
-            return NotFound(new ErrorResponse("Login com Google esta desligado."));
+            return NotFound(new ErrorResponse("Login com Google está desligado."));
         }
 
         if (string.IsNullOrWhiteSpace(googleOptions.Value.ClientId))
         {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new ErrorResponse("Login com Google nao esta configurado."));
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new ErrorResponse("Login com Google não está configurado."));
         }
 
         var identity = await googleTokens.ValidateAsync(request.IdToken, cancellationToken);
         if (identity is null)
         {
-            return Unauthorized(new ErrorResponse("Nao foi possivel validar o Google."));
+            return Unauthorized(new ErrorResponse("Não foi possível validar o Google."));
         }
 
         var user = await db.Users.Include(item => item.Profile)
@@ -160,7 +160,7 @@ public sealed class AuthController(
                 .FirstOrDefaultAsync(item => item.Email == identity.Email, cancellationToken);
             if (user is not null)
             {
-                return Conflict(new ErrorResponse("Ja existe uma conta com este e-mail. Entre com senha."));
+                return Conflict(new ErrorResponse("Já existe uma conta com este e-mail. Entre com senha."));
             }
 
             var now = clock.GetUtcNow().UtcDateTime;
@@ -206,12 +206,12 @@ public sealed class AuthController(
         var token = FirstRefresh(request?.RefreshToken, AuthCookie.Read(Request));
         if (string.IsNullOrWhiteSpace(token))
         {
-            return Unauthorized(new ErrorResponse("Sessao expirada. Entre de novo."));
+            return Unauthorized(new ErrorResponse("Sessão expirada. Entre de novo."));
         }
 
         var rotated = await sessions.RotateAsync(token, cancellationToken);
         return rotated is null
-            ? Unauthorized(new ErrorResponse("Sessao expirada. Entre de novo."))
+            ? Unauthorized(new ErrorResponse("Sessão expirada. Entre de novo."))
             : Ok(AttachWebCookie(rotated));
     }
 
@@ -257,8 +257,8 @@ public sealed class AuthController(
             await db.SaveChangesAsync(cancellationToken);
             await email.SendAsync(
                 user.Email,
-                "Redefinir senha do Circulos",
-                $"Use este codigo para redefinir a senha: {token}",
+                "Redefinir senha do Círculos",
+                $"Use este código para redefinir a senha: {token}",
                 cancellationToken);
         }
 
@@ -277,7 +277,7 @@ public sealed class AuthController(
             .FirstOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
         if (reset is null || reset.UsedAt is not null || reset.ExpiresAt < clock.GetUtcNow().UtcDateTime)
         {
-            return BadRequest(new ErrorResponse("Este link de redefinicao nao e valido."));
+            return BadRequest(new ErrorResponse("Este link de redefinição não é válido."));
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -304,7 +304,7 @@ public sealed class AuthController(
 
         if (user is null)
         {
-            return Unauthorized(new ErrorResponse("Sessao invalida."));
+            return Unauthorized(new ErrorResponse("Sessão inválida."));
         }
 
         return Ok(new AuthUserDto(user.Id, user.Email, user.Profile.DisplayName, user.IsSystemAdmin));
@@ -329,7 +329,7 @@ public sealed class AuthController(
         if (user.TwoFactorEnabled)
         {
             await transaction.RollbackAsync(cancellationToken);
-            return BadRequest(new ErrorResponse("O segundo fator ja esta ativo."));
+            return BadRequest(new ErrorResponse("O segundo fator já está ativo."));
         }
 
         var secret = Totp.NewSecret();
@@ -365,7 +365,7 @@ public sealed class AuthController(
         if (user.TwoFactorEnabled)
         {
             await transaction.RollbackAsync(cancellationToken);
-            return BadRequest(new ErrorResponse("O segundo fator ja esta ativo."));
+            return BadRequest(new ErrorResponse("O segundo fator já está ativo."));
         }
 
         if (string.IsNullOrWhiteSpace(user.TwoFactorSecret)
@@ -373,7 +373,7 @@ public sealed class AuthController(
             || !Totp.Verify(user.TwoFactorSecret, request.Code, clock.GetUtcNow()))
         {
             await transaction.RollbackAsync(cancellationToken);
-            return BadRequest(new ErrorResponse("Codigo do autenticador invalido."));
+            return BadRequest(new ErrorResponse("Código do autenticador inválido."));
         }
 
         user.TwoFactorEnabled = true;
@@ -408,7 +408,7 @@ public sealed class AuthController(
         if (!await AcceptFactorAsync(user, request.Code, request.RecoveryCode, cancellationToken))
         {
             await transaction.RollbackAsync(cancellationToken);
-            return BadRequest(new ErrorResponse("Codigo do autenticador invalido."));
+            return BadRequest(new ErrorResponse("Código do autenticador inválido."));
         }
 
         user.TwoFactorEnabled = false;
@@ -434,7 +434,7 @@ public sealed class AuthController(
         if (challenge is null || challenge.UsedAt is not null || challenge.ExpiresAt < clock.GetUtcNow().UtcDateTime)
         {
             await transaction.RollbackAsync(cancellationToken);
-            return Unauthorized(new ErrorResponse("Codigo expirado. Entre de novo."));
+            return Unauthorized(new ErrorResponse("Código expirado. Entre de novo."));
         }
 
         await UserRowLock.AcquireAsync(db, challenge.UserId, cancellationToken);
@@ -442,13 +442,13 @@ public sealed class AuthController(
         if (challenge.UsedAt is not null)
         {
             await transaction.RollbackAsync(cancellationToken);
-            return Unauthorized(new ErrorResponse("Codigo expirado. Entre de novo."));
+            return Unauthorized(new ErrorResponse("Código expirado. Entre de novo."));
         }
 
         if (!await AcceptFactorAsync(challenge.User, request.Code, request.RecoveryCode, cancellationToken))
         {
             await transaction.RollbackAsync(cancellationToken);
-            return Unauthorized(new ErrorResponse("Codigo do autenticador invalido."));
+            return Unauthorized(new ErrorResponse("Código do autenticador inválido."));
         }
 
         challenge.UsedAt = clock.GetUtcNow().UtcDateTime;
@@ -537,7 +537,7 @@ public static class ClaimsPrincipalExtensions
         var value = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(value, out var id))
         {
-            throw new InvalidOperationException("Usuario nao autenticado.");
+            throw new InvalidOperationException("Usuário não autenticado.");
         }
 
         return id;

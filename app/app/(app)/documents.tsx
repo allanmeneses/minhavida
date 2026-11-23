@@ -26,7 +26,7 @@ export default function DocumentsScreen() {
       const list = await api<DocumentItem[]>('/api/documents', { token });
       setItems(list);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel listar os documentos.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível listar os documentos.');
       setItems([]);
     }
   }, [token]);
@@ -65,7 +65,7 @@ export default function DocumentsScreen() {
       }
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nao foi possivel enviar o arquivo.');
+      setError(err instanceof Error ? err.message : 'Não foi possível enviar o arquivo.');
     } finally {
       setBusy(false);
     }
@@ -80,7 +80,7 @@ export default function DocumentsScreen() {
     try {
       await downloadDocument(item.id, item.fileName, token);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel baixar o arquivo.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível baixar o arquivo.');
     } finally {
       setActingId(null);
     }
@@ -88,7 +88,7 @@ export default function DocumentsScreen() {
 
   function confirmDelete(item: DocumentItem) {
     if (Platform.OS === 'web') {
-      if (globalThis.confirm(`Excluir ${item.fileName}? Esta acao nao tem volta.`)) {
+      if (globalThis.confirm(`Excluir ${item.fileName}? Esta ação não tem volta.`)) {
         void remove(item);
       }
       return;
@@ -109,7 +109,7 @@ export default function DocumentsScreen() {
       await api(`/api/documents/${item.id}`, { method: 'DELETE', token });
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel excluir o arquivo.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível excluir o arquivo.');
     } finally {
       setActingId(null);
     }
@@ -119,10 +119,10 @@ export default function DocumentsScreen() {
     <ScrollView contentContainerStyle={styles.page}>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.kicker}>Area privada</Text>
+          <Text style={styles.kicker}>Área privada</Text>
           <Text style={styles.title}>Documentos pessoais</Text>
           <Text style={styles.lead}>
-            Envie arquivos so seus. Ninguem mais ve, baixa ou apaga. Nao existe link publico permanente.
+            Envie arquivos só seus. Ninguém mais ve, baixa ou apaga. Não existe link público permanente.
           </Text>
         </View>
         <Button label="Enviar arquivo" onPress={() => void upload()} loading={busy} />
@@ -133,7 +133,7 @@ export default function DocumentsScreen() {
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>Nenhum documento ainda</Text>
           <Text style={styles.lead}>
-            Envie um arquivo so seu, como um documento de identidade, um contrato ou uma foto guardada.
+            Envie um arquivo só seu, como um documento de identidade, um contrato ou uma foto guardada.
           </Text>
         </View>
       ) : null}
@@ -144,7 +144,7 @@ export default function DocumentsScreen() {
               <Text style={[styles.cellName, styles.headText]}>Arquivo</Text>
               <Text style={[styles.cellMeta, styles.headText]}>Tamanho</Text>
               <Text style={[styles.cellMeta, styles.headText]}>Enviado</Text>
-              <Text style={[styles.cellActions, styles.headText]}>Acoes</Text>
+              <Text style={[styles.cellActions, styles.headText]}>Ações</Text>
             </View>
           ) : null}
           {items.map((item) => (

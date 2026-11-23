@@ -22,9 +22,9 @@ export default function ForgotScreen() {
         method: 'POST',
         body: JSON.stringify({ email: email.trim() }),
       });
-      setOk('Se existir conta neste e-mail, enviamos o codigo.');
+      setOk('Se existir conta neste e-mail, enviamos o código.');
     } catch {
-      setError('Nao foi possivel enviar o e-mail.');
+      setError('Não foi possível enviar o e-mail.');
     } finally {
       setBusy(false);
     }
@@ -33,13 +33,19 @@ export default function ForgotScreen() {
   return (
     <View style={[styles.page, { backgroundColor: colors.bg }]}>
       <Text style={[styles.title, { color: colors.ink }]}>Esqueci a senha</Text>
-      <Text style={[styles.lead, { color: colors.muted }]}>Recuperacao so por e-mail. Segundo fator fica para depois.</Text>
+      <Text style={[styles.lead, { color: colors.muted }]}>Recuperação só por e-mail. Segundo fator fica para depois.</Text>
       <TextField label="E-mail" value={email} onChangeText={setEmail} keyboardType="email-address" autoComplete="email" />
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />
-      <Button label="Enviar codigo" onPress={() => void submit()} loading={busy} disabled={!email.trim()} />
+      <Button
+        label="Enviar código"
+        onPress={() => void submit()}
+        loading={busy}
+        disabled={!email.trim()}
+        disabledHint="Informe o e-mail da conta para enviar o código."
+      />
       <Link href="/(auth)/reset" style={[styles.link, { color: colors.primary }]}>
-        Ja tenho o codigo
+        Já tenho o código
       </Link>
       <Link href="/(auth)/login" style={[styles.link, { color: colors.primary }]}>
         Voltar ao login

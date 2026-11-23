@@ -9,7 +9,7 @@ const apiSource = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'ap
 const authSource = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../context/AuthContext.tsx'), 'utf8');
 
 describe('cookie httpOnly na web', () => {
-  it('nao guarda o refresh no storage da web e manda X-Client', () => {
+  it('não guarda o refresh no storage da web e manda X-Client', () => {
     assert.match(source, /if \(Platform\.OS === 'web'\) \{\s*await remove\(REFRESH_KEY\)/s);
     assert.match(apiSource, /headerInit\['X-Client'\] = 'web'/);
     assert.match(apiSource, /credentials: Platform\.OS === 'web' \? 'include'/);

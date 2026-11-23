@@ -7,6 +7,7 @@ import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary, type ReminderItem } from '@/lib/api';
+import { FREQUENCY_LABEL, displayLabel } from '@/lib/labels';
 import { screenStyles } from '@/lib/screenStyles';
 
 const FREQUENCIES = ['none', 'daily', 'weekly', 'monthly', 'yearly'] as const;
@@ -102,19 +103,19 @@ export default function RemindersScreen() {
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Lembretes</Text>
       <Text style={styles.lead}>
-        Recorrencia no modelo de agenda: diaria, semanal, mensal, anual, intervalo e termino.
+        Recorrência no modelo de agenda: diária, semanal, mensal, anual, intervalo e término.
       </Text>
-      <Button label="Ver calendario" variant="ghost" onPress={() => router.push('/(app)/calendar' as Href)} />
+      <Button label="Ver calendário" variant="ghost" onPress={() => router.push('/(app)/calendar' as Href)} />
       <Button label="Modelos de lembrete" variant="ghost" onPress={() => router.push('/(app)/templates' as Href)} />
       <Feedback message={error} />
-      <TextField label="Titulo" value={title} onChangeText={setTitle} />
+      <TextField label="Título" value={title} onChangeText={setTitle} />
       <Button
-        label={kind === 'birthday' ? 'Aniversario' : 'Geral'}
+        label={kind === 'birthday' ? 'Aniversário' : 'Geral'}
         variant="ghost"
         onPress={() => setKind(kind === 'birthday' ? 'general' : 'birthday')}
       />
       <Button
-        label={`Recorrencia: ${frequency}`}
+        label={`Recorrência: ${displayLabel(frequency, FREQUENCY_LABEL)}`}
         variant="ghost"
         onPress={() => {
           const index = FREQUENCIES.indexOf(frequency);
@@ -135,13 +136,13 @@ export default function RemindersScreen() {
           {frequency === 'monthly' ? (
             <>
               <Button
-                label={monthlyMode === 'date' ? 'Mensal por dia do mes' : 'Mensal por posicao'}
+                label={monthlyMode === 'date' ? 'Mensal por dia do mês' : 'Mensal por posição'}
                 variant="ghost"
                 onPress={() => setMonthlyMode(monthlyMode === 'date' ? 'position' : 'date')}
               />
               {monthlyMode === 'position' ? (
                 <TextField
-                  label="Semana do mes"
+                  label="Semana do mês"
                   value={weekOfMonth}
                   onChangeText={setWeekOfMonth}
                   placeholder="3"
@@ -151,7 +152,7 @@ export default function RemindersScreen() {
             </>
           ) : null}
           <TextField label="Termina em" value={until} onChangeText={setUntil} placeholder="AAAA-MM-DD" />
-          <TextField label="Maximo de ocorrencias" value={maxOccurrences} onChangeText={setMaxOccurrences} keyboardType="number-pad" />
+          <TextField label="Máximo de ocorrências" value={maxOccurrences} onChangeText={setMaxOccurrences} keyboardType="number-pad" />
         </>
       ) : null}
       {kind === 'birthday' ? (
@@ -160,9 +161,9 @@ export default function RemindersScreen() {
           <TextField label="Ideias de presente" value={ideas} onChangeText={setIdeas} placeholder="Livro, planta" />
         </>
       ) : null}
-      <Text style={styles.lead}>Circulo ciclico (opcional). O atalho marca que foi feito.</Text>
+      <Text style={styles.lead}>Círculo ciclico (opcional). O atalho marca que foi feito.</Text>
       <Button
-        label={circleId ? circles.find((item) => item.id === circleId)?.name ?? 'Circulo' : 'Sem circulo'}
+        label={circleId ? circles.find((item) => item.id === circleId)?.name ?? 'Círculo' : 'Sem círculo'}
         variant="ghost"
         onPress={() => {
           if (circles.length === 0) {
@@ -174,14 +175,19 @@ export default function RemindersScreen() {
           setCircleId(next?.id ?? null);
         }}
       />
-      <Button label="Criar lembrete" onPress={() => void create()} disabled={!title.trim()} />
+      <Button
+        label="Criar lembrete"
+        onPress={() => void create()}
+        disabled={!title.trim()}
+        disabledHint="Informe o título do lembrete para criar."
+      />
       {items.map((item) => (
         <View key={item.id} style={styles.card}>
           <Text style={styles.item}>{item.title}</Text>
           <Text style={styles.lead}>
-            {item.recurrence?.frequency ?? 'none'} · {new Date(item.nextFireAt).toLocaleString('pt-BR')}
+            {displayLabel(item.recurrence?.frequency ?? 'none', FREQUENCY_LABEL)} · {new Date(item.nextFireAt).toLocaleString('pt-BR')}
           </Text>
-          {item.endingSoon ? <Text style={styles.lead}>Recorrencia acabando</Text> : null}
+          {item.endingSoon ? <Text style={styles.lead}>Recorrência acabando</Text> : null}
           {item.giftIdeas?.length ? <Text style={styles.lead}>{item.giftIdeas.join(', ')}</Text> : null}
           <Button
             label={item.isPaused ? 'Retomar' : 'Pausar'}

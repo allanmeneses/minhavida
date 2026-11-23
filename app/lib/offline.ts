@@ -91,7 +91,7 @@ export function nextPending(queue: ListQueueAction[]): ListQueueAction | undefin
 
 export function forbiddenWarning(status: number, message: string): string | null {
   if (status === 403) {
-    return message || 'Esta lista nao permite essa acao.';
+    return message || 'Esta lista não permite essa ação.';
   }
   return null;
 }

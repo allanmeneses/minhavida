@@ -20,12 +20,12 @@ export function entryExample(kind: string | undefined): EntryExample {
         whenPlaceholder: 'AAAA-MM-DD',
         wherePlaceholder: 'UBS Centro',
         numberPlaceholder: '1',
-        bodyPlaceholder: 'Lote ou observacao',
+        bodyPlaceholder: 'Lote ou observação',
       };
     case 'diary':
       return {
-        hint: 'Exemplo: um paragrafo do dia. Busca por palavra-chave. Sem versao.',
-        titlePlaceholder: 'Corrida de manha',
+        hint: 'Exemplo: um parágrafo do dia. Busca por palavra-chave. Sem versão.',
+        titlePlaceholder: 'Corrida de manhã',
         showWhen: false,
         showWhere: false,
         whenPlaceholder: 'AAAA-MM-DD',
@@ -35,7 +35,7 @@ export function entryExample(kind: string | undefined): EntryExample {
       };
     case 'reminder':
       return {
-        hint: 'Exemplo: o que voce nao pode esquecer.',
+        hint: 'Exemplo: o que você não pode esquecer.',
         titlePlaceholder: 'Renovar RG',
         showWhen: true,
         showWhere: false,
@@ -46,18 +46,18 @@ export function entryExample(kind: string | undefined): EntryExample {
       };
     case 'document':
       return {
-        hint: 'Exemplo: nome do que voce guarda para acesso rapido.',
-        titlePlaceholder: 'Carteira de vacinacao',
+        hint: 'Exemplo: nome do que você guardá para acesso rápido.',
+        titlePlaceholder: 'Carteira de vacinação',
         showWhen: false,
         showWhere: false,
         whenPlaceholder: 'AAAA-MM-DD',
         wherePlaceholder: '',
         numberPlaceholder: '1',
-        bodyPlaceholder: 'Onde esta o original',
+        bodyPlaceholder: 'Onde está o original',
       };
     default:
       return {
-        hint: 'Texto, numero ou foto. Sem video.',
+        hint: 'Texto, número ou foto. Sem vídeo.',
         titlePlaceholder: 'Nova entrada',
         showWhen: false,
         showWhere: false,

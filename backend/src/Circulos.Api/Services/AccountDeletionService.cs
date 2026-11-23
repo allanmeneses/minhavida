@@ -40,7 +40,7 @@ public sealed class AccountDeletionService(
                 CircleOwnership.MarkLost(circle, DateTime.UtcNow);
                 if (remaining.Count == 0)
                 {
-                    db.CircleLogs.Add(Log(circle.Id, null, "owner-lost", "Sem dono e sem membros. A posse sera oferecida a quem existir apos 40 dias."));
+                    db.CircleLogs.Add(Log(circle.Id, null, "owner-lost", "Sem dono e sem membros. A posse será oferecida a quem existir após 40 dias."));
                 }
                 else
                 {
@@ -54,7 +54,7 @@ public sealed class AccountDeletionService(
                 circle.Owner = successorUser;
                 circle.OwnerUserId = successorUser.Id;
                 admin.Role = CircleRole.Owner;
-                db.CircleLogs.Add(Log(circle.Id, admin.UserId, "transferred", "Dono anterior saiu. O circulo passou para um administrador."));
+                db.CircleLogs.Add(Log(circle.Id, admin.UserId, "transferred", "Dono anterior saiu. O círculo passou para um administrador."));
                 if (!circle.IsStarter)
                 {
                     successorUser.OwnedCircleCount += 1;
@@ -123,8 +123,8 @@ public sealed class AccountDeletionService(
 
         await email.SendAsync(
             user.Email,
-            "Conta do Circulos encerrada",
-            "Sua conta foi excluida. Os dados que eram so seus foram apagados. Este e-mail nao reativa a conta.",
+            "Conta do Círculos encerrada",
+            "Sua conta foi excluída. Os dados que eram só seus foram apagados. Este e-mail não reativa a conta.",
             cancellationToken);
     }
 

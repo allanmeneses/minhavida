@@ -20,13 +20,13 @@ public sealed class SuccessionController(AppDbContext db, SuccessionService succ
         var circle = await db.Circles.Include(item => item.Members).FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (circle is null || circle.Status == CircleStatus.Deleted || circle.Members.All(member => member.UserId != userId))
         {
-            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            return NotFound(new ErrorResponse("Círculo não encontrado."));
         }
 
         var vote = await succession.CurrentAsync(id, cancellationToken);
         if (vote is null)
         {
-            return NotFound(new ErrorResponse("Nao ha votacao aberta."));
+            return NotFound(new ErrorResponse("Não há votação aberta."));
         }
 
         return Ok(ToResponse(vote, circle, userId));
@@ -73,7 +73,7 @@ public sealed class SuccessionController(AppDbContext db, SuccessionService succ
             && circle.OwnerElectedAt is not null
             && availableAt is { } until
             && now < until
-                ? "O dono eleito so pode ser substituido apos 30 dias da eleicao."
+                ? "O dono eleito só pode ser substituído após 30 dias da eleição."
                 : null;
         return new(
             vote.Id,

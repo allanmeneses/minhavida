@@ -10,6 +10,7 @@ import { useTour } from '@/context/TourContext';
 import { api, ApiError, downloadNamedBlob, type PlanInfo, type PrivacyItem, type TwoFactorSetup } from '@/lib/api';
 import { t } from '@/lib/i18n';
 import { API_URL } from '@/lib/config';
+import { SUBSCRIPTION_STATUS_LABEL, THEME_LABEL, displayLabel } from '@/lib/labels';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function SettingsScreen() {
@@ -59,7 +60,7 @@ export default function SettingsScreen() {
     const days = Math.max(1, Number(vacationDays.replace(',', '.')) || 7);
     const until = new Date(Date.now() + days * 24 * 3600_000).toISOString();
     await api('/api/reminders/vacation', { method: 'PUT', token, body: JSON.stringify({ until }) });
-    setOk(`Modo ferias ligado por ${days} dia(s). Lembretes ficam guardados.`);
+    setOk(`Modo férias ligado por ${days} dia(s). Lembretes ficam guardados.`);
   }
 
   async function requestDeletion() {
@@ -73,10 +74,10 @@ export default function SettingsScreen() {
         token,
         body: JSON.stringify({ password }),
       });
-      setOk('Enviamos um e-mail para confirmar a exclusao.');
+      setOk('Enviamos um e-mail para confirmar a exclusão.');
       setPassword('');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel pedir a exclusao.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível pedir a exclusão.');
     }
   }
 
@@ -88,7 +89,7 @@ export default function SettingsScreen() {
     try {
       setSetup(await api<TwoFactorSetup>('/api/auth/2fa/setup', { method: 'POST', token }));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel iniciar o segundo fator.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível iniciar o segundo fator.');
     }
   }
 
@@ -99,10 +100,10 @@ export default function SettingsScreen() {
     try {
       await api('/api/auth/2fa/enable', { method: 'POST', token, body: JSON.stringify({ code: code.trim() }) });
       setTwoFactor(true);
-      setOk('Segundo fator ativo. Guarde os codigos de recuperacao.');
+      setOk('Segundo fator ativo. Guarde os códigos de recuperação.');
       setCode('');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Codigo do autenticador invalido.');
+      setError(err instanceof ApiError ? err.message : 'Código do autenticador inválido.');
     }
   }
 
@@ -121,7 +122,7 @@ export default function SettingsScreen() {
       setOk('Segundo fator desativado.');
       setCode('');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel desativar o segundo fator.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível desativar o segundo fator.');
     }
   }
 
@@ -155,7 +156,7 @@ export default function SettingsScreen() {
       setSupportBody('');
       setOk('Recebemos seu pedido. Sem prazo prometido de resposta.');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel enviar o suporte.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível enviar o suporte.');
     }
   }
 
@@ -168,8 +169,10 @@ export default function SettingsScreen() {
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />
 
-      <Text style={styles.section}>Aparencia</Text>
-      <Text style={styles.lead}>Agora: {resolved}. Preferencia: {preference}.</Text>
+      <Text style={styles.section}>Aparência</Text>
+      <Text style={styles.lead}>
+        Agora: {displayLabel(resolved, THEME_LABEL)}. Preferência: {displayLabel(preference, THEME_LABEL)}.
+      </Text>
       <Text style={styles.lead}>Contraste: {highContrast ? 'alto' : 'normal'}.</Text>
       <Button label="Seguir o aparelho" variant="ghost" onPress={() => void setPreference('system')} />
       <Button label="Claro" variant="ghost" onPress={() => void setPreference('light')} />
@@ -182,15 +185,15 @@ export default function SettingsScreen() {
 
       <Text style={styles.section}>Plano</Text>
       <Text style={styles.lead}>
-        {plan?.plan === 'paid' ? 'Pago' : 'Gratuito'}: {plan?.circleLimit ?? 'ilimitado'} circulos,{' '}
+        {plan?.plan === 'paid' ? 'Pago' : 'Gratuito'}: {plan?.circleLimit ?? 'ilimitado'} círculos,{' '}
         {plan ? Math.round(plan.storageLimitBytes / (1024 * 1024)) : 0} MB, {plan?.shortcutLimit ?? 5} atalhos.
         Uso {used}%.
       </Text>
       <Text style={styles.lead}>
-        Status: {plan?.subscriptionStatus ?? 'none'}. {plan?.inGoodStanding ? 'Em dia.' : 'Inadimplente.'}{' '}
-        {plan?.sandbox ? 'Sandbox.' : ''} {plan?.checkout}
+        Status: {displayLabel(plan?.subscriptionStatus ?? 'none', SUBSCRIPTION_STATUS_LABEL)}. {plan?.inGoodStanding ? 'Em dia.' : 'Inadimplente.'}{' '}
+        {plan?.sandbox ? 'Ambiente de teste.' : ''} {plan?.checkout}
       </Text>
-      <Button label="Ver precos" variant="ghost" onPress={() => router.push('/pricing' as Href)} />
+      <Button label="Ver preços" variant="ghost" onPress={() => router.push('/pricing' as Href)} />
       {plan?.plan === 'paid' ? (
         <Button
           label="Cancelar assinatura"
@@ -202,9 +205,9 @@ export default function SettingsScreen() {
             void api<PlanInfo>('/api/plan/cancel', { method: 'POST', token })
               .then((next) => {
                 setPlan(next);
-                setOk('Assinatura cancelada. O acesso pago segue ate o fim do ciclo.');
+                setOk('Assinatura cancelada. O acesso pago segue até o fim do ciclo.');
               })
-              .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel cancelar.'));
+              .catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível cancelar.'));
           }}
         />
       ) : null}
@@ -234,7 +237,7 @@ export default function SettingsScreen() {
 
       <Text style={styles.section}>Segundo fator</Text>
       <Text style={styles.lead}>
-        {twoFactor ? 'Ativo. O login pede o codigo do autenticador.' : 'Opcional. Ative com QR no autenticador.'}
+        {twoFactor ? 'Ativo. O login pede o código do autenticador.' : 'Opcional. Ative com QR no autenticador.'}
       </Text>
       {!twoFactor && !setup ? <Button label="Ativar segundo fator" onPress={() => void startTwoFactor()} /> : null}
       {setup && !twoFactor ? (
@@ -245,35 +248,41 @@ export default function SettingsScreen() {
             style={{ width: 180, height: 180 }}
           />
           <Text style={styles.lead}>Segredo: {setup.secret}</Text>
-          <Text style={styles.lead}>Codigos de recuperacao: {setup.recoveryCodes.join(', ')}</Text>
-          <TextField label="Codigo do autenticador" value={code} onChangeText={setCode} keyboardType="number-pad" />
-          <Button label="Confirmar segundo fator" onPress={() => void enableTwoFactor()} disabled={!code.trim()} />
+          <Text style={styles.lead}>Códigos de recuperação: {setup.recoveryCodes.join(', ')}</Text>
+          <TextField label="Código do autenticador" value={code} onChangeText={setCode} keyboardType="number-pad" />
+          <Button
+            label="Confirmar segundo fator"
+            onPress={() => void enableTwoFactor()}
+            disabled={!code.trim()}
+            disabledHint="Informe o código do autenticador para confirmar."
+          />
         </>
       ) : null}
       {setup && twoFactor ? (
-        <Text style={styles.lead}>Codigos de recuperacao: {setup.recoveryCodes.join(', ')}</Text>
+        <Text style={styles.lead}>Códigos de recuperação: {setup.recoveryCodes.join(', ')}</Text>
       ) : null}
       {twoFactor ? (
         <>
-          <TextField label="Codigo do autenticador" value={code} onChangeText={setCode} keyboardType="number-pad" />
+          <TextField label="Código do autenticador" value={code} onChangeText={setCode} keyboardType="number-pad" />
           <TextField label="Senha para desativar" value={password} onChangeText={setPassword} secureTextEntry />
           <Button
             label="Desativar segundo fator"
             variant="danger"
             onPress={() => void disableTwoFactor()}
             disabled={!password || !code.trim()}
+            disabledHint="Informe senha e código do autenticador para desativar."
           />
         </>
       ) : null}
 
       <Text style={styles.section}>Lembretes por e-mail</Text>
       <Text style={styles.lead}>
-        Lembretes do circulo chegam so aos membros, no app e por e-mail se a pessoa ligar. Sem SMS. Padrao: so no
+        Lembretes do círculo chegam só aos membros, no app e por e-mail se a pessoa ligar. Sem SMS. Padrão: só no
         aplicativo. O envio usa a caixa local, sem SMTP real.
       </Text>
       {emailRemindersLoaded ? (
         <Button
-          label={emailReminders ? 'Lembrete por e-mail: ligado' : 'Lembrete por e-mail: so no app'}
+          label={emailReminders ? 'Lembrete por e-mail: ligado' : 'Lembrete por e-mail: só no app'}
           variant="ghost"
           onPress={() => {
             if (!token) {
@@ -286,28 +295,29 @@ export default function SettingsScreen() {
               body: JSON.stringify({ enabled: next }),
             })
               .then((status) => setEmailReminders(status.enabled))
-              .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel salvar a preferencia.'));
+              .catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível salvar a preferência.'));
           }}
         />
       ) : null}
 
-      <Text style={styles.section}>Ferias</Text>
-      <Text style={styles.lead}>Escolha por quantos dias as notificacoes ficam suspensas.</Text>
-      <TextField label="Dias de ferias" value={vacationDays} onChangeText={setVacationDays} keyboardType="number-pad" />
-      <Button label="Silenciar ferias" onPress={() => void vacation()} />
+      <Text style={styles.section}>Férias</Text>
+      <Text style={styles.lead}>Escolha por quantos dias as notificações ficam suspensas.</Text>
+      <TextField label="Dias de férias" value={vacationDays} onChangeText={setVacationDays} keyboardType="number-pad" />
+      <Button label="Silenciar férias" onPress={() => void vacation()} />
 
       {user?.isSystemAdmin ? (
         <Button label="Painel interno" variant="ghost" onPress={() => router.push('/(app)/admin' as Href)} />
       ) : null}
 
       <Text style={styles.section}>Ajuda</Text>
-      <Text style={styles.lead}>So por e-mail, sem prazo prometido.</Text>
+      <Text style={styles.lead}>Só por e-mail, sem prazo prometido.</Text>
       <TextField label="Mensagem para o suporte" value={supportBody} onChangeText={setSupportBody} />
       <Button
         label={t('support.send')}
         variant="ghost"
         onPress={() => void sendSupport()}
         disabled={supportBody.trim().length < 8}
+        disabledHint="Escreva pelo menos 8 caracteres para enviar ao suporte."
       />
       <Button label="FAQ" variant="ghost" onPress={() => router.push('/(app)/faq' as Href)} />
       <Button label="Status do sistema" variant="ghost" onPress={() => void Linking.openURL(`${API_URL}/status`)} />
@@ -315,12 +325,18 @@ export default function SettingsScreen() {
 
       <Text style={styles.section}>Documentos legais</Text>
       <Button label="Termos de uso" variant="ghost" onPress={() => router.push('/termos' as Href)} />
-      <Button label="Politica de privacidade" variant="ghost" onPress={() => router.push('/privacidade' as Href)} />
+      <Button label="Política de privacidade" variant="ghost" onPress={() => router.push('/privacidade' as Href)} />
 
       <Text style={styles.section}>Excluir conta</Text>
-      <Text style={styles.lead}>Pede senha e confirmacao por e-mail. O rastro do circulo fica anonimo.</Text>
+      <Text style={styles.lead}>Pede senha e confirmação por e-mail. O rastro do círculo fica anônimo.</Text>
       <TextField label="Senha" value={password} onChangeText={setPassword} secureTextEntry />
-      <Button label="Pedir exclusao" variant="danger" onPress={() => void requestDeletion()} disabled={!password} />
+      <Button
+        label="Pedir exclusão"
+        variant="danger"
+        onPress={() => void requestDeletion()}
+        disabled={!password}
+        disabledHint="Informe a senha para pedir a exclusão da conta."
+      />
       <Button label="Sair" variant="ghost" onPress={() => void logout()} />
     </ScrollView>
   );

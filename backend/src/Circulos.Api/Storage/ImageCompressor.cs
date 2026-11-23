@@ -14,7 +14,7 @@ public static class ImageCompressor
         using var bitmap = SKBitmap.Decode(buffer.ToArray());
         if (bitmap is null)
         {
-            throw new InvalidDataException("A foto nao pode ser lida.");
+            throw new InvalidDataException("A foto não pode ser lida.");
         }
 
         SKBitmap working = bitmap;
@@ -32,7 +32,7 @@ public static class ImageCompressor
                     new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear));
                 if (resized is null)
                 {
-                    throw new InvalidDataException("Nao foi possivel redimensionar a foto.");
+                    throw new InvalidDataException("Não foi possível redimensionar a foto.");
                 }
 
                 working = resized;
@@ -40,7 +40,7 @@ public static class ImageCompressor
 
             using var image = SKImage.FromBitmap(working);
             using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, JpegQuality)
-                ?? throw new InvalidDataException("Nao foi possivel comprimir a foto.");
+                ?? throw new InvalidDataException("Não foi possível comprimir a foto.");
             var output = new MemoryStream();
             encoded.SaveTo(output);
             output.Position = 0;

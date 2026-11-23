@@ -24,7 +24,7 @@ public sealed class TwoFactorTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.OK, setup.StatusCode);
         var payload = await setup.Content.ReadFromJsonAsync<SetupDto>(Json);
         Assert.False(string.IsNullOrWhiteSpace(payload?.Secret));
-        Assert.StartsWith("otpauth://totp/Circulos:", payload!.OtpauthUri);
+        Assert.StartsWith("otpauth://totp/Círculos:", payload!.OtpauthUri);
         Assert.False(string.IsNullOrWhiteSpace(payload.QrPngBase64));
         Assert.Equal(8, payload.RecoveryCodes.Count);
         var png = Convert.FromBase64String(payload.QrPngBase64);

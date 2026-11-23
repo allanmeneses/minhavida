@@ -21,12 +21,12 @@ public sealed class ReportsController(AppDbContext db, IEmailSender email) : Con
         var kind = NormalizeKind(request.TargetKind);
         if (kind is null)
         {
-            return BadRequest(new ErrorResponse("Denuncie um perfil, um circulo ou um post."));
+            return BadRequest(new ErrorResponse("Denuncie um perfil, um círculo ou um post."));
         }
 
         if (!await TargetExists(kind, request.TargetId, cancellationToken))
         {
-            return NotFound(new ErrorResponse("Alvo da denuncia nao encontrado."));
+            return NotFound(new ErrorResponse("Alvo da denúncia não encontrado."));
         }
 
         Guid? circleId = kind switch
@@ -63,8 +63,8 @@ public sealed class ReportsController(AppDbContext db, IEmailSender email) : Con
             {
                 await email.SendAsync(
                     to,
-                    "Denuncia no seu circulo",
-                    "Alguem denunciou um conteudo neste circulo. Abra o circulo para decidir se mantem ou esconde.",
+                    "Denúncia no seu círculo",
+                    "Alguém denunciou um conteúdo neste círculo. Abra o círculo para decidir se mantém ou esconde.",
                     cancellationToken);
             }
         }
@@ -84,7 +84,7 @@ public sealed class ReportsController(AppDbContext db, IEmailSender email) : Con
     internal static string? NormalizeKind(string? value) => value?.Trim().ToLowerInvariant() switch
     {
         "profile" or "perfil" => "profile",
-        "circle" or "circulo" => "circle",
+        "circle" or "círculo" => "circle",
         "post" => "post",
         _ => null,
     };

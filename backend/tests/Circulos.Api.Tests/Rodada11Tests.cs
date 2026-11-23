@@ -30,7 +30,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         var circles = await client.GetFromJsonAsync<List<JsonElement>>("/api/circles", Json);
         Assert.Equal(2, circles!.Count);
         Assert.Contains(circles, x => x.GetProperty("name").GetString() == "Eu");
-        Assert.Contains(circles, x => x.GetProperty("name").GetString() == "Familia");
+        Assert.Contains(circles, x => x.GetProperty("name").GetString() == "Família");
 
         var examples = await client.GetFromJsonAsync<List<JsonElement>>("/api/onboarding", Json);
         Assert.Equal(3, examples!.Count);
@@ -129,9 +129,9 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
 
         var circles = await client.GetFromJsonAsync<List<JsonElement>>("/api/circles", Json);
         Assert.Contains(circles!, x => x.GetProperty("name").GetString() == "Eu");
-        Assert.Contains(circles, x => x.GetProperty("name").GetString() == "Familia");
+        Assert.Contains(circles, x => x.GetProperty("name").GetString() == "Família");
         var euId = circles.Single(x => x.GetProperty("name").GetString() == "Eu").GetProperty("id").GetGuid();
-        var familiaId = circles.Single(x => x.GetProperty("name").GetString() == "Familia").GetProperty("id").GetGuid();
+        var familiaId = circles.Single(x => x.GetProperty("name").GetString() == "Família").GetProperty("id").GetGuid();
         var eu = await client.GetFromJsonAsync<JsonElement>($"/api/circles/{euId}", Json);
         var familia = await client.GetFromJsonAsync<JsonElement>($"/api/circles/{familiaId}", Json);
         Assert.Empty(eu.GetProperty("posts").EnumerateArray());
@@ -148,7 +148,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync("/api/circles", new { name = "Tres" })).StatusCode);
         var fourth = await client.PostAsJsonAsync("/api/circles", new { name = "Quatro" });
         Assert.Equal(HttpStatusCode.BadRequest, fourth.StatusCode);
-        Assert.Contains("3 circulos", await fourth.Content.ReadAsStringAsync());
+        Assert.Contains("3 círculos", await fourth.Content.ReadAsStringAsync());
 
         using (var scope = _factory.Services.CreateScope())
         {
@@ -188,7 +188,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
             HttpStatusCode.Created,
             (await client.PostAsJsonAsync("/api/memories", new
             {
-                title = "Aniversario antigo",
+                title = "Aniversário antigo",
                 body = "Mesmo dia",
                 occurredOn = lastYear.ToString("yyyy-MM-dd"),
             })).StatusCode);
@@ -196,7 +196,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
             HttpStatusCode.Created,
             (await client.PostAsJsonAsync("/api/memories", new
             {
-                title = "Do mes passado",
+                title = "Do mês passado",
                 body = "Surpresa",
                 occurredOn = previousMonth.ToString("yyyy-MM-dd"),
             })).StatusCode);
@@ -204,17 +204,17 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         var home = await client.GetFromJsonAsync<JsonElement>("/api/home", Json);
         Assert.Contains(
             home.GetProperty("onThisDay").EnumerateArray(),
-            x => x.GetProperty("title").GetString() == "Aniversario antigo" && x.GetProperty("year").GetInt32() == lastYear.Year);
+            x => x.GetProperty("title").GetString() == "Aniversário antigo" && x.GetProperty("year").GetInt32() == lastYear.Year);
         Assert.Equal(previousMonth.Year, home.GetProperty("monthlySurprise").GetProperty("year").GetInt32());
         Assert.Equal(previousMonth.Month, home.GetProperty("monthlySurprise").GetProperty("month").GetInt32());
 
         var onThisDay = await client.GetFromJsonAsync<List<JsonElement>>("/api/memories/on-this-day", Json);
-        Assert.Contains(onThisDay!, x => x.GetProperty("title").GetString() == "Aniversario antigo");
+        Assert.Contains(onThisDay!, x => x.GetProperty("title").GetString() == "Aniversário antigo");
 
         var album = await client.GetFromJsonAsync<JsonElement>(
             $"/api/memories/album?year={previousMonth.Year}&month={previousMonth.Month}",
             Json);
-        Assert.Contains(album.GetProperty("items").EnumerateArray(), x => x.GetProperty("title").GetString() == "Do mes passado");
+        Assert.Contains(album.GetProperty("items").EnumerateArray(), x => x.GetProperty("title").GetString() == "Do mês passado");
 
         Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsync("/api/recap/monthly/ack", null)).StatusCode);
         var afterAck = await client.GetFromJsonAsync<JsonElement>("/api/home", Json);
@@ -228,7 +228,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
         dono.WithToken(donoAuth.Token);
         var circles = await dono.GetFromJsonAsync<List<JsonElement>>("/api/circles", Json);
-        var familia = circles!.Single(x => x.GetProperty("name").GetString() == "Familia").GetProperty("id").GetGuid();
+        var familia = circles!.Single(x => x.GetProperty("name").GetString() == "Família").GetProperty("id").GetGuid();
 
         var created = await dono.PostAsJsonAsync($"/api/circles/{familia}/invite-link", new { });
         Assert.Equal(HttpStatusCode.OK, created.StatusCode);
@@ -236,11 +236,11 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         var token = invite.GetProperty("token").GetString();
         Assert.False(string.IsNullOrWhiteSpace(token));
         Assert.Contains("/i/", invite.GetProperty("shareUrl").GetString(), StringComparison.Ordinal);
-        Assert.Contains("Entre no circulo Familia", invite.GetProperty("shareText").GetString(), StringComparison.Ordinal);
+        Assert.Contains("Entre no círculo Família", invite.GetProperty("shareText").GetString(), StringComparison.Ordinal);
 
         var anon = _factory.CreateClient();
         var preview = await anon.GetFromJsonAsync<JsonElement>($"/api/circles/invites/{token}", Json);
-        Assert.Equal("Familia", preview.GetProperty("circleName").GetString());
+        Assert.Equal("Família", preview.GetProperty("circleName").GetString());
         Assert.True(preview.GetProperty("openLink").GetBoolean());
 
         var a = _factory.CreateClient();
@@ -295,9 +295,9 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         client.WithToken(auth.Token);
         var privacy = await client.GetFromJsonAsync<JsonElement>("/api/privacy/me", Json);
         var items = privacy.GetProperty("items").EnumerateArray().Select(x => x.GetProperty("what").GetString()).ToList();
-        Assert.Contains(items, x => x!.Contains("Diario", StringComparison.Ordinal));
+        Assert.Contains(items, x => x!.Contains("Diário", StringComparison.Ordinal));
         Assert.Contains(items, x => x!.Contains("Eu", StringComparison.Ordinal));
-        Assert.Contains(items, x => x!.Contains("Familia", StringComparison.Ordinal));
+        Assert.Contains(items, x => x!.Contains("Família", StringComparison.Ordinal));
 
         var export = await client.GetAsync("/api/export/me?format=json");
         Assert.Equal(HttpStatusCode.OK, export.StatusCode);
@@ -334,7 +334,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         var client = _factory.CreateClient();
         client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
         var circles = await client.GetFromJsonAsync<List<JsonElement>>("/api/circles", Json);
-        var id = circles!.Single(x => x.GetProperty("name").GetString() == "Familia").GetProperty("id").GetGuid();
+        var id = circles!.Single(x => x.GetProperty("name").GetString() == "Família").GetProperty("id").GetGuid();
         (await client.PostAsJsonAsync($"/api/circles/{id}/posts", new { body = "Recado" })).EnsureSuccessStatusCode();
 
         var full = await client.GetAsync($"/api/circles/{id}/log");
@@ -360,7 +360,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
         dono.WithToken(donoAuth.Token);
         var circles = await dono.GetFromJsonAsync<List<JsonElement>>("/api/circles", Json);
-        var id = circles!.Single(x => x.GetProperty("name").GetString() == "Familia").GetProperty("id").GetGuid();
+        var id = circles!.Single(x => x.GetProperty("name").GetString() == "Família").GetProperty("id").GetGuid();
         var post = await (await dono.PostAsJsonAsync($"/api/circles/{id}/posts", new { body = "Alvo" }))
             .Content.ReadFromJsonAsync<JsonElement>(Json);
 
@@ -373,7 +373,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         using (var scope = _factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Assert.True(await db.SentEmails.AnyAsync(x => x.To == donoAuth.Email && x.Subject.Contains("Denuncia")));
+            Assert.True(await db.SentEmails.AnyAsync(x => x.To == donoAuth.Email && x.Subject.Contains("Denúncia")));
         }
 
         var list = await dono.GetFromJsonAsync<List<JsonElement>>($"/api/circles/{id}/reports", Json);
@@ -439,10 +439,10 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
         dono.WithToken(donoAuth.Token);
         var circles = await dono.GetFromJsonAsync<List<JsonElement>>("/api/circles", Json);
-        var familia = circles!.Single(x => x.GetProperty("name").GetString() == "Familia").GetProperty("id").GetGuid();
+        var familia = circles!.Single(x => x.GetProperty("name").GetString() == "Família").GetProperty("id").GetGuid();
         var reminder = await (await dono.PostAsJsonAsync("/api/reminders", new
         {
-            title = "Aniversario",
+            title = "Aniversário",
             kind = "birthday",
             startAt = DateTime.UtcNow.Date.AddDays(20),
             personName = "Ana",
@@ -460,7 +460,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
 
         var ideas = await dono.GetFromJsonAsync<List<JsonElement>>($"/api/circles/{familia}/gift-ideas", Json);
         Assert.Single(ideas!);
-        Assert.Equal("Aniversario", ideas[0].GetProperty("title").GetString());
+        Assert.Equal("Aniversário", ideas[0].GetProperty("title").GetString());
         Assert.Equal(2, ideas[0].GetProperty("ideas").GetArrayLength());
     }
 
@@ -529,7 +529,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         Assert.Equal("indefinite", TelemetryRetention.Policy);
         Assert.Equal(2L * 1024 * 1024 * 1024, FileRules.MaxIncomingBytes);
         Assert.Null(FileRules.ValidatePhoto("foto.jpg", "image/jpeg", 90L * 1024 * 1024));
-        Assert.Equal("A foto esta vazia.", FileRules.ValidatePhoto("foto.jpg", "image/jpeg", 0));
+        Assert.Equal("A foto está vazia.", FileRules.ValidatePhoto("foto.jpg", "image/jpeg", 0));
     }
 
     [Fact]
@@ -540,11 +540,11 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         client.WithToken(auth.Token);
         Assert.Equal(
             HttpStatusCode.NoContent,
-            (await client.PostAsJsonAsync("/api/account/support", new { body = "Preciso de ajuda com o circulo." })).StatusCode);
+            (await client.PostAsJsonAsync("/api/account/support", new { body = "Preciso de ajuda com o círculo." })).StatusCode);
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.True(await db.SupportMessages.AnyAsync(x => x.UserId == auth.UserId));
-        Assert.True(await db.SentEmails.AnyAsync(x => x.To == auth.Email && x.Body.Contains("Nao ha prazo")));
+        Assert.True(await db.SentEmails.AnyAsync(x => x.To == auth.Email && x.Body.Contains("Não há prazo")));
     }
 
     [Fact]

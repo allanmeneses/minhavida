@@ -29,7 +29,7 @@ export default function InviteLinkScreen() {
     savePendingInvite(inviteToken);
     void api<Preview>(`/api/circles/invites/${inviteToken}`)
       .then(setPreview)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Convite invalido.'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : 'Convite inválido.'));
   }, [inviteToken]);
 
   async function enter() {
@@ -51,7 +51,7 @@ export default function InviteLinkScreen() {
       });
       router.replace(`/(app)/circle/${joined.id}` as Href);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel entrar no circulo.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível entrar no círculo.');
     } finally {
       setBusy(false);
     }
@@ -60,13 +60,13 @@ export default function InviteLinkScreen() {
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.kicker}>Convite</Text>
-      <Text style={styles.title}>{preview ? preview.circleName : 'Abrir o circulo'}</Text>
+      <Text style={styles.title}>{preview ? preview.circleName : 'Abrir o círculo'}</Text>
       <Text style={styles.lead}>
-        Depois do cadastro voce entra direto neste circulo. O texto do convite ja serve para colar no WhatsApp.
+        Depois do cadastro você entra direto neste círculo. O texto do convite já serve para colar no WhatsApp.
       </Text>
       <Feedback message={error} />
       <Button
-        label={token ? 'Entrar no circulo' : 'Criar conta e entrar'}
+        label={token ? 'Entrar no círculo' : 'Criar conta e entrar'}
         onPress={() => void enter()}
         loading={busy}
       />

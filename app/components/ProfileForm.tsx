@@ -79,23 +79,23 @@ export function ProfileForm({ initial, error, ok, busy, accountEmail, onSave }: 
         placeholder="Opcional, se for diferente do login"
       />
       <TextField
-        label="Descricao publica"
+        label="Descrição pública"
         value={shown.bio}
         onChangeText={(bio) => patch({ bio })}
-        placeholder="Uma frase sobre voce"
+        placeholder="Uma frase sobre você"
       />
       <Button
-        label={shown.isPublic ? 'Perfil publico' : 'Perfil privado'}
+        label={shown.isPublic ? 'Perfil público' : 'Perfil privado'}
         variant="ghost"
         onPress={() => patch({ isPublic: !shown.isPublic })}
       />
       <Text style={[styles.account, { color: colors.muted }]}>
-        Busca por raio usa a posicao so na hora. O app nao guarda latitude nem longitude da pessoa.
+        Busca por raio usa a posição só na hora. O app não guarda latitude nem longitude da pessoa.
       </Text>
       <Text style={[styles.account, { color: colors.muted }]}>
         {shown.isPublic
-          ? 'Quem visita ve nome, foto e descricao. Telefone, e-mail e diario ficam fora.'
-          : 'O perfil nasce privado. Ninguem de fora ve seus dados.'}
+          ? 'Quem visita vê nome, foto e descrição. Telefone, e-mail e diário ficam fora.'
+          : 'O perfil nasce privado. Ninguém de fora vê seus dados.'}
       </Text>
       {accountEmail ? <Text style={[styles.account, { color: colors.muted }]}>Conta: {accountEmail}</Text> : null}
       <Feedback message={error} />

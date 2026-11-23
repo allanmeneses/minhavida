@@ -44,7 +44,7 @@ export default function HomeScreen() {
         setEmailsSent(next.reminderEmailsSent);
       }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel abrir o dia.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível abrir o dia.');
       return;
     }
     try {
@@ -56,7 +56,7 @@ export default function HomeScreen() {
         setDeletedShortcuts([]);
       }
     } catch {
-      // atalho nao entra no cache de leitura desta rodada
+      // atalho não entra no cache de leitura desta rodada
     }
     try {
       setReminders(await api<ReminderItem[]>('/api/reminders', { token }));
@@ -116,7 +116,7 @@ export default function HomeScreen() {
       setFlashAt(Date.now());
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nao foi possivel registrar o atalho.');
+      setError(err instanceof Error ? err.message : 'Não foi possível registrar o atalho.');
     }
   }, [token, load]);
 
@@ -255,10 +255,10 @@ export default function HomeScreen() {
         {t('home.title')}
       </Text>
       {panel?.vacationUntil ? (
-        <Text style={styles.lead}>Modo ferias ate {new Date(panel.vacationUntil).toLocaleDateString('pt-BR')}.</Text>
+        <Text style={styles.lead}>Modo férias até {new Date(panel.vacationUntil).toLocaleDateString('pt-BR')}.</Text>
       ) : (
         <Text style={styles.lead}>
-          {panel?.activeCircleCount ?? 0} circulo(s) ativo(s). Atalhos disparam na hora, sem confirmacao.
+          {panel?.activeCircleCount ?? 0} círculo(s) ativo(s). Atalhos disparam na hora, sem confirmação.
         </Text>
       )}
       <Feedback message={error} />
@@ -271,7 +271,7 @@ export default function HomeScreen() {
       ))}
       {(panel?.ownershipOffers ?? []).map((offer) => (
         <View key={offer.circleId} style={styles.card}>
-          <Text style={styles.lead}>O circulo {offer.circleName} oferece a posse para voce.</Text>
+          <Text style={styles.lead}>O círculo {offer.circleName} oferece a posse para você.</Text>
           <Button
             label={`Abrir ${offer.circleName}`}
             variant="ghost"
@@ -283,7 +283,7 @@ export default function HomeScreen() {
       {(panel?.onboarding ?? []).length > 0 ? (
         <View style={styles.card} testID="onboarding-examples">
           <Text style={styles.section}>Comece por aqui</Text>
-          <Text style={styles.lead}>Circulos Eu e Familia ja estao prontos. Confirme ou descarte os exemplos.</Text>
+          <Text style={styles.lead}>Círculos Eu e Família já estão prontos. Confirme ou descarte os exemplos.</Text>
           {(panel?.onboarding ?? []).map((item) => (
             <View key={item.id} style={extra.onboarding}>
               <Text style={styles.item}>{item.title}</Text>
@@ -312,7 +312,7 @@ export default function HomeScreen() {
       ) : (
         <View style={styles.card} testID="on-this-day">
           <Text style={styles.section}>{t('home.onThisDay')}</Text>
-          <Text style={styles.lead}>Quando houver uma memoria desta data em outro ano, ela aparece aqui.</Text>
+          <Text style={styles.lead}>Quando houver uma memória desta data em outro ano, ela aparece aqui.</Text>
         </View>
       )}
 
@@ -326,7 +326,7 @@ export default function HomeScreen() {
         <View style={styles.card} testID="monthly-surprise">
           <Text style={styles.section}>Retrospectiva de {panel.monthlySurprise.month}/{panel.monthlySurprise.year}</Text>
           <Text style={styles.lead}>
-            {panel.monthlySurprise.memoryCount} memoria(s) e {panel.monthlySurprise.entryCount} entrada(s) no mes
+            {panel.monthlySurprise.memoryCount} memória(s) e {panel.monthlySurprise.entryCount} entrada(s) no mês
             passado.
           </Text>
           {panel.monthlySurprise.titles.map((title) => (
@@ -385,7 +385,7 @@ export default function HomeScreen() {
                 {circles.map((circle) => (
                   <Button
                     key={`${item.id}-${circle.id}`}
-                    label={`Compartilhar ${item.label} em ${circle.name ?? 'circulo'}`}
+                    label={`Compartilhar ${item.label} em ${circle.name ?? 'círculo'}`}
                     variant="ghost"
                     onPress={() => {
                       if (!token) {
@@ -409,7 +409,7 @@ export default function HomeScreen() {
       {inactiveShortcuts.length > 0 ? (
         <View style={styles.card}>
           <Text style={styles.section}>Atalhos desativados</Text>
-          <Text style={styles.lead}>Somem da tela principal ate reativar.</Text>
+          <Text style={styles.lead}>Somem da tela principal até reativar.</Text>
           {inactiveShortcuts.map((item) => (
             <View key={item.id}>
               <Text style={styles.item}>{item.label}</Text>
@@ -422,7 +422,7 @@ export default function HomeScreen() {
 
       <Button label="+" onPress={() => setLabel((current) => current)} />
       <View style={styles.card}>
-        <TextField label="Nome do atalho" value={label} onChangeText={setLabel} placeholder="Ex.: Tomei o remedio" />
+        <TextField label="Nome do atalho" value={label} onChangeText={setLabel} placeholder="Ex.: Tomei o remédio" />
         <Button
           label={`Tipo: ${actionKind === 'start' ? 'iniciar' : actionKind === 'note' ? 'nota' : 'concluir'}`}
           variant="ghost"
@@ -431,7 +431,7 @@ export default function HomeScreen() {
           }
         />
         <Button
-          label={reminderId ? `Lembrete: ${circleReminders.find((item) => item.id === reminderId)?.title}` : 'Sem lembrete de circulo'}
+          label={reminderId ? `Lembrete: ${circleReminders.find((item) => item.id === reminderId)?.title}` : 'Sem lembrete de círculo'}
           variant="ghost"
           onPress={() => {
             if (circleReminders.length === 0) {
@@ -443,11 +443,16 @@ export default function HomeScreen() {
             setReminderId(next?.id ?? null);
           }}
         />
-        <Button label="Adicionar atalho" onPress={() => void addShortcut()} disabled={!label.trim()} />
+        <Button
+          label="Adicionar atalho"
+          onPress={() => void addShortcut()}
+          disabled={!label.trim()}
+          disabledHint="Informe o nome do atalho para adicionar."
+        />
       </View>
       {deletedShortcuts.length > 0 ? (
         <View style={styles.card}>
-          <Text style={styles.section}>Atalhos excluidos</Text>
+          <Text style={styles.section}>Atalhos excluídos</Text>
           {deletedShortcuts.map((item) => (
             <Button
               key={item.id}
@@ -464,7 +469,7 @@ export default function HomeScreen() {
         </View>
       ) : null}
       <Button label="Lembretes" variant="ghost" onPress={() => router.push('/(app)/reminders')} />
-      <Button label="Calendario" variant="ghost" onPress={() => router.push('/(app)/calendar' as Href)} />
+      <Button label="Calendário" variant="ghost" onPress={() => router.push('/(app)/calendar' as Href)} />
       <Button label="Busca" variant="ghost" onPress={() => router.push('/(app)/search' as Href)} />
       <Button label="FAQ" variant="ghost" onPress={() => router.push('/(app)/faq' as Href)} />
       <Button label="Ajustes" variant="ghost" onPress={() => router.push('/(app)/settings')} />
@@ -478,7 +483,7 @@ export default function HomeScreen() {
           <Section title="Em seguida" items={panel?.upcoming ?? []} />
           {panel?.plan.storageWarning ? (
             <Text style={[styles.lead, { color: colors.accent, fontWeight: '700' }]}>
-              Voce ja usou {Math.round((panel.plan.storageUsedBytes / panel.plan.storageLimitBytes) * 100)}% do
+              Você já usou {Math.round((panel.plan.storageUsedBytes / panel.plan.storageLimitBytes) * 100)}% do
               armazenamento. O plano pago sobe para 1 GB.
             </Text>
           ) : null}

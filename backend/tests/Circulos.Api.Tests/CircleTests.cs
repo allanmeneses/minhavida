@@ -26,7 +26,7 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
         var membroAuth = await AuthHelper.RegisterAsync(membro, name: "Membro");
         membro.WithToken(membroAuth.Token);
 
-        var created = await dono.PostAsJsonAsync("/api/circles", new { name = "Familia", visibility = "private" });
+        var created = await dono.PostAsJsonAsync("/api/circles", new { name = "Família", visibility = "private" });
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
         var circle = await created.Content.ReadFromJsonAsync<SummaryDto>(Json);
 
@@ -38,7 +38,7 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.OK, accept.StatusCode);
 
         var detail = await membro.GetFromJsonAsync<JsonElement>($"/api/circles/{circle.Id}", Json);
-        Assert.Equal("Familia", detail.GetProperty("name").GetString());
+        Assert.Equal("Família", detail.GetProperty("name").GetString());
         Assert.Contains(detail.GetProperty("members").EnumerateArray(), x => x.GetProperty("userId").GetGuid() == membroAuth.UserId);
     }
 
@@ -83,7 +83,7 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
         var created = await dono.PostAsJsonAsync("/api/circles", new
         {
             name = "Festa surpresa",
-            description = "Nao contar",
+            description = "Não contar",
             isSurprise = true,
             surpriseSubjectEmail = honradoAuth.Email,
         });
@@ -108,7 +108,7 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
         var created = await dono.PostAsJsonAsync("/api/circles", new
         {
             name = "Grupo fechado",
-            description = "So com pedido",
+            description = "Só com pedido",
             visibility = "private",
             discoverable = true,
         });

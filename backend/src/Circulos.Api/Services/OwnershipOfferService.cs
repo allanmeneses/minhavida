@@ -42,12 +42,12 @@ public sealed class OwnershipOfferService(AppDbContext db, TimeProvider clock, I
             .FirstOrDefaultAsync(item => item.Id == circleId, cancellationToken);
         if (circle is null || circle.Status == CircleStatus.Deleted)
         {
-            return (StatusCodes.Status404NotFound, "Circulo nao encontrado.");
+            return (StatusCodes.Status404NotFound, "Círculo não encontrado.");
         }
 
         if (circle.Members.All(member => member.UserId != userId))
         {
-            return (StatusCodes.Status404NotFound, "Circulo nao encontrado.");
+            return (StatusCodes.Status404NotFound, "Círculo não encontrado.");
         }
 
         var offer = await db.OwnershipOffers.FirstOrDefaultAsync(
@@ -55,7 +55,7 @@ public sealed class OwnershipOfferService(AppDbContext db, TimeProvider clock, I
             cancellationToken);
         if (offer is null || offer.ExpiresAt <= now)
         {
-            return (StatusCodes.Status400BadRequest, "Esta oferta de posse nao esta mais aberta.");
+            return (StatusCodes.Status400BadRequest, "Esta oferta de posse não está mais aberta.");
         }
 
         if (circle.OwnerUserId is not null)
@@ -64,7 +64,7 @@ public sealed class OwnershipOfferService(AppDbContext db, TimeProvider clock, I
             offer.RespondedAt = now;
             await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
-            return (StatusCodes.Status400BadRequest, "O circulo ja tem dono.");
+            return (StatusCodes.Status400BadRequest, "O círculo já tem dono.");
         }
 
         var openVote = await db.SuccessionVotes.AnyAsync(
@@ -72,7 +72,7 @@ public sealed class OwnershipOfferService(AppDbContext db, TimeProvider clock, I
             cancellationToken);
         if (openVote)
         {
-            return (StatusCodes.Status400BadRequest, "A votacao de sucessao ainda esta aberta.");
+            return (StatusCodes.Status400BadRequest, "A votação de sucessão ainda está aberta.");
         }
 
         await CircleOwnership.AssignAsync(
@@ -256,7 +256,7 @@ public sealed class OwnershipOfferService(AppDbContext db, TimeProvider clock, I
             Action = "ownership-offered",
             Detail = next.Count == 1
                 ? "Oferta de posse enviada para o membro restante."
-                : $"Oferta de posse enviada para as {next.Count} pessoas mais ativas do circulo.",
+                : $"Oferta de posse enviada para as {next.Count} pessoas mais ativas do círculo.",
             CreatedAt = now,
         });
         await db.SaveChangesAsync(cancellationToken);
@@ -266,8 +266,8 @@ public sealed class OwnershipOfferService(AppDbContext db, TimeProvider clock, I
         {
             await email.SendAsync(
                 item.Email,
-                $"Convite para assumir o circulo {item.CircleName}",
-                $"O circulo {item.CircleName} ficou sem dono. Voce esta entre as pessoas mais ativas e pode aceitar a posse no app. O primeiro que aceitar vira dono; os outros convites saem na hora.",
+                $"Convite para assumir o círculo {item.CircleName}",
+                $"O círculo {item.CircleName} ficou sem dono. Você está entre as pessoas mais ativas e pode aceitar a posse no app. O primeiro que aceitar vira dono; os outros convites saem na hora.",
                 cancellationToken);
         }
     }

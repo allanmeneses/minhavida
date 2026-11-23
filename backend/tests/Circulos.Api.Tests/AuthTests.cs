@@ -93,7 +93,7 @@ public sealed class AuthTests : IClassFixture<ApiFactory>
 
         var conflito = respostas.Single(r => r.StatusCode == HttpStatusCode.Conflict);
         using var doc = JsonDocument.Parse(await conflito.Content.ReadAsStringAsync());
-        Assert.Equal("Ja existe uma conta com este e-mail.", doc.RootElement.GetProperty("error").GetString());
+        Assert.Equal("Já existe uma conta com este e-mail.", doc.RootElement.GetProperty("error").GetString());
     }
 
     [Fact]

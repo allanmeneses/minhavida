@@ -28,7 +28,7 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
             var circle = await db.Circles.Include(x => x.Members).FirstOrDefaultAsync(x => x.Id == cid, cancellationToken);
             if (circle is null || CircleAccess.HiddenSurprise(circle, userId) || circle.Members.All(x => x.UserId != userId))
             {
-                return NotFound(new ErrorResponse("Circulo nao encontrado."));
+                return NotFound(new ErrorResponse("Círculo não encontrado."));
             }
 
             source = await db.Memories.AsNoTracking()
@@ -113,7 +113,7 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
             var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
             if (circle is null || CircleAccess.HiddenSurprise(circle, userId) || member is null)
             {
-                return NotFound(new ErrorResponse("Circulo nao encontrado."));
+                return NotFound(new ErrorResponse("Círculo não encontrado."));
             }
 
             if (!CircleAccess.IsWritable(circle))
@@ -123,7 +123,7 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
 
             if (member.Role < CircleRole.Editor)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Seu papel neste circulo nao cria memorias."));
+                return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Seu papel neste círculo não cria memórias."));
             }
         }
 
@@ -148,7 +148,7 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
                 CircleId = circle.Id,
                 ActorUserId = userId,
                 Action = "memory",
-                Detail = "Memoria adicionada.",
+                Detail = "Memória adicionada.",
                 CreatedAt = now,
             });
         }
@@ -172,12 +172,12 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
         var memory = await db.Memories.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (memory is null)
         {
-            return NotFound(new ErrorResponse("Memoria nao encontrada."));
+            return NotFound(new ErrorResponse("Memória não encontrada."));
         }
 
         if (memory.AuthorUserId != userId)
         {
-            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("So quem guardou edita esta memoria."));
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Só quem guardou edita esta memória."));
         }
 
         memory.Title = request.Title.Trim();
@@ -195,7 +195,7 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
         var memory = await db.Memories.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (memory is null)
         {
-            return NotFound(new ErrorResponse("Memoria nao encontrada."));
+            return NotFound(new ErrorResponse("Memória não encontrada."));
         }
 
         if (memory.CircleId is Guid cid)
@@ -204,17 +204,17 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
             var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
             if (circle is null || member is null)
             {
-                return NotFound(new ErrorResponse("Memoria nao encontrada."));
+                return NotFound(new ErrorResponse("Memória não encontrada."));
             }
 
             if (memory.AuthorUserId != userId && member.Role < CircleRole.Admin)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Sem permissao para apagar esta memoria."));
+                return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Sem permissão para apagar esta memória."));
             }
         }
         else if (memory.AuthorUserId != userId)
         {
-            return NotFound(new ErrorResponse("Memoria nao encontrada."));
+            return NotFound(new ErrorResponse("Memória não encontrada."));
         }
 
         if (memory.PhotoStorageKey is not null)
@@ -239,7 +239,7 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
         var memory = await db.Memories.FirstOrDefaultAsync(x => x.Id == id && x.AuthorUserId == userId, cancellationToken);
         if (memory is null)
         {
-            return NotFound(new ErrorResponse("Memoria nao encontrada."));
+            return NotFound(new ErrorResponse("Memória não encontrada."));
         }
 
         if (file is null || file.Length == 0)
@@ -285,7 +285,7 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
         var memory = await db.Memories.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         if (memory is null || memory.PhotoStorageKey is null || memory.PhotoContentType is null)
         {
-            return NotFound(new ErrorResponse("Esta memoria ainda nao tem foto."));
+            return NotFound(new ErrorResponse("Esta memória ainda não tem foto."));
         }
 
         if (memory.CircleId is Guid cid)
@@ -293,17 +293,17 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
             var circle = await db.Circles.Include(x => x.Members).FirstOrDefaultAsync(x => x.Id == cid, cancellationToken);
             if (circle is null || CircleAccess.HiddenSurprise(circle, userId) || circle.Members.All(x => x.UserId != userId))
             {
-                return NotFound(new ErrorResponse("Memoria nao encontrada."));
+                return NotFound(new ErrorResponse("Memória não encontrada."));
             }
         }
         else if (memory.AuthorUserId != userId)
         {
-            return NotFound(new ErrorResponse("Memoria nao encontrada."));
+            return NotFound(new ErrorResponse("Memória não encontrada."));
         }
 
         var stream = await storage.OpenReadAsync(memory.PhotoStorageKey, cancellationToken);
         Response.Headers.CacheControl = "private, no-store";
-        return File(stream, memory.PhotoContentType, "memoria.jpg");
+        return File(stream, memory.PhotoContentType, "memória.jpg");
     }
 
     private static MemoryResponse ToResponse(Memory memory) =>

@@ -5,6 +5,12 @@ import { Feedback } from '@/components/ui/Feedback';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type AdminActionItem, type AdminReport, type AdminStats } from '@/lib/api';
+import {
+  ADMIN_ACTION_LABEL,
+  APPEAL_STATUS_LABEL,
+  TARGET_KIND_LABEL,
+  displayLabel,
+} from '@/lib/labels';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function AdminScreen() {
@@ -36,7 +42,7 @@ export default function AdminScreen() {
     if (!user?.isSystemAdmin) {
       return;
     }
-    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel abrir o painel.'));
+    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível abrir o painel.'));
   }, [load, user?.isSystemAdmin]);
 
   async function setBlock(targetKind: string, targetId: string, blocked: boolean) {
@@ -53,7 +59,7 @@ export default function AdminScreen() {
       setOk(blocked ? 'Bloqueado.' : 'Desbloqueado.');
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel alterar o bloqueio.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível alterar o bloqueio.');
     }
   }
 
@@ -61,7 +67,7 @@ export default function AdminScreen() {
     return (
       <ScrollView contentContainerStyle={styles.page}>
         <Text style={styles.title}>Painel interno</Text>
-        <Text style={styles.lead}>So o admin do sistema ve este painel.</Text>
+        <Text style={styles.lead}>Só o admin do sistema vê este painel.</Text>
       </ScrollView>
     );
   }
@@ -70,7 +76,7 @@ export default function AdminScreen() {
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Painel interno</Text>
       <Text style={styles.lead}>
-        Contagem agregada de uso, sem conteudo e sem identificar ninguem. Nao sai do sistema.
+        Contagem agregada de uso, sem conteúdo e sem identificar ninguém. Não sai do sistema.
       </Text>
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />
@@ -79,7 +85,7 @@ export default function AdminScreen() {
           <Text style={styles.section}>Uso de recursos</Text>
           <Text style={styles.item}>Atalhos disparados: {stats.shortcutsTriggered}</Text>
           <Text style={styles.item}>Entradas criadas: {stats.entriesCreated}</Text>
-          <Text style={styles.item}>Circulos ativos: {stats.activeCircles}</Text>
+          <Text style={styles.item}>Círculos ativos: {stats.activeCircles}</Text>
         </View>
       ) : null}
 
@@ -104,17 +110,17 @@ export default function AdminScreen() {
               }}
             />
           ) : (
-            <Text style={styles.lead}>{item.status}</Text>
+            <Text style={styles.lead}>{displayLabel(item.status, APPEAL_STATUS_LABEL)}</Text>
           )}
         </View>
       ))}
 
-      <Text style={styles.section}>Denuncias</Text>
-      {reports.length === 0 ? <Text style={styles.lead}>Nenhuma denuncia.</Text> : null}
+      <Text style={styles.section}>Denúncias</Text>
+      {reports.length === 0 ? <Text style={styles.lead}>Nenhuma denúncia.</Text> : null}
       {reports.map((item) => (
         <View key={item.id} style={styles.card}>
           <Text style={styles.item}>
-            {item.targetKind} · {item.targetId}
+            {displayLabel(item.targetKind, TARGET_KIND_LABEL)} · {item.targetId}
           </Text>
           <Text style={styles.lead}>
             {item.reporterEmail} · {new Date(item.createdAt).toLocaleString('pt-BR')}
@@ -122,12 +128,12 @@ export default function AdminScreen() {
           {item.targetKind === 'profile' || item.targetKind === 'circle' ? (
             <>
               <Button
-                label={`Bloquear ${item.targetKind}`}
+                label={`Bloquear ${displayLabel(item.targetKind, TARGET_KIND_LABEL)}`}
                 variant="danger"
                 onPress={() => void setBlock(item.targetKind, item.targetId, true)}
               />
               <Button
-                label={`Desbloquear ${item.targetKind}`}
+                label={`Desbloquear ${displayLabel(item.targetKind, TARGET_KIND_LABEL)}`}
                 variant="ghost"
                 onPress={() => void setBlock(item.targetKind, item.targetId, false)}
               />
@@ -139,7 +145,7 @@ export default function AdminScreen() {
       <Text style={styles.section}>Registro</Text>
       {actions.map((item) => (
         <Text key={item.id} style={styles.lead}>
-          {item.action} · {item.targetKind} · {item.detail}
+          {displayLabel(item.action, ADMIN_ACTION_LABEL)} · {displayLabel(item.targetKind, TARGET_KIND_LABEL)} · {item.detail}
         </Text>
       ))}
     </ScrollView>

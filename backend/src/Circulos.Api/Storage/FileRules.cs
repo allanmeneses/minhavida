@@ -34,17 +34,17 @@ public static class FileRules
     {
         if (size <= 0)
         {
-            return "O arquivo esta vazio.";
+            return "O arquivo está vazio.";
         }
 
-        return Validate(fileName, contentType, DocumentTypes, "Este tipo de arquivo nao e aceito nos documentos pessoais.");
+        return Validate(fileName, contentType, DocumentTypes, "Este tipo de arquivo não é aceito nos documentos pessoais.");
     }
 
     public static string? ValidatePhoto(string fileName, string? contentType, long size)
     {
         if (size <= 0)
         {
-            return "A foto esta vazia.";
+            return "A foto está vazia.";
         }
 
         return Validate(fileName, contentType, PhotoTypes, "A foto precisa ser JPG, PNG ou WebP.");

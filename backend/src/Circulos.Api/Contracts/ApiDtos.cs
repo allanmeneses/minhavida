@@ -9,7 +9,7 @@ public sealed record ErrorResponse(string Error);
 public sealed class RegisterRequest
 {
     [Required(ErrorMessage = "Informe o e-mail.")]
-    [EmailAddress(ErrorMessage = "Informe um e-mail valido.")]
+    [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
     [MaxLength(256)]
     public string Email { get; set; } = string.Empty;
 
@@ -27,7 +27,7 @@ public sealed class RegisterRequest
 public sealed class LoginRequest
 {
     [Required(ErrorMessage = "Informe o e-mail.")]
-    [EmailAddress(ErrorMessage = "Informe um e-mail valido.")]
+    [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
     public string Email { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Informe a senha.")]
@@ -37,7 +37,7 @@ public sealed class LoginRequest
 public sealed class ForgotPasswordRequest
 {
     [Required(ErrorMessage = "Informe o e-mail.")]
-    [EmailAddress(ErrorMessage = "Informe um e-mail valido.")]
+    [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
     public string Email { get; set; } = string.Empty;
 }
 
@@ -137,7 +137,7 @@ public sealed class UpdateProfileRequest
     public string? Phone { get; set; }
 
     [MaxLength(256)]
-    [EmailAddress(ErrorMessage = "Informe um e-mail de contato valido.")]
+    [EmailAddress(ErrorMessage = "Informe um e-mail de contato válido.")]
     public string? SecondaryEmail { get; set; }
 
     public bool IsPublic { get; set; }

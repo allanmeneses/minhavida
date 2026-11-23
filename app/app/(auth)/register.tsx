@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Link, router, type Href } from 'expo-router';
 import { BrandMark } from '@/components/BrandMark';
 import { Button } from '@/components/ui/Button';
@@ -12,6 +12,8 @@ import { t } from '@/lib/i18n';
 import { clearPendingInvite, readPendingInvite } from '@/lib/pending-invite';
 
 export default function RegisterScreen() {
+  const { width } = useWindowDimensions();
+  const narrow = width < 768;
   const { register } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -44,7 +46,7 @@ export default function RegisterScreen() {
       }
       router.replace('/(app)/home');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Nao foi possivel criar a conta.');
+      setError(err instanceof ApiError ? err.message : 'Não foi possível criar a conta.');
     } finally {
       setBusy(false);
     }
@@ -56,7 +58,7 @@ export default function RegisterScreen() {
         label="Nome"
         value={name}
         onChangeText={setName}
-        placeholder="Como voce quer ser chamado"
+        placeholder="Como você quer ser chamado"
         autoCapitalize="words"
         autoComplete="name"
       />
@@ -64,7 +66,7 @@ export default function RegisterScreen() {
         label="E-mail"
         value={email}
         onChangeText={setEmail}
-        placeholder="voce@exemplo.com"
+        placeholder="você@exemplo.com"
         keyboardType="email-address"
         autoComplete="email"
       />
@@ -82,22 +84,29 @@ export default function RegisterScreen() {
         onPress={onSubmit}
         loading={busy}
         disabled={!name || !email || password.length < 8}
+        disabledHint={
+          password.length > 0 && password.length < 8
+            ? 'A senha precisa ter pelo menos 8 caracteres.'
+            : !name || !email || password.length < 8
+              ? 'Preencha nome, e-mail e senha com pelo menos 8 caracteres.'
+              : undefined
+        }
       />
       {googleEnabled ? <Button label={t('google.login')} variant="ghost" onPress={() => undefined} /> : null}
       <Text style={styles.hint}>
-        Ja tem conta?{' '}
+        Já tem conta?{' '}
         <Link href="/(auth)/login" style={styles.link}>
           Entrar
         </Link>
       </Text>
       <Text style={styles.hint}>
-        Ao criar a conta voce concorda com os{' '}
+        Ao criar a conta você concorda com os{' '}
         <Link href={'/termos' as Href} style={styles.link}>
           termos de uso
         </Link>
         {' e a '}
         <Link href={'/privacidade' as Href} style={styles.link}>
-          politica de privacidade
+          política de privacidade
         </Link>
         .
       </Text>
@@ -106,17 +115,20 @@ export default function RegisterScreen() {
 
   if (Platform.OS === 'web') {
     return (
-      <View style={styles.webSplit}>
-        <View style={styles.webBrand}>
-          <BrandMark inverted />
-          <Text style={styles.webLead}>
-            O perfil pessoal e o ponto de partida de tudo. Guarde dados, documentos, circulos e
-            lembretes no celular e no navegador.
-          </Text>
-        </View>
-        <View style={styles.webPanel}>
+      <View style={[styles.webSplit, narrow && styles.webSplitNarrow]}>
+        {narrow ? null : (
+          <View style={styles.webBrand}>
+            <BrandMark inverted />
+            <Text style={styles.webLead}>
+              O perfil pessoal é o ponto de partida de tudo. Guarde dados, documentos, círculos e
+              lembretes no celular e no navegador.
+            </Text>
+          </View>
+        )}
+        <View style={[styles.webPanel, narrow && styles.webPanelNarrow]}>
+          {narrow ? <BrandMark /> : null}
           <Text style={styles.heading}>Criar conta</Text>
-          <Text style={styles.lead}>Cadastro simples, so com e-mail e senha.</Text>
+          <Text style={styles.lead}>Cadastro simples, só com e-mail e senha.</Text>
           {form}
         </View>
       </View>
@@ -147,6 +159,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg,
     minHeight: '100%' as unknown as number,
   },
+  webSplitNarrow: {
+    flexDirection: 'column',
+  },
   webBrand: {
     flex: 1,
     backgroundColor: colors.primary,
@@ -166,6 +181,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 56,
     backgroundColor: colors.surface,
     gap: 10,
+  },
+  webPanelNarrow: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
   },
   heading: {
     fontSize: 28,

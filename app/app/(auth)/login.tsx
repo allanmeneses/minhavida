@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Link, router, type Href } from 'expo-router';
 import { BrandMark } from '@/components/BrandMark';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +11,8 @@ import { api, ApiError, TwoFactorRequiredError } from '@/lib/api';
 import { t } from '@/lib/i18n';
 
 export default function LoginScreen() {
+  const { width } = useWindowDimensions();
+  const narrow = width < 768;
   const { login, verifyTwoFactor } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,9 +42,9 @@ export default function LoginScreen() {
     } catch (err) {
       if (err instanceof TwoFactorRequiredError) {
         setChallenge(err.twoFactorToken);
-        setError('Informe o codigo do autenticador ou um codigo de recuperacao.');
+        setError('Informe o código do autenticador ou um código de recuperação.');
       } else {
-        setError(err instanceof ApiError ? err.message : 'Nao foi possivel entrar.');
+        setError(err instanceof ApiError ? err.message : 'Não foi possível entrar.');
       }
     } finally {
       setBusy(false);
@@ -55,7 +57,7 @@ export default function LoginScreen() {
         label="E-mail"
         value={email}
         onChangeText={setEmail}
-        placeholder="voce@exemplo.com"
+        placeholder="você@exemplo.com"
         keyboardType="email-address"
         autoComplete="email"
       />
@@ -70,14 +72,14 @@ export default function LoginScreen() {
       {challenge ? (
         <>
           <TextField
-            label="Codigo do autenticador"
+            label="Código do autenticador"
             value={code}
             onChangeText={setCode}
             placeholder="000000"
             keyboardType="number-pad"
           />
           <TextField
-            label="Codigo de recuperacao"
+            label="Código de recuperação"
             value={recovery}
             onChangeText={setRecovery}
             placeholder="opcional"
@@ -86,10 +88,15 @@ export default function LoginScreen() {
       ) : null}
       <Feedback message={error} />
       <Button
-        label={challenge ? 'Confirmar codigo' : 'Entrar'}
+        label={challenge ? 'Confirmar código' : 'Entrar'}
         onPress={onSubmit}
         loading={busy}
         disabled={!email || !password || (Boolean(challenge) && !code.trim() && !recovery.trim())}
+        disabledHint={
+          challenge || email && password
+            ? undefined
+            : 'Preencha e-mail e senha para entrar.'
+        }
       />
       {googleEnabled ? <Button label={t('google.login')} variant="ghost" onPress={() => undefined} /> : null}
       <Text style={styles.hint}>
@@ -98,7 +105,7 @@ export default function LoginScreen() {
         </Link>
       </Text>
       <Text style={styles.hint}>
-        Ainda nao tem conta?{' '}
+        Ainda não tem conta?{' '}
         <Link href="/(auth)/register" style={styles.link}>
           Criar conta
         </Link>
@@ -109,7 +116,7 @@ export default function LoginScreen() {
         </Link>
         {'  '}
         <Link href={'/privacidade' as Href} style={styles.link}>
-          Politica de privacidade
+          Política de privacidade
         </Link>
       </Text>
     </View>
@@ -117,15 +124,18 @@ export default function LoginScreen() {
 
   if (Platform.OS === 'web') {
     return (
-      <View style={styles.webSplit}>
-        <View style={styles.webBrand}>
-          <BrandMark inverted />
-          <Text style={styles.webLead}>
-            Um hub da sua vida pessoal. Perfil, documentos, circulos e lembretes no mesmo lugar,
-            no celular e no navegador.
-          </Text>
-        </View>
-        <View style={styles.webPanel}>
+      <View style={[styles.webSplit, narrow && styles.webSplitNarrow]}>
+        {narrow ? null : (
+          <View style={styles.webBrand}>
+            <BrandMark inverted />
+            <Text style={styles.webLead}>
+              Um hub da sua vida pessoal. Perfil, documentos, círculos e lembretes no mesmo lugar,
+              no celular e no navegador.
+            </Text>
+          </View>
+        )}
+        <View style={[styles.webPanel, narrow && styles.webPanelNarrow]}>
+          {narrow ? <BrandMark /> : null}
           <Text style={styles.heading}>Entrar</Text>
           <Text style={styles.lead}>Use o e-mail e a senha da sua conta.</Text>
           {form}
@@ -138,7 +148,7 @@ export default function LoginScreen() {
     <KeyboardAvoidingView style={styles.mobile} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <BrandMark />
       <Text style={styles.heading}>Entrar</Text>
-      <Text style={styles.lead}>Abra o Circulos pelo seu perfil pessoal.</Text>
+      <Text style={styles.lead}>Abra o Círculos pelo seu perfil pessoal.</Text>
       {form}
     </KeyboardAvoidingView>
   );
@@ -157,6 +167,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: colors.bg,
     minHeight: '100%' as unknown as number,
+  },
+  webSplitNarrow: {
+    flexDirection: 'column',
   },
   webBrand: {
     flex: 1,
@@ -177,6 +190,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 56,
     backgroundColor: colors.surface,
     gap: 10,
+  },
+  webPanelNarrow: {
+    paddingHorizontal: 20,
+    paddingVertical: 24,
   },
   heading: {
     fontSize: 28,

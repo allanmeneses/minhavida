@@ -58,21 +58,21 @@ public static class TemplateCatalog
         yield return List(
             ComprasDaSemanaId,
             "Compras da semana",
-            "Lista pronta de feira: leite, pao, ovos e frutas.",
+            "Lista pronta de feira: leite, pão, ovos e frutas.",
             "shopping",
             [("Leite", "2 L"), ("Pao", "1"), ("Ovos", "12"), ("Frutas", null)],
             now);
         yield return List(
             CuidadosDoDiaId,
             "Cuidados do dia",
-            "Rotina de cuidado: remedio, agua e caminhada.",
+            "Rotina de cuidado: remédio, água e caminhada.",
             "other",
-            [("Remedio da manha", null), ("Beber agua", "2 L"), ("Caminhada", "20 min")],
+            [("Remédio da manhã", null), ("Beber água", "2 L"), ("Caminhada", "20 min")],
             now);
         yield return List(
             MateriaisDaEscolaId,
             "Materiais da escola",
-            "Cadernos, lapis e estojo para o inicio do periodo.",
+            "Cadernos, lápis e estojo para o início do período.",
             "materials",
             [("Caderno", "4"), ("Lapis", "12"), ("Estojo", "1")],
             now);
@@ -85,9 +85,9 @@ public static class TemplateCatalog
             now);
         yield return Reminder(
             TomeiORemedioId,
-            "Tomei o remedio",
-            "Lembrete diario de medicacao, com atalho de um toque.",
-            "Tomei o remedio",
+            "Tomei o remédio",
+            "Lembrete diário de medicação, com atalho de um toque.",
+            "Tomei o remédio",
             "general",
             new RecurrenceRule { Frequency = "daily", Interval = 1 },
             now);
@@ -101,9 +101,9 @@ public static class TemplateCatalog
             now);
         yield return Reminder(
             AniversarioAnualId,
-            "Aniversario",
-            "Aniversario anual com antecedencia de tres dias.",
-            "Aniversario",
+            "Aniversário",
+            "Aniversário anual com antecedencia de tres dias.",
+            "Aniversário",
             "birthday",
             new RecurrenceRule { Frequency = "yearly", Interval = 1 },
             now);

@@ -28,7 +28,7 @@ public static class CircleOwnership
         CancellationToken cancellationToken)
     {
         var member = circle.Members.FirstOrDefault(item => item.UserId == winnerId)
-            ?? throw new InvalidOperationException("A pessoa precisa ser membro do circulo.");
+            ?? throw new InvalidOperationException("A pessoa precisa ser membro do círculo.");
         var winner = await db.Users.FirstAsync(item => item.Id == winnerId, cancellationToken);
         var previousOwnerId = circle.OwnerUserId;
         if (previousOwnerId is Guid previous && previous != winnerId)

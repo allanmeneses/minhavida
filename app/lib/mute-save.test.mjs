@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = dirname(fileURLToPath(import.meta.url));
 
 describe('salvar e mudo', () => {
-  it('memorias e diario nao disparam som ao salvar', () => {
+  it('memórias e diário não disparam som ao salvar', () => {
     const memories = readFileSync(join(root, '../app/(app)/memories.tsx'), 'utf8');
     const life = readFileSync(join(root, '../app/(app)/life/[id].tsx'), 'utf8');
     assert.doesNotMatch(memories, /playShortcutFeedback/);

@@ -67,7 +67,7 @@ public sealed class BillingTests : IClassFixture<ApiFactory>
         var v1 = MercadoPagoGateway.Sign(FakePaymentGateway.Secret, MercadoPagoGateway.BuildManifest(requestId, providerId, ts));
         var gateway = _factory.Services.GetRequiredService<FakePaymentGateway>();
         var reads = gateway.SubscriptionReads;
-        Assert.Equal(HttpStatusCode.Unauthorized, (await PostWebhook(client, "nao", "00", requestId, ts)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await PostWebhook(client, "não", "00", requestId, ts)).StatusCode);
         Assert.Equal(reads, gateway.SubscriptionReads);
         var webhook = await PostWebhook(client, providerId, v1, requestId, ts);
         Assert.Equal(HttpStatusCode.OK, webhook.StatusCode);
@@ -109,7 +109,7 @@ public sealed class BillingTests : IClassFixture<ApiFactory>
         var pixRequest = new PixPaymentRequest(
             auth.UserId.ToString("N"),
             29.90m,
-            "Circulos pago mensal",
+            "Círculos pago mensal",
             "Pessoa",
             auth.Email,
             DateTime.UtcNow.AddHours(1),

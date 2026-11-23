@@ -7,7 +7,7 @@ public static class LifeAreaDefaults
         New(userId, "Vacinas", LifeAreaKind.Vaccine, 0, now),
         New(userId, "Lembretes", LifeAreaKind.Reminder, 1, now),
         New(userId, "Documentos", LifeAreaKind.Document, 2, now),
-        New(userId, "Diario", LifeAreaKind.Diary, 3, now),
+        New(userId, "Diário", LifeAreaKind.Diary, 3, now),
     ];
 
     private static LifeArea New(Guid userId, string name, LifeAreaKind kind, int order, DateTime now) =>

@@ -80,7 +80,7 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
         await InviteAsync(dono, membro, membroAuth.Email, familia, "viewer");
         (await dono.PostAsJsonAsync("/api/reminders", new
         {
-            title = "Remedio da casa",
+            title = "Remédio da casa",
             startAt = DateTime.UtcNow.AddHours(-2),
             circleId = familia,
             recurrence = new { frequency = "none", interval = 1 },
@@ -91,16 +91,16 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
 
         var membroHome = await membro.GetFromJsonAsync<JsonElement>("/api/home", Json);
         var deForaHome = await deFora.GetFromJsonAsync<JsonElement>("/api/home", Json);
-        Assert.Contains(membroHome.GetProperty("overdue").EnumerateArray(), x => x.GetProperty("title").GetString() == "Remedio da casa");
-        Assert.DoesNotContain(deForaHome.GetProperty("overdue").EnumerateArray(), x => x.GetProperty("title").GetString() == "Remedio da casa");
-        Assert.Contains(membroHome.GetProperty("reminderEmailsSent").EnumerateArray(), x => x.GetString() == "Remedio da casa");
-        Assert.DoesNotContain(deForaHome.GetProperty("reminderEmailsSent").EnumerateArray(), x => x.GetString() == "Remedio da casa");
+        Assert.Contains(membroHome.GetProperty("overdue").EnumerateArray(), x => x.GetProperty("title").GetString() == "Remédio da casa");
+        Assert.DoesNotContain(deForaHome.GetProperty("overdue").EnumerateArray(), x => x.GetProperty("title").GetString() == "Remédio da casa");
+        Assert.Contains(membroHome.GetProperty("reminderEmailsSent").EnumerateArray(), x => x.GetString() == "Remédio da casa");
+        Assert.DoesNotContain(deForaHome.GetProperty("reminderEmailsSent").EnumerateArray(), x => x.GetString() == "Remédio da casa");
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Assert.Equal(1, await db.SentEmails.CountAsync(x => x.To == membroAuth.Email && x.Subject.Contains("Remedio da casa")));
-        Assert.Equal(0, await db.SentEmails.CountAsync(x => x.To == deForaAuth.Email && x.Subject.Contains("Remedio da casa")));
-        var mailed = await db.SentEmails.SingleAsync(x => x.To == membroAuth.Email && x.Subject.Contains("Remedio da casa"));
+        Assert.Equal(1, await db.SentEmails.CountAsync(x => x.To == membroAuth.Email && x.Subject.Contains("Remédio da casa")));
+        Assert.Equal(0, await db.SentEmails.CountAsync(x => x.To == deForaAuth.Email && x.Subject.Contains("Remédio da casa")));
+        var mailed = await db.SentEmails.SingleAsync(x => x.To == membroAuth.Email && x.Subject.Contains("Remédio da casa"));
         Assert.Contains("Sem SMS", mailed.Body, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.NotFound, (await membro.GetAsync("/api/reminders/sms")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await membro.PostAsJsonAsync("/api/reminders/sms", new { phone = "11999999999" })).StatusCode);
@@ -149,7 +149,7 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
         client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/feed")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/ads")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/anuncios")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync("/api/anúncios")).StatusCode);
     }
 
     [Fact]
@@ -157,9 +157,9 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
     {
         var client = _factory.CreateClient();
         client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
-        var post = await client.PostAsJsonAsync("/api/calendar", new { title = "Nao gravar" });
+        var post = await client.PostAsJsonAsync("/api/calendar", new { title = "Não gravar" });
         Assert.Equal(HttpStatusCode.MethodNotAllowed, post.StatusCode);
-        var put = await client.PutAsJsonAsync("/api/calendar", new { title = "Nao gravar" });
+        var put = await client.PutAsJsonAsync("/api/calendar", new { title = "Não gravar" });
         Assert.Equal(HttpStatusCode.MethodNotAllowed, put.StatusCode);
         var delete = await client.DeleteAsync("/api/calendar");
         Assert.Equal(HttpStatusCode.MethodNotAllowed, delete.StatusCode);
@@ -184,7 +184,7 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
         await InviteAsync(dono, viewer, viewerAuth.Email, familia, "viewer");
         var reminder = await (await dono.PostAsJsonAsync("/api/reminders", new
         {
-            title = "Aniversario compartilhado",
+            title = "Aniversário compartilhado",
             kind = "birthday",
             startAt = DateTime.UtcNow.Date.AddDays(20),
             personName = "Ana",
@@ -199,7 +199,7 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
         Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
         var message = await forbidden.Content.ReadFromJsonAsync<JsonElement>(Json);
         Assert.Contains("visualiza", message.GetProperty("error").GetString(), StringComparison.OrdinalIgnoreCase);
-        var putForbidden = await viewer.PutAsJsonAsync($"/api/circles/{familia}/gift-ideas/{reminderId}", new { ideas = new[] { "So ver" } });
+        var putForbidden = await viewer.PutAsJsonAsync($"/api/circles/{familia}/gift-ideas/{reminderId}", new { ideas = new[] { "Só ver" } });
         Assert.Equal(HttpStatusCode.Forbidden, putForbidden.StatusCode);
 
         var ideas = await viewer.GetFromJsonAsync<List<JsonElement>>($"/api/circles/{familia}/gift-ideas", Json);
@@ -208,7 +208,7 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
         Assert.Contains("Livro", list);
         Assert.Contains("Planta", list);
         Assert.DoesNotContain("Chocolate", list);
-        Assert.DoesNotContain("So ver", list);
+        Assert.DoesNotContain("Só ver", list);
     }
 
     [Fact]
@@ -262,23 +262,23 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
 
         var areas = await dono.GetFromJsonAsync<List<JsonElement>>("/api/life-areas", Json);
         var diario = areas!.Single(x => x.GetProperty("kind").GetString() == "diary").GetProperty("id").GetGuid();
-        (await dono.PostAsJsonAsync($"/api/life-areas/{diario}/pages", new { title = "Pagina secreta", body = "segredo-xyz no diario solo" })).EnsureSuccessStatusCode();
+        (await dono.PostAsJsonAsync($"/api/life-areas/{diario}/pages", new { title = "Página secreta", body = "segredo-xyz no diário solo" })).EnsureSuccessStatusCode();
         (await dono.PostAsJsonAsync($"/api/life-areas/{diario}/entries", new
         {
             title = "Entrada compartilhada-xyz",
-            body = "texto visivel no circulo",
+            body = "texto visível no círculo",
             circleIds = new[] { familia },
         })).EnsureSuccessStatusCode();
 
         var ownSearch = await dono.GetFromJsonAsync<JsonElement>($"/api/life-areas/{diario}/search?q=segredo-xyz", Json);
-        Assert.Contains(ownSearch.EnumerateArray(), x => x.GetProperty("title").GetString() == "Pagina secreta");
+        Assert.Contains(ownSearch.EnumerateArray(), x => x.GetProperty("title").GetString() == "Página secreta");
         var unified = await dono.GetFromJsonAsync<JsonElement>("/api/search?q=segredo-xyz&type=diary", Json);
-        Assert.Contains(unified.GetProperty("hits").EnumerateArray(), x => x.GetProperty("title").GetString() == "Pagina secreta");
+        Assert.Contains(unified.GetProperty("hits").EnumerateArray(), x => x.GetProperty("title").GetString() == "Página secreta");
 
         var membroBusca = await membro.GetFromJsonAsync<JsonElement>("/api/search?q=compartilhada-xyz&type=diary", Json);
         Assert.Contains(membroBusca.GetProperty("hits").EnumerateArray(), x => x.GetProperty("title").GetString()!.Contains("compartilhada-xyz"));
         var membroSegredo = await membro.GetFromJsonAsync<JsonElement>("/api/search?q=segredo-xyz&type=diary", Json);
-        Assert.DoesNotContain(membroSegredo.GetProperty("hits").EnumerateArray(), x => x.GetProperty("title").GetString() == "Pagina secreta");
+        Assert.DoesNotContain(membroSegredo.GetProperty("hits").EnumerateArray(), x => x.GetProperty("title").GetString() == "Página secreta");
         Assert.Equal(HttpStatusCode.NotFound, (await membro.GetAsync($"/api/life-areas/{diario}/search?q=segredo-xyz")).StatusCode);
 
         var deForaBusca = await deFora.GetFromJsonAsync<JsonElement>("/api/search?q=compartilhada-xyz&type=diary", Json);
@@ -376,13 +376,13 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
 
         var decided = await ana.GetFromJsonAsync<JsonElement>($"/api/circles/{circleId}/succession", Json);
         Assert.Equal("decided", decided.GetProperty("status").GetString());
-        Assert.Equal("O dono eleito so pode ser substituido apos 30 dias da eleicao.", decided.GetProperty("replacementBlockedMessage").GetString());
+        Assert.Equal("O dono eleito só pode ser substituído após 30 dias da eleição.", decided.GetProperty("replacementBlockedMessage").GetString());
         Assert.False(decided.GetProperty("canRequestReplacement").GetBoolean());
 
         var tooSoon = await bia.PostAsync($"/api/circles/{circleId}/succession/replace", null);
         Assert.Equal(HttpStatusCode.BadRequest, tooSoon.StatusCode);
         var tooSoonBody = await tooSoon.Content.ReadFromJsonAsync<JsonElement>(Json);
-        Assert.Equal("O dono eleito so pode ser substituido apos 30 dias da eleicao.", tooSoonBody.GetProperty("error").GetString());
+        Assert.Equal("O dono eleito só pode ser substituído após 30 dias da eleição.", tooSoonBody.GetProperty("error").GetString());
 
         using (var scope = _factory.Services.CreateScope())
         {
@@ -412,7 +412,7 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
     private async Task<Guid> FamiliaId(HttpClient client)
     {
         var circles = await client.GetFromJsonAsync<List<JsonElement>>("/api/circles", Json);
-        return circles!.Single(x => x.GetProperty("name").GetString() == "Familia").GetProperty("id").GetGuid();
+        return circles!.Single(x => x.GetProperty("name").GetString() == "Família").GetProperty("id").GetGuid();
     }
 
     private static async Task InviteAsync(HttpClient owner, HttpClient member, string email, Guid circleId, string role)

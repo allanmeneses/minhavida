@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const storeSession = useCallback(async (result: AuthResponse) => {
     if (!result.token) {
-      throw new Error('Sessao incompleta.');
+      throw new Error('Sessão incompleta.');
     }
     await writeSession(result.token, result.refreshToken);
     refreshRef.current = result.refreshToken;
@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               return;
             }
           } catch {
-            // cai no limpar sessao
+            // cai no limpar sessão
           }
         }
         await clearToken();
@@ -159,7 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     await storeSession(result);
     if (!result.token) {
-      throw new Error('Sessao incompleta.');
+      throw new Error('Sessão incompleta.');
     }
     return result.token;
   }, [storeSession]);

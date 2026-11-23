@@ -28,6 +28,7 @@ export default function LivingScreen() {
   const [error, setError] = useState<string | null>(null);
   const [grantUserId, setGrantUserId] = useState('');
   const [grantAccess, setGrantAccess] = useState<'view' | 'edit'>('view');
+  const [circlesLoaded, setCirclesLoaded] = useState(false);
 
   const load = useCallback(async () => {
     if (!token) {
@@ -35,6 +36,7 @@ export default function LivingScreen() {
     }
     setItems(await api<LivingProfileItem[]>('/api/living-profiles', { token }));
     setCircles(await api<CircleSummary[]>('/api/circles', { token }));
+    setCirclesLoaded(true);
   }, [token]);
 
   useEffect(() => {
@@ -64,7 +66,7 @@ export default function LivingScreen() {
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Pet e grupo</Text>
       <Text style={styles.lead}>
-        Perfil vivo de pessoa, pet ou grupo. Edita quem tem permissao de edicao. Quem so visualiza so visualiza.
+        Perfil vivo de pessoa, pet ou grupo. Edita quem tem permissão de edição. Quem só visualiza só visualiza.
       </Text>
       <Feedback message={error} />
       <TextField label="Nome" value={name} onChangeText={setName} placeholder="Luna" />
@@ -75,8 +77,10 @@ export default function LivingScreen() {
         onPress={() => setKind(KINDS[(KINDS.indexOf(kind) + 1) % KINDS.length])}
       />
       <Button
-        label={circleId ? `Circulo: ${circles.find((item) => item.id === circleId)?.name ?? 'escolhido'}` : 'So no meu perfil'}
+        label={circleId ? `Círculo: ${circles.find((item) => item.id === circleId)?.name ?? 'escolhido'}` : 'Só no meu perfil'}
         variant="ghost"
+        disabled={!circlesLoaded}
+        disabledHint="Aguarde os círculos carregarem para escolher."
         onPress={() => {
           if (circles.length === 0) {
             return;
@@ -89,15 +93,20 @@ export default function LivingScreen() {
           setCircleId(index + 1 >= circles.length ? null : circles[index + 1].id);
         }}
       />
-      <Button label="Criar perfil" onPress={() => void create()} disabled={!name.trim()} />
+      <Button
+        label="Criar perfil"
+        onPress={() => void create()}
+        disabled={!name.trim()}
+        disabledHint="Informe o nome do perfil para criar."
+      />
       <TextField
-        label="Pessoa (id) para permissao"
+        label="Pessoa (id) para permissão"
         value={grantUserId}
         onChangeText={setGrantUserId}
         placeholder="uuid da pessoa"
       />
       <Button
-        label={`Permissao: ${grantAccess === 'edit' ? 'editar' : 'visualizar'}`}
+        label={`Permissão: ${grantAccess === 'edit' ? 'editar' : 'visualizar'}`}
         variant="ghost"
         onPress={() => setGrantAccess(grantAccess === 'edit' ? 'view' : 'edit')}
       />
@@ -107,11 +116,11 @@ export default function LivingScreen() {
           <Text style={styles.lead}>
             {KIND_LABEL[item.kind as (typeof KINDS)[number]] ?? item.kind}
             {item.context ? ` · ${item.context}` : ''}
-            {item.canEdit ? ' · pode editar' : ' · so visualiza'}
+            {item.canEdit ? ' · pode editar' : ' · só visualiza'}
           </Text>
           {item.canEdit ? (
             <Button
-              label={`Conceder ${grantAccess} em ${item.name}`}
+              label={`Conceder ${grantAccess === 'edit' ? 'editar' : 'visualizar'} em ${item.name}`}
               variant="ghost"
               onPress={() => {
                 if (!token || !grantUserId.trim()) {

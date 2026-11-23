@@ -26,7 +26,7 @@ public sealed class LocalFileStorage : IFileStorage
         var path = Resolve(key);
         if (!File.Exists(path))
         {
-            throw new FileNotFoundException("Arquivo nao encontrado no armazenamento.", key);
+            throw new FileNotFoundException("Arquivo não encontrado no armazenamento.", key);
         }
 
         Stream stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -48,14 +48,14 @@ public sealed class LocalFileStorage : IFileStorage
     {
         if (string.IsNullOrWhiteSpace(key) || key.Contains("..", StringComparison.Ordinal))
         {
-            throw new InvalidOperationException("Chave de armazenamento invalida.");
+            throw new InvalidOperationException("Chave de armazenamento inválida.");
         }
 
         var full = Path.GetFullPath(Path.Combine(_root, key));
         var rootFull = Path.GetFullPath(_root);
         if (!full.StartsWith(rootFull, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException("Chave de armazenamento invalida.");
+            throw new InvalidOperationException("Chave de armazenamento inválida.");
         }
 
         return full;

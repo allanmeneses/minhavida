@@ -36,7 +36,7 @@ public sealed class RecapService(AppDbContext db)
                 LifeAreaKind.Vaccine => "Vacinas",
                 LifeAreaKind.Reminder => "Lembretes da vida",
                 LifeAreaKind.Document => "Documentos da vida",
-                LifeAreaKind.Diary => "Diario",
+                LifeAreaKind.Diary => "Diário",
                 _ => area.Name,
             };
             flows.Add(new RecapFlowDto(key, label, area.Count));
@@ -46,8 +46,8 @@ public sealed class RecapService(AppDbContext db)
         await AddIfUsed(flows, "reminders", "Lembretes", await db.Reminders.CountAsync(x => x.UserId == userId, cancellationToken));
         await AddIfUsed(flows, "shortcuts", "Atalhos", await db.Shortcuts.CountAsync(x => x.UserId == userId, cancellationToken));
         await AddIfUsed(flows, "lists", "Listas", await db.SharedLists.CountAsync(x => x.OwnerUserId == userId && x.CircleId == null, cancellationToken));
-        await AddIfUsed(flows, "memories", "Memorias", await db.Memories.CountAsync(x => x.AuthorUserId == userId && x.CircleId == null, cancellationToken));
-        await AddIfUsed(flows, "circles", "Circulos", await UsedCircleCountAsync(userId, cancellationToken));
+        await AddIfUsed(flows, "memories", "Memórias", await db.Memories.CountAsync(x => x.AuthorUserId == userId && x.CircleId == null, cancellationToken));
+        await AddIfUsed(flows, "circles", "Círculos", await UsedCircleCountAsync(userId, cancellationToken));
         return new ProfileRecapResponse(flows);
     }
 
@@ -84,7 +84,7 @@ public sealed class RecapService(AppDbContext db)
             .OrderBy(memory => memory.CreatedAt)
             .Select(memory => memory.Title)
             .ToListAsync(cancellationToken);
-        await AddIfUsed(flows, "memories", "Minhas memorias", myMemories.Count);
+        await AddIfUsed(flows, "memories", "Minhas memórias", myMemories.Count);
 
         var myItems = await db.SharedListItems.CountAsync(
             item => item.AddedByUserId == userId && item.List.CircleId == circleId,
@@ -128,7 +128,7 @@ public sealed class RecapService(AppDbContext db)
 
     public CircleRecapResponse Deserialize(string json) =>
         JsonSerializer.Deserialize<CircleRecapResponse>(json, Json)
-        ?? throw new InvalidOperationException("Recap invalido.");
+        ?? throw new InvalidOperationException("Recap inválido.");
 
     private static Task AddIfUsed(List<RecapFlowDto> flows, string key, string label, int count)
     {

@@ -6,11 +6,11 @@ export default function NotFoundScreen() {
   const { colors } = useTheme();
   return (
     <>
-      <Stack.Screen options={{ title: 'Pagina nao encontrada', headerShown: true }} />
+      <Stack.Screen options={{ title: 'Página não encontrada', headerShown: true }} />
       <View style={[styles.container, { backgroundColor: colors.bg }]}>
-        <Text style={[styles.title, { color: colors.ink }]}>Esta tela nao existe.</Text>
+        <Text style={[styles.title, { color: colors.ink }]}>Esta tela não existe.</Text>
         <Link href="/" style={styles.link}>
-          <Text style={[styles.linkText, { color: colors.primary }]}>Voltar ao inicio</Text>
+          <Text style={[styles.linkText, { color: colors.primary }]}>Voltar ao início</Text>
         </Link>
       </View>
     </>

@@ -34,8 +34,8 @@ export default function TemplatesScreen() {
     const result = await api<{ kind: string; id: string }>(`/api/templates/${item.id}/copy`, { method: 'POST', token });
     setOk(
       result.kind === 'list'
-        ? `Lista copiada: ${item.name}. Voce pode editar os itens.`
-        : `Lembrete copiado: ${item.name}. Voce pode editar a recorrencia.`,
+        ? `Lista copiada: ${item.name}. Você pode editar os itens.`
+        : `Lembrete copiado: ${item.name}. Você pode editar a recorrência.`,
     );
     await load();
   }
@@ -43,7 +43,7 @@ export default function TemplatesScreen() {
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Modelos</Text>
-      <Text style={styles.lead}>Listas e lembretes prontos, gratuitos, em portugues. Quem copia edita. O criador nao aparece.</Text>
+      <Text style={styles.lead}>Listas e lembretes prontos, gratuitos, em português. Quem copia edita. O criador não aparece.</Text>
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />
       {items.map((item) => (

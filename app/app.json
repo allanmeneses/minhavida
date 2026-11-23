@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Circulos",
+    "name": "Círculos",
     "slug": "circulos",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,10 +11,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "dev.circulos.app",
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "O Circulos usa sua galeria para fotos do perfil e das entradas.",
-        "NSCameraUsageDescription": "O Circulos usa a camera para fotos do perfil e das entradas.",
-        "NSCalendarsUsageDescription": "O Circulos le o calendario do aparelho so para mostrar compromissos, sem gravar nada la.",
-        "NSCalendarsFullAccessUsageDescription": "O Circulos le o calendario do aparelho so para mostrar compromissos, sem gravar nada la."
+        "NSPhotoLibraryUsageDescription": "O Círculos usa sua galeria para fotos do perfil e das entradas.",
+        "NSCameraUsageDescription": "O Círculos usa a câmera para fotos do perfil e das entradas.",
+        "NSCalendarsUsageDescription": "O Círculos lê o calendário do aparelho só para mostrar compromissos, sem gravar nada lá.",
+        "NSCalendarsFullAccessUsageDescription": "O Círculos lê o calendário do aparelho só para mostrar compromissos, sem gravar nada lá."
       }
     },
     "android": {
@@ -47,15 +47,15 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "O Circulos usa sua galeria para fotos do perfil e das entradas.",
-          "cameraPermission": "O Circulos usa a camera para fotos do perfil e das entradas."
+          "photosPermission": "O Círculos usa sua galeria para fotos do perfil e das entradas.",
+          "cameraPermission": "O Círculos usa a câmera para fotos do perfil e das entradas."
         }
       ],
       "expo-sharing",
       [
         "expo-calendar",
         {
-          "calendarPermission": "O Circulos le o calendario do aparelho so para mostrar compromissos, sem gravar nada la."
+          "calendarPermission": "O Círculos lê o calendário do aparelho só para mostrar compromissos, sem gravar nada lá."
         }
       ]
     ],

@@ -49,7 +49,7 @@ public sealed class ReminderEmailService(AppDbContext db, TimeProvider clock, IE
             await email.SendAsync(
                 user.Email,
                 $"Lembrete: {reminder.Title}",
-                $"O lembrete {reminder.Title} pede atencao agora. Voce escolheu receber por e-mail. Sem SMS.",
+                $"O lembrete {reminder.Title} pede atenção agora. Você escolheu receber por e-mail. Sem SMS.",
                 cancellationToken);
             db.ReminderEmailReceipts.Add(new ReminderEmailReceipt
             {

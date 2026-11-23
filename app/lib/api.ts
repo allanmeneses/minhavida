@@ -13,7 +13,7 @@ export class ApiError extends Error {
 
 export class TwoFactorRequiredError extends Error {
   constructor(readonly twoFactorToken: string) {
-    super('Informe o codigo do autenticador.');
+    super('Informe o código do autenticador.');
   }
 }
 
@@ -519,7 +519,7 @@ export async function uploadNativeFile<T>(
       }
       reject(new ApiError(messageFromErrorBody(xhr.responseText, xhr.status), xhr.status));
     };
-    xhr.onerror = () => reject(new Error('Nao foi possivel concluir o pedido.'));
+    xhr.onerror = () => reject(new Error('Não foi possível concluir o pedido.'));
     xhr.send(form);
   });
 
@@ -593,7 +593,7 @@ function messageFromErrorBody(body: string, status: number): string {
       return data.title;
     }
   } catch {
-    // corpo nao JSON
+    // corpo não JSON
   }
 
   if (status === 401) {
@@ -602,7 +602,7 @@ function messageFromErrorBody(body: string, status: number): string {
   if (status === 0) {
     return 'Sem conexao.';
   }
-  return 'Nao foi possivel concluir o pedido.';
+  return 'Não foi possível concluir o pedido.';
 }
 
 export async function downloadNamedBlob(path: string, fileName: string, token: string): Promise<void> {
