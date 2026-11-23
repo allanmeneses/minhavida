@@ -103,8 +103,12 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
     {
         var userId = User.GetUserId();
         Circle? circle = null;
+        await using var transaction = request.CircleId is Guid
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
         if (request.CircleId is Guid cid)
         {
+            await CircleRowLock.AcquireAsync(db, cid, cancellationToken);
             circle = await db.Circles.Include(x => x.Members).FirstOrDefaultAsync(x => x.Id == cid, cancellationToken);
             var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
             if (circle is null || CircleAccess.HiddenSurprise(circle, userId) || member is null)
@@ -112,9 +116,9 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
                 return NotFound(new ErrorResponse("Circulo nao encontrado."));
             }
 
-            if (circle.Status != CircleStatus.Active)
+            if (!CircleAccess.IsWritable(circle))
             {
-                return BadRequest(new ErrorResponse("Este circulo esta travado."));
+                return BadRequest(new ErrorResponse(CircleAccess.LockedMessage));
             }
 
             if (member.Role < CircleRole.Editor)
@@ -150,6 +154,11 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
+
         return Created($"/api/memories/{memory.Id}", ToResponse(memory));
     }
 

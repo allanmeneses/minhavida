@@ -42,14 +42,22 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFi
         }
 
         Guid? circleId = null;
+        await using var transaction = request.CircleId is Guid
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
         if (request.CircleId is Guid requestedCircle)
         {
-            var member = await db.CircleMembers.AnyAsync(
-                x => x.CircleId == requestedCircle && x.UserId == User.GetUserId(),
-                cancellationToken);
-            if (!member)
+            await CircleRowLock.AcquireAsync(db, requestedCircle, cancellationToken);
+            var circle = await db.Circles.Include(x => x.Members).FirstOrDefaultAsync(x => x.Id == requestedCircle, cancellationToken);
+            var member = circle?.Members.FirstOrDefault(x => x.UserId == User.GetUserId());
+            if (circle is null || member is null)
             {
                 return BadRequest(new ErrorResponse("Voce precisa participar do circulo."));
+            }
+
+            if (!CircleAccess.IsWritable(circle))
+            {
+                return BadRequest(new ErrorResponse(CircleAccess.LockedMessage));
             }
 
             circleId = requestedCircle;
@@ -85,6 +93,11 @@ public sealed class RemindersController(AppDbContext db, TimeProvider clock, IFi
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
+
         return Created($"/api/reminders/{reminder.Id}", ToResponse(reminder, reminder.CreatedAt));
     }
 

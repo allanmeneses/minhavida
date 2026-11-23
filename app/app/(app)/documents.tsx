@@ -164,10 +164,18 @@ export default function DocumentsScreen() {
                 </>
               ) : null}
               <View style={styles.cellActions}>
-                <Pressable onPress={() => void download(item)} disabled={actingId === item.id}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Baixar ${item.fileName}`}
+                  onPress={() => void download(item)}
+                  disabled={actingId === item.id}>
                   <Text style={styles.action}>Baixar</Text>
                 </Pressable>
-                <Pressable onPress={() => confirmDelete(item)} disabled={actingId === item.id}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Excluir ${item.fileName}`}
+                  onPress={() => confirmDelete(item)}
+                  disabled={actingId === item.id}>
                   <Text style={styles.danger}>Excluir</Text>
                 </Pressable>
               </View>

@@ -26,6 +26,24 @@ describe('decisoes de produto e contribuicao', () => {
     assert.doesNotMatch(text, /Conventional Commits obrigatorio/);
   });
 
+  it('versionamento do app segue semver 1.0.0', () => {
+    const pkg = JSON.parse(readFileSync(join(appRoot, 'package.json'), 'utf8'));
+    const expo = JSON.parse(readFileSync(join(appRoot, 'app.json'), 'utf8'));
+    assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
+    assert.equal(pkg.version, '1.0.0');
+    assert.equal(expo.expo.version, '1.0.0');
+    assert.equal(expo.expo.name, 'Circulos');
+    const contrib = readFileSync(join(repoRoot, 'docs/contribuicao.md'), 'utf8');
+    assert.match(contrib, /semver/);
+  });
+
+  it('transicao entre telas permanece corte seco', () => {
+    const rootLayout = readFileSync(join(appRoot, 'app/_layout.tsx'), 'utf8');
+    const appLayout = readFileSync(join(appRoot, 'app/(app)/_layout.tsx'), 'utf8');
+    assert.match(rootLayout, /animation:\s*'none'/);
+    assert.match(appLayout, /animation:\s*'none'/);
+  });
+
   it('nao ha SMS de lembrete no cliente', () => {
     const settings = readFileSync(join(appRoot, 'app/(app)/settings.tsx'), 'utf8');
     assert.match(settings, /Sem SMS/);

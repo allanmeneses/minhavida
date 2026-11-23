@@ -29,7 +29,7 @@ public sealed class StatusPage(AppDbContext db, IConfiguration configuration, Ti
             + "dl{background:#fff;padding:16px;border-radius:8px;max-width:420px;}"
             + "dt{font-weight:700;margin-top:12px;}dd{margin:4px 0 0;}</style></head><body>"
             + "<h1>Status do Circulos</h1>"
-            + "<p>Pagina automatica a partir do monitoramento da API.</p><dl>"
+            + "<p>Pagina automatica a partir do monitoramento da API. Sonda publica: GET /health.</p><dl>"
             + "<dt>Geral</dt><dd>" + overall + "</dd>"
             + "<dt>API</dt><dd>" + snapshot.Api + "</dd>"
             + "<dt>Banco</dt><dd>" + snapshot.Database + "</dd>"

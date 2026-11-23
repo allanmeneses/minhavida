@@ -51,13 +51,22 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
     {
         var userId = User.GetUserId();
         Guid? circleId = null;
+        await using var transaction = request.CircleId is Guid
+            ? await db.Database.BeginTransactionAsync(cancellationToken)
+            : null;
         if (request.CircleId is Guid cid)
         {
+            await CircleRowLock.AcquireAsync(db, cid, cancellationToken);
             var circle = await db.Circles.Include(x => x.Members).FirstOrDefaultAsync(x => x.Id == cid, cancellationToken);
             var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
             if (circle is null || CircleAccess.HiddenSurprise(circle, userId) || member is null)
             {
                 return NotFound(new ErrorResponse("Circulo nao encontrado."));
+            }
+
+            if (!CircleAccess.IsWritable(circle))
+            {
+                return BadRequest(new ErrorResponse(CircleAccess.LockedMessage));
             }
 
             if (member.Role < CircleRole.Editor)
@@ -83,6 +92,11 @@ public sealed class LivingProfilesController(AppDbContext db, IFileStorage stora
         };
         db.LivingProfiles.Add(profile);
         await db.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
+
         return Created($"/api/living-profiles/{profile.Id}", ToResponse(profile, userId, includeGrants: true));
     }
 

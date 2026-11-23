@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Button } from '@/components/ui/Button';
@@ -10,6 +10,7 @@ import { api, ApiError, type CircleSummary, type DayPanel, type ReminderItem, ty
 import { t } from '@/lib/i18n';
 import { playShortcutFeedback } from '@/lib/shortcutFeedback';
 import { SHORTCUT_FLASH_MS } from '@/lib/shortcutFlash';
+import { isTypingTarget, shortcutIndexFromKey } from '@/lib/shortcutHotkey';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function HomeScreen() {
@@ -100,7 +101,7 @@ export default function HomeScreen() {
     return () => clearTimeout(timer);
   }, [flash, flashAt]);
 
-  async function runShortcut(item: ShortcutItem) {
+  const runShortcut = useCallback(async (item: ShortcutItem) => {
     if (!token) {
       return;
     }
@@ -117,7 +118,32 @@ export default function HomeScreen() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Nao foi possivel registrar o atalho.');
     }
-  }
+  }, [token, load]);
+
+  const shortcutsRef = useRef<ShortcutItem[]>([]);
+  shortcutsRef.current = panel?.shortcuts ?? [];
+  const runShortcutRef = useRef(runShortcut);
+  runShortcutRef.current = runShortcut;
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') {
+      return;
+    }
+    const onKey = (event: { key: string; target: EventTarget | null; preventDefault: () => void }) => {
+      const index = shortcutIndexFromKey(event.key, isTypingTarget(event.target));
+      if (index == null) {
+        return;
+      }
+      const item = shortcutsRef.current[index];
+      if (!item) {
+        return;
+      }
+      event.preventDefault();
+      void runShortcutRef.current(item);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   async function addShortcut() {
     if (!token || !label.trim()) {
