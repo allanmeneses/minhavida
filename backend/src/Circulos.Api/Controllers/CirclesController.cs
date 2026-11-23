@@ -603,10 +603,22 @@ public sealed class CirclesController(
         CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await CircleRowLock.AcquireAsync(db, id, cancellationToken);
         var circle = await LoadCircle(id, cancellationToken);
-        if (circle is null || HiddenSurprise(circle, userId))
+        if (circle is null || circle.Status == CircleStatus.Deleted || HiddenSurprise(circle, userId))
         {
             return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        if (!CircleAccess.IsWritable(circle))
+        {
+            return BadRequest(new ErrorResponse(CircleAccess.LockedMessage));
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Body))
+        {
+            return BadRequest(new ErrorResponse("A entrada nao pode ficar vazia."));
         }
 
         var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
@@ -626,6 +638,7 @@ public sealed class CirclesController(
         db.CirclePosts.Add(post);
         db.CircleLogs.Add(Log(circle.Id, userId, "posted", "Nova entrada."));
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return Created($"/api/circles/{id}/posts/{post.Id}", ToPost(post));
     }
 
@@ -633,11 +646,18 @@ public sealed class CirclesController(
     public async Task<IActionResult> DeletePost(Guid id, Guid postId, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await CircleRowLock.AcquireAsync(db, id, cancellationToken);
         var circle = await LoadCircle(id, cancellationToken);
         var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
-        if (circle is null || member is null)
+        if (circle is null || circle.Status == CircleStatus.Deleted || member is null)
         {
             return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        if (!CircleAccess.IsWritable(circle))
+        {
+            return BadRequest(new ErrorResponse(CircleAccess.LockedMessage));
         }
 
         var post = circle.Posts.FirstOrDefault(x => x.Id == postId);
@@ -659,6 +679,7 @@ public sealed class CirclesController(
         db.CirclePosts.Remove(post);
         db.CircleLogs.Add(Log(circle.Id, userId, "deleted", "Entrada apagada."));
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         return NoContent();
     }
 
@@ -977,6 +998,11 @@ public sealed class CirclesController(
         if (circle is null || HiddenSurprise(circle, userId) || member is null)
         {
             return (StatusCodes.Status404NotFound, "Circulo nao encontrado.", null);
+        }
+
+        if (!CircleAccess.IsWritable(circle))
+        {
+            return (StatusCodes.Status400BadRequest, CircleAccess.LockedMessage, null);
         }
 
         if (member.Role < CircleRole.Editor)

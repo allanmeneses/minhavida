@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Button } from '@/components/ui/Button';
@@ -23,6 +23,8 @@ export default function ListDetailScreen() {
   const [quantity, setQuantity] = useState('');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const accessInFlight = useRef(false);
+  const [accessBusy, setAccessBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!token || !listId) {
@@ -154,29 +156,43 @@ export default function ListDetailScreen() {
   }
 
   async function cycleAccess() {
-    if (!token || !listId || !detail) {
+    if (!token || !listId || !detail || accessInFlight.current) {
       return;
     }
-    const current = (LIST_ACCESS.includes(detail.memberAccess as ListAccess) ? detail.memberAccess : 'view') as ListAccess;
-    await api(`/api/lists/${listId}/access`, {
-      method: 'PUT',
-      token,
-      body: JSON.stringify({ memberAccess: nextOf(LIST_ACCESS, current) }),
-    });
-    await load();
+    accessInFlight.current = true;
+    setAccessBusy(true);
+    try {
+      const current = (LIST_ACCESS.includes(detail.memberAccess as ListAccess) ? detail.memberAccess : 'view') as ListAccess;
+      await api(`/api/lists/${listId}/access`, {
+        method: 'PUT',
+        token,
+        body: JSON.stringify({ memberAccess: nextOf(LIST_ACCESS, current) }),
+      });
+      await load();
+    } finally {
+      accessInFlight.current = false;
+      setAccessBusy(false);
+    }
   }
 
   async function cycleGrant(userId: string, current: string) {
-    if (!token || !listId) {
+    if (!token || !listId || accessInFlight.current) {
       return;
     }
-    const access = (LIST_ACCESS.includes(current as ListAccess) ? current : 'view') as ListAccess;
-    await api(`/api/lists/${listId}/grants`, {
-      method: 'PUT',
-      token,
-      body: JSON.stringify({ userId, access: nextOf(LIST_ACCESS, access) }),
-    });
-    await load();
+    accessInFlight.current = true;
+    setAccessBusy(true);
+    try {
+      const access = (LIST_ACCESS.includes(current as ListAccess) ? current : 'view') as ListAccess;
+      await api(`/api/lists/${listId}/grants`, {
+        method: 'PUT',
+        token,
+        body: JSON.stringify({ userId, access: nextOf(LIST_ACCESS, access) }),
+      });
+      await load();
+    } finally {
+      accessInFlight.current = false;
+      setAccessBusy(false);
+    }
   }
 
   const kindLabel = detail ? LIST_KIND_LABEL[detail.kind as ListKind] ?? detail.kind : '';
@@ -200,7 +216,12 @@ export default function ListDetailScreen() {
         <Button label="Sincronizar fila" variant="ghost" onPress={() => void syncQueue()} />
       )}
       {detail?.canChangeAccess ? (
-        <Button label={`Permissao dos membros: ${accessLabel}`} variant="ghost" onPress={() => void cycleAccess()} />
+        <Button
+          label={`Permissao dos membros: ${accessLabel}`}
+          variant="ghost"
+          disabled={accessBusy}
+          onPress={() => void cycleAccess()}
+        />
       ) : null}
       {detail?.canChangeAccess
         ? detail.members.map((member) => (
@@ -208,6 +229,7 @@ export default function ListDetailScreen() {
               key={member.userId}
               label={`Permissao de ${member.name}: ${LIST_ACCESS_LABEL[member.access as ListAccess] ?? member.access}`}
               variant="ghost"
+              disabled={accessBusy}
               onPress={() => void cycleGrant(member.userId, member.access)}
             />
           ))

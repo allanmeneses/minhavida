@@ -66,6 +66,7 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
         Assert.Equal("Clube", preview.GetProperty("name").GetString());
         Assert.Equal("Corrida de rua", preview.GetProperty("description").GetString());
         Assert.Empty(preview.GetProperty("posts").EnumerateArray());
+        Assert.Empty(preview.GetProperty("members").EnumerateArray());
         Assert.Empty(preview.GetProperty("log").EnumerateArray());
     }
 

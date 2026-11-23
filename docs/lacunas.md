@@ -14,6 +14,59 @@ Numero da pergunta: transcricao. A segunda serie 60-69 aparece como `N (reinicio
 
 A auditoria pergunta a pergunta desta rodada esta em `docs/auditoria-perguntas.md` (272 linhas, conferidas no codigo).
 
+## Rodada 13 (auditoria restante, sem depender do Allan)
+
+Pedido: fechar as 4 perguntas sem resposta clara com padrao conservador; avancar parciais e nao feitas que nao dependem de deploy, Azure, SMTP real, Mercado Pago producao, iOS nativo, PWA, WebSocket, SMS 2FA, push nem feed de descoberta; passar de qualidade.
+
+Totais da auditoria depois desta rodada (contagem no arquivo): feito e testado 234, parcial 7, nao feito 5, decidido nao 21, adiado pelo Allan 5, sem resposta clara 0. Soma 272.
+
+### Escolhas da parte A (padrao escolhido sem resposta do Allan, pode ser revisto)
+
+| Item | Escolha | Status | Evidencia |
+| --- | --- | --- | --- |
+| 86 semver | Segue semver, versao `1.0.0` ja usada no app | feito e testado | `AppVersion.SemVer`, `app.json`, `package.json`. Testes `Versionamento_SegueSemver100`, `npm test` `versionamento do app segue semver 1.0.0`. |
+| 99 gesto do atalho | So toque, sem balancar | feito e testado | `Atalho_ExecutaSemConfirmacaoEApareceNoPainel`. `npm test` `dispara 1 a 9 fora de campo`. Playwright `atalho de um toque dispara sem confirmacao`. |
+| 276 primeira formula do teto de upload | Avisa em 90% e bloqueia no teto, igual a 277 | feito e testado | Teste `Armazenamento_AvisaEm90PorCento_EBloqueiaNoLimite`. |
+| 285 primeira formula da animacao | Corte seco, igual a 286 | feito e testado | `npm test` `transicao entre telas permanece corte seco` e `stack e abas desligam animacao`. |
+
+### Parte B
+
+| Item | Status | Origem | O que mudou / o que falta |
+| --- | --- | --- | --- |
+| Quem esta aqui ao entrar no circulo | parcial | 1 | Visitante nao ve membros (pergunta 9). Teste `Publico_VisitanteVeSoNomeEDescricao`. Playwright `descobrir circulo e pedir entrada`. Falta feed de descoberta (37 a 39), adiado. |
+| Trava por inatividade do dono | parcial | 4 | Sem timer. O Allan nao definiu o prazo. |
+| Calendario do aparelho, so leitura | feito e testado | 45 | `listDeviceEvents` + `expo-calendar`. `npm test` `le eventos quando a permissao vem de um leitor injetado`. Playwright `calendario mostra lembrete e baixa ics`. Web nao lista eventos nativos. |
+| Plano pago alem de circulos | feito e testado | 61 reinicio | Circulos ilimitados, 20 atalhos, 1 GB. Teste `CatalogoPago_SoCirculosAtalhosEStorage`. PDF/imagem continua adiado na 61 reinicio. |
+| UptimeRobot | parcial | 89 | `/status` cita sonda `GET /health`. Teste `StatusHtml_CitaSondaHealth`. Cadastro no provedor depende de conta e URL publica (deploy Azure adiado). |
+| Dominio de producao | parcial | 90 | Depende de deploy Azure, adiado. |
+| Nome de trabalho Circulos | feito e testado | 91 | `npm test` `versionamento do app segue semver 1.0.0`. |
+| Atalho por tecla no computador | parcial | 100 | Teclas 1 a 9 na web. Playwright `atalho dispara pela tecla 1 no computador`. Falta icone na tela inicial e PWA, adiados. |
+| iOS nativo / loja | parcial | 305 | Expo app + web. Falta iOS nativo, adiado. |
+| Circulo nunca trava | parcial | 330 | Com membros abre votacao. Circulo vazio ainda trava. Nao inventei dono automatico. Teste `Exclusao_SemAdminNemSucessor_TravaCirculo`. |
+| Notificacao em tempo real | nao feito | 40 reformulada | Poll de 5s. Falta WebSocket/TLS e push, adiados. |
+| Nuxt | nao feito | 63 reinicio | Cliente permanece Expo. Sem autorizacao para trocar a stack. |
+| WebSocket com TLS | nao feito | 73, 74 | Adiado pelo Allan. |
+| Repositorio privado | nao feito | 83 | Repo segue PUBLIC. Nao alterei visibilidade. |
+
+### Parte C (bugs)
+
+| Bug | Correcao | Teste |
+| --- | --- | --- |
+| Post em circulo travado (e lembrete no circulo travado) | `CircleRowLock` + `CircleAccess.IsWritable` em post, delete post, ideias, lembrete e perfil vivo. `CloseIfDueAsync` e exclusao de conta entram no mesmo lock. | `CirculoTravado_NaoAceitaPostNemSobrepostoComATrava` |
+| Memoria nova em circulo travado | Create de memoria no circulo entra no mesmo `CircleRowLock` | Mesmo teste, POST `/api/memories` depois da trava |
+| Viewer via o botao Publicar | Composer so para editor+ e circulo ativo | Playwright `ideias de presente: editor adiciona e viewer so ve` |
+| Post so com espaco | API recusa body em branco | `Post_EmBranco_Devolve400` |
+| Tipo da busca em ingles na tela | Rotulo pt-BR no filtro, no resultado e no raio | `npm test` `botao e campo tem papel e rotulo`. Playwright `busca unificada com historico` e `busca por raio com e sem permissao` |
+| Dois toques seguidos na permissao da lista pulavam o passo | Um ciclo por vez, botao desligado no meio | Playwright `permissao da lista: so ver e depois marcar feito` e `offline le o cache, enfileira item e 403 descarta com aviso` |
+| Busca e documentos sem rotulo de botao | `accessibilityLabel` em historico da busca e Baixar/Excluir | `npm test` `botao e campo tem papel e rotulo`. Playwright `documentos pessoais tem rotulo de baixar e excluir` e `busca unificada com historico` |
+
+Testes locais observados nesta rodada:
+
+- `dotnet test --nologo` (em `backend/`): Passed 195, Failed 0, Skipped 0, exit 0
+- `npm test` (em `app/`): tests 45, pass 45, fail 0, exit 0
+- `npx tsc --noEmit` (em `app/`): exit 0
+- `npx playwright test` (em `app/`): 61 passed, exit 0
+
 ## Rodada 12 (decisoes da auditoria)
 
 Pedido: implementar as 10 decisoes aprovadas para perguntas que estavam em sem resposta clara.

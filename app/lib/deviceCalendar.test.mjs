@@ -19,4 +19,17 @@ describe('calendario do aparelho', () => {
     assert.match(screen, /somente leitura/);
     assert.match(screen, /nunca grava/);
   });
+
+  it('le eventos quando a permissao vem de um leitor injetado', async () => {
+    const events = await listDeviceEvents({
+      async requestPermission() {
+        return true;
+      },
+      async listEvents() {
+        return [{ id: 'cal-1', title: 'Consulta', startDate: '2026-11-23T10:00:00.000Z' }];
+      },
+    });
+    assert.equal(events.length, 1);
+    assert.equal(events[0].title, 'Consulta');
+  });
 });

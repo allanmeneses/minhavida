@@ -29,6 +29,13 @@ async function signUp(page: Page, suffix = ''): Promise<string> {
   return email;
 }
 
+async function cycleMemberAccess(page: Page, from: string, to: string): Promise<void> {
+  const button = page.getByRole('button', { name: `Permissao dos membros: ${from}` });
+  await expect(button).toBeVisible();
+  await button.click();
+  await expect(page.getByRole('button', { name: `Permissao dos membros: ${to}` })).toBeVisible();
+}
+
 async function waitTotpWindow(): Promise<void> {
   const remaining = 30 - (Math.floor(Date.now() / 1000) % 30);
   if (remaining <= 3) {
@@ -92,6 +99,18 @@ test('atalho de um toque dispara sem confirmacao', async ({ page }) => {
   await shortcut.click();
   await expect(page.getByText('Tomei o remedio').first()).toBeVisible();
   await page.screenshot({ path: `${artifacts}/atalho.png`, fullPage: true });
+});
+
+test('atalho dispara pela tecla 1 no computador', async ({ page }) => {
+  await signUp(page, '-atalho-tecla');
+  await page.getByLabel('Nome do atalho').fill('Tomei agua');
+  await page.getByRole('button', { name: 'Adicionar atalho' }).click();
+  const shortcut = page.getByRole('button', { name: 'Tomei agua', exact: true });
+  await expect(shortcut).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('heading', { name: 'O que pede atencao hoje' }).click();
+  await page.keyboard.press('1');
+  await expect(page.getByTestId('shortcut-flash')).toBeVisible();
+  await expect(page.getByTestId('shortcut-flash')).toContainText('Tomei agua');
 });
 
 test('lembrete de aniversario entra na lista', async ({ page }) => {
@@ -187,6 +206,8 @@ test('descobrir circulo e pedir entrada', async ({ browser }) => {
   await visitor.getByLabel('Buscar circulos').fill(String(stamp));
   await visitor.getByRole('button', { name: 'Buscar' }).click();
   await visitor.getByRole('button', { name: `Descobrir ${circleName}` }).click();
+  await expect(visitor.getByRole('button', { name: 'Publicar' })).toHaveCount(0);
+  await expect(visitor.getByText('Quem esta aqui')).toBeVisible();
   await visitor.getByRole('button', { name: 'Pedir para entrar' }).click();
   await expect(visitor.getByText('Pedido de entrada enviado.')).toBeVisible();
 
@@ -331,7 +352,11 @@ test('busca unificada com historico', async ({ page }) => {
   await page.getByLabel('Buscar', { exact: true }).fill('medicacao');
   await page.getByRole('button', { name: 'Buscar agora' }).click();
   await expect(page.getByText('Texto livre da medicacao')).toBeVisible();
+  await expect(page.getByText('diario', { exact: true })).toBeVisible();
+  await expect(page.getByText('diary', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Mais usadas')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Buscar medicacao' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Buscar recente medicacao' })).toBeVisible();
 });
 
 test('atalhos reordenam na tela', async ({ page }) => {
@@ -430,9 +455,8 @@ test('permissao da lista: so ver e depois marcar feito', async ({ browser }) => 
   await expect(memberPage.getByRole('button', { name: 'Adicionar item' })).toHaveCount(0);
   await expect(memberPage.getByRole('button', { name: 'Marcar Leite' })).toHaveCount(0);
 
-  await owner.getByRole('button', { name: /^Permissao dos membros:/ }).click();
-  await owner.getByRole('button', { name: /^Permissao dos membros:/ }).click();
-  await expect(owner.getByRole('button', { name: 'Permissao dos membros: membros marcam feito' })).toBeVisible();
+  await cycleMemberAccess(owner, 'so o dono edita', 'membros adicionam');
+  await cycleMemberAccess(owner, 'membros adicionam', 'membros marcam feito');
   await expect(memberPage.getByRole('button', { name: 'Marcar Leite' })).toBeVisible({ timeout: 15_000 });
   await memberPage.getByRole('button', { name: 'Marcar Leite' }).click();
   await expect(memberPage.getByText(/feito por/)).toBeVisible();
@@ -560,9 +584,8 @@ test('offline le o cache, enfileira item e 403 descarta com aviso', async ({ bro
   await owner.getByLabel('Item', { exact: true }).fill('Leite');
   await owner.getByRole('button', { name: 'Adicionar item' }).click();
   await expect(owner.getByText('Leite', { exact: true })).toBeVisible();
-  await owner.getByRole('button', { name: /^Permissao dos membros:/ }).click();
-  await owner.getByRole('button', { name: /^Permissao dos membros:/ }).click();
-  await expect(owner.getByRole('button', { name: 'Permissao dos membros: membros marcam feito' })).toBeVisible();
+  await cycleMemberAccess(owner, 'so o dono edita', 'membros adicionam');
+  await cycleMemberAccess(owner, 'membros adicionam', 'membros marcam feito');
 
   const memberContext = await browser.newContext();
   const memberPage = await memberContext.newPage();
@@ -581,9 +604,8 @@ test('offline le o cache, enfileira item e 403 descarta com aviso', async ({ bro
   await memberPage.getByRole('button', { name: 'Marcar Leite' }).click();
   await expect(memberPage.getByText(/feito por/)).toBeVisible();
 
-  await owner.getByRole('button', { name: /^Permissao dos membros:/ }).click();
-  await owner.getByRole('button', { name: /^Permissao dos membros:/ }).click();
-  await expect(owner.getByRole('button', { name: 'Permissao dos membros: so o dono edita' })).toBeVisible();
+  await cycleMemberAccess(owner, 'membros marcam feito', 'membros editam e excluem');
+  await cycleMemberAccess(owner, 'membros editam e excluem', 'so o dono edita');
 
   await memberPage.context().setOffline(false);
   await memberPage.getByRole('button', { name: 'Sincronizar fila' }).click();
@@ -653,6 +675,8 @@ test('calendario mostra lembrete e baixa ics', async ({ page }) => {
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/circulos-lembretes\.ics/);
   await expect(page.getByText(/somente leitura/)).toBeVisible();
+  await expect(page.getByText(/nunca grava/)).toBeVisible();
+  await expect(page.getByText(/Nesta tela web nao ha eventos do aparelho/)).toBeVisible();
   await expect(page.getByText(/Assinatura: \/api\/calendar\/feed\//)).toBeVisible();
 });
 
@@ -745,6 +769,7 @@ test('pagina de status publica', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Status do Circulos' })).toBeVisible();
   await expect(page.getByText('OpenTelemetry')).toBeVisible();
   await expect(page.getByText('Banco')).toBeVisible();
+  await expect(page.getByText('GET /health')).toBeVisible();
 });
 
 test('recap de uso no perfil so mostra fluxo usado', async ({ page }) => {
@@ -960,7 +985,7 @@ test('busca por raio com e sem permissao', async ({ browser }) => {
   await owner.getByRole('button', { name: 'Criar circulo' }).click();
   await expect(owner.getByText(geoName).first()).toBeVisible();
   await seeker.getByRole('button', { name: 'Buscar por perto' }).click();
-  await expect(seeker.getByText(`${geoName} · circle`, { exact: false })).toBeVisible();
+  await expect(seeker.getByText(`${geoName} · circulo`, { exact: false })).toBeVisible();
   await expect(seeker.getByText(`${geoName} · person`, { exact: false })).toHaveCount(0);
   await ownerContext.close();
   await seekerContext.close();
@@ -1422,6 +1447,8 @@ test('ideias de presente: editor adiciona e viewer so ve', async ({ browser }) =
   await viewerPage.getByRole('button', { name: `Abrir ${circleName}` }).click();
   await expect(viewerPage.getByText('Quem so visualiza nao edita ideias de presente.')).toBeVisible();
   await expect(viewerPage.getByRole('button', { name: 'Adicionar ideia' })).toHaveCount(0);
+  await expect(viewerPage.getByRole('button', { name: 'Publicar' })).toHaveCount(0);
+  await expect(editorPage.getByRole('button', { name: 'Publicar' })).toBeVisible();
   const forbidden = await viewerPage.request.post(
     `${apiUrl}/api/circles/${circle.id}/gift-ideas/${reminderBody.id}/ideas`,
     {
@@ -1434,5 +1461,21 @@ test('ideias de presente: editor adiciona e viewer so ve', async ({ browser }) =
   await ownerContext.close();
   await editorContext.close();
   await viewerContext.close();
+});
+
+test('documentos pessoais tem rotulo de baixar e excluir', async ({ page }) => {
+  await signUp(page, '-docs-a11y');
+  const token = await page.evaluate(() => localStorage.getItem('circulos.token'));
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const uploaded = await page.request.post(`${apiUrl}/api/documents`, {
+    headers: { Authorization: `Bearer ${token}` },
+    multipart: {
+      file: { name: 'nota.txt', mimeType: 'text/plain', buffer: Buffer.from('texto da nota') },
+    },
+  });
+  expect(uploaded.ok()).toBeTruthy();
+  await page.getByRole('button', { name: 'Documentos' }).click();
+  await expect(page.getByRole('button', { name: 'Baixar nota.txt' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Excluir nota.txt' })).toBeVisible();
 });
 

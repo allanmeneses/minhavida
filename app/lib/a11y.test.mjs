@@ -10,8 +10,17 @@ describe('leitor de tela', () => {
   it('botao e campo tem papel e rotulo', () => {
     const button = readFileSync(join(root, '../components/ui/Button.tsx'), 'utf8');
     const field = readFileSync(join(root, '../components/ui/TextField.tsx'), 'utf8');
+    const search = readFileSync(join(root, '../app/(app)/search.tsx'), 'utf8');
+    const documents = readFileSync(join(root, '../app/(app)/documents.tsx'), 'utf8');
     assert.match(button, /accessibilityRole="button"/);
     assert.match(button, /accessibilityLabel=\{label\}/);
     assert.match(field, /accessibilityLabel=\{label\}/);
+    assert.match(search, /accessibilityLabel=\{`Buscar \$\{term\}`\}/);
+    assert.match(search, /entry: 'entrada'/);
+    assert.match(search, /searchTypeLabel\(hit\.type\)/);
+    assert.match(search, /searchTypeLabel\(filter\)/);
+    assert.doesNotMatch(search, /Filtro: \$\{filter\}/);
+    assert.match(documents, /accessibilityLabel=\{`Baixar \$\{item\.fileName\}`\}/);
+    assert.match(documents, /accessibilityLabel=\{`Excluir \$\{item\.fileName\}`\}/);
   });
 });

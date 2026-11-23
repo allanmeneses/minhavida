@@ -126,12 +126,15 @@ export default function CircleDetailScreen() {
   const isAdmin = Boolean(
     detail?.members.some((member) => member.userId === user?.id && (member.role === 'admin' || member.role === 'owner')),
   );
+  const isLocked = detail?.status === 'locked';
   const canCreateList = Boolean(
-    detail?.members.some(
-      (member) =>
-        member.userId === user?.id && (member.role === 'editor' || member.role === 'admin' || member.role === 'owner'),
-    ),
+    !isLocked &&
+      detail?.members.some(
+        (member) =>
+          member.userId === user?.id && (member.role === 'editor' || member.role === 'admin' || member.role === 'owner'),
+      ),
   );
+  const canPost = canCreateList;
   const canEditGiftIdeas = canCreateList;
 
   async function createList() {
@@ -310,6 +313,9 @@ export default function CircleDetailScreen() {
       {detail?.status === 'archived' ? (
         <Text style={styles.lead}>Arquivo e retrospectiva ficam visiveis neste app, para qualquer plano.</Text>
       ) : null}
+      {isLocked ? (
+        <Text style={styles.lead}>Este circulo esta travado. Leituras seguem; ninguem publica entrada nova.</Text>
+      ) : null}
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />
       {token && circleId ? (
@@ -395,8 +401,12 @@ export default function CircleDetailScreen() {
               {shareText}
             </Text>
           ) : null}
-          <TextField label="Nova entrada" value={post} onChangeText={setPost} />
-          <Button label="Publicar" onPress={() => void publish()} disabled={!post.trim()} />
+          {canPost ? (
+            <>
+              <TextField label="Nova entrada" value={post} onChangeText={setPost} />
+              <Button label="Publicar" onPress={() => void publish()} disabled={!post.trim()} />
+            </>
+          ) : null}
         </>
       ) : null}
 
@@ -515,7 +525,7 @@ export default function CircleDetailScreen() {
       {detail?.posts.map((item) => (
         <View key={item.id} style={styles.card}>
           <Text style={styles.item}>{item.body}</Text>
-          {isMember ? <Button label="Apagar" variant="danger" onPress={() => void removePost(item.id)} /> : null}
+          {isMember && !isLocked ? <Button label="Apagar" variant="danger" onPress={() => void removePost(item.id)} /> : null}
           {token ? (
             <Button
               label={`Denunciar post ${item.body}`}

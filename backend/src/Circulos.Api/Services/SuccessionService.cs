@@ -212,8 +212,23 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
             return;
         }
 
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await CircleRowLock.AcquireAsync(db, vote.CircleId, cancellationToken);
+        await db.Entry(vote).ReloadAsync(cancellationToken);
+        if (vote.Status != SuccessionVoteStatus.Open)
+        {
+            return;
+        }
+
+        now = clock.GetUtcNow().UtcDateTime;
+        if (now < vote.DeadlineAt)
+        {
+            return;
+        }
+
         var circle = await db.Circles.Include(item => item.Members).FirstAsync(item => item.Id == vote.CircleId, cancellationToken);
         await ExpireAsync(circle, vote, now, cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
     }
 
     private async Task TryDecideAsync(Circle circle, SuccessionVote vote, int memberCount, DateTime now, CancellationToken cancellationToken)

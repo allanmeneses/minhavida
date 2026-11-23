@@ -9,4 +9,6 @@ Exemplos do jeito combinado:
 
 O que nao entra na mensagem: nome de ferramenta, autoria extra, `Co-authored-by`, travessao.
 
-Esta regra vale para o historico publico. Semver continua indiferente para o dono.
+Esta regra vale para o historico publico.
+
+Versionamento do app segue semver, hoje `1.0.0` em `app/package.json`, `app/app.json` e `Circulos.Api`. Padrao escolhido sem resposta do Allan, pode ser revisto.

@@ -24,6 +24,7 @@ public sealed class AccountDeletionService(
 
         foreach (var circle in owned)
         {
+            await CircleRowLock.AcquireAsync(db, circle.Id, cancellationToken);
             var successor = circle.SuccessorUserId is Guid successorId
                 ? circle.Members.FirstOrDefault(member => member.UserId == successorId && member.UserId != user.Id)
                 : null;

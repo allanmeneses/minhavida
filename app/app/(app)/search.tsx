@@ -11,6 +11,19 @@ import { screenStyles } from '@/lib/screenStyles';
 
 const FILTERS = ['', 'entry', 'circle', 'birthday', 'diary'] as const;
 
+const SEARCH_TYPE_LABEL: Record<string, string> = {
+  '': 'tudo',
+  entry: 'entrada',
+  circle: 'circulo',
+  birthday: 'aniversario',
+  diary: 'diario',
+  memory: 'memoria',
+};
+
+function searchTypeLabel(type: string): string {
+  return SEARCH_TYPE_LABEL[type] ?? type;
+}
+
 export default function SearchScreen() {
   const { token } = useAuth();
   const { colors } = useTheme();
@@ -58,7 +71,7 @@ export default function SearchScreen() {
       <Feedback message={error} />
       <TextField label="Buscar" value={query} onChangeText={setQuery} placeholder="medicacao" />
       <Button
-        label={filter ? `Filtro: ${filter}` : 'Filtro: tudo'}
+        label={`Filtro: ${searchTypeLabel(filter)}`}
         variant="ghost"
         onPress={() => setFilter(FILTERS[(FILTERS.indexOf(filter) + 1) % FILTERS.length])}
       />
@@ -88,19 +101,27 @@ export default function SearchScreen() {
       {nearby.length === 0 ? <Text style={styles.lead}>Ninguem por perto com permissao.</Text> : null}
       {nearby.map((hit) => (
         <Text key={`${hit.kind}-${hit.id}`} style={styles.item}>
-          {hit.name} · {hit.kind} · {hit.distanceKm} km
+          {hit.name} · {searchTypeLabel(hit.kind)} · {hit.distanceKm} km
         </Text>
       ))}
 
       <Text style={styles.section}>Mais usadas</Text>
       {result?.history.frequent.map((term) => (
-        <Pressable key={`f-${term}`} onPress={() => void run(term)}>
+        <Pressable
+          key={`f-${term}`}
+          accessibilityRole="button"
+          accessibilityLabel={`Buscar ${term}`}
+          onPress={() => void run(term)}>
           <Text style={styles.item}>{term}</Text>
         </Pressable>
       ))}
       <Text style={styles.section}>Recentes</Text>
       {result?.history.recent.map((term) => (
-        <Pressable key={`r-${term}`} onPress={() => void run(term)}>
+        <Pressable
+          key={`r-${term}`}
+          accessibilityRole="button"
+          accessibilityLabel={`Buscar recente ${term}`}
+          onPress={() => void run(term)}>
           <Text style={styles.lead}>{term}</Text>
         </Pressable>
       ))}
@@ -109,7 +130,7 @@ export default function SearchScreen() {
       {result?.hits.map((hit) => (
         <View key={`${hit.type}-${hit.id}`} style={styles.card}>
           <Text style={styles.item}>{hit.title}</Text>
-          <Text style={styles.lead}>{hit.type}</Text>
+          <Text style={styles.lead}>{searchTypeLabel(hit.type)}</Text>
           {hit.type === 'circle' ? (
             <Button label="Abrir circulo" variant="ghost" onPress={() => router.push(`/(app)/circle/${hit.id}`)} />
           ) : null}

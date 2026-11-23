@@ -12,7 +12,9 @@
       "bundleIdentifier": "dev.circulos.app",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "O Circulos usa sua galeria para fotos do perfil e das entradas.",
-        "NSCameraUsageDescription": "O Circulos usa a camera para fotos do perfil e das entradas."
+        "NSCameraUsageDescription": "O Circulos usa a camera para fotos do perfil e das entradas.",
+        "NSCalendarsUsageDescription": "O Circulos le o calendario do aparelho so para mostrar compromissos, sem gravar nada la.",
+        "NSCalendarsFullAccessUsageDescription": "O Circulos le o calendario do aparelho so para mostrar compromissos, sem gravar nada la."
       }
     },
     "android": {
@@ -49,7 +51,13 @@
           "cameraPermission": "O Circulos usa a camera para fotos do perfil e das entradas."
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "O Circulos le o calendario do aparelho so para mostrar compromissos, sem gravar nada la."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
