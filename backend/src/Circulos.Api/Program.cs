@@ -1,5 +1,7 @@
 using System.Text;
 using Circulos.Api.Auth;
+using Circulos.Api.Contracts;
+using Circulos.Api.Controllers;
 using Circulos.Api.Data;
 using Circulos.Api.Domain;
 using Circulos.Api.Observability;
@@ -20,6 +22,16 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddScoped<SessionService>();
+builder.Services.Configure<SystemAdminOptions>(builder.Configuration.GetSection("SystemAdmin"));
+builder.Services.PostConfigure<SystemAdminOptions>(options =>
+{
+    if (string.IsNullOrWhiteSpace(options.Email))
+    {
+        options.Email = builder.Configuration["SYSTEM_ADMIN_EMAIL"];
+    }
+});
+builder.Services.AddScoped<UsageStats>();
+builder.Services.AddScoped<CircleArchiveService>();
 builder.Services.AddSingleton<IEncryptionKeyProvider, ConfigurationEncryptionKeyProvider>();
 builder.Services.AddSingleton<LocalFileStorage>();
 builder.Services.AddSingleton<IFileStorage>(sp =>
@@ -106,23 +118,16 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-if (builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"))
+var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ??
+[
+    "http://127.0.0.1:43123",
+    "http://localhost:43123",
+];
+builder.Services.AddCors(options =>
 {
-    builder.Services.AddCors(options =>
-    {
-        options.AddDefaultPolicy(policy =>
-            policy.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin());
-    });
-}
-else
-{
-    var origins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [];
-    builder.Services.AddCors(options =>
-    {
-        options.AddDefaultPolicy(policy =>
-            policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod());
-    });
-}
+    options.AddDefaultPolicy(policy =>
+        policy.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod().AllowCredentials());
+});
 
 var app = builder.Build();
 
@@ -145,6 +150,27 @@ if (!app.Environment.IsEnvironment("Testing"))
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.Use(async (context, next) =>
+{
+    if (context.User.Identity?.IsAuthenticated == true)
+    {
+        var path = context.Request.Path.Value ?? string.Empty;
+        if (!path.StartsWith("/api/auth/logout", StringComparison.OrdinalIgnoreCase))
+        {
+            var db = context.RequestServices.GetRequiredService<AppDbContext>();
+            var userId = context.User.GetUserId();
+            var blocked = await db.Users.AsNoTracking().AnyAsync(user => user.Id == userId && user.BlockedAt != null);
+            if (blocked)
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new ErrorResponse("Esta conta foi bloqueada."));
+                return;
+            }
+        }
+    }
+
+    await next();
+});
 
 app.MapGet("/", () => Results.Json(new { name = "Circulos", version = "2.0.0" }));
 app.MapControllers();

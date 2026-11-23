@@ -12,6 +12,33 @@ Legenda:
 
 Numero da pergunta: transcricao. A segunda serie 60-69 aparece como `N (reinicio)`.
 
+A auditoria pergunta a pergunta desta rodada esta em `docs/auditoria-perguntas.md` (272 linhas, conferidas no codigo).
+
+## Rodada 10 (auditoria, decisoes 22/11, moderacao e cookie)
+
+Pedido: uma linha por pergunta da transcricao; implementar as decisoes de 22/11/2026; o que ainda tinha regra clara e nao dependia de decisao.
+
+| Item | Status | Origem | Evidencia |
+| --- | --- | --- | --- |
+| Auditoria pergunta a pergunta | feito | transcricao | `docs/auditoria-perguntas.md`. Totais no topo do arquivo. Cada status foi conferido no codigo e no nome do teste, nao copiado desta pagina. |
+| Feedback do atalho some em 1 segundo | feito e testado | 105 | `SHORTCUT_FLASH_MS = 1000`. `npm test` `some depois de 1 segundo e sobrevive a um rerender no meio`. Playwright `aviso do atalho some depois de 1 segundo`. |
+| Estatisticas anonimas internas | feito e testado | 43, 44 | Conta atalhos disparados, entradas criadas e circulos ativos. Sem conteudo e sem identidade. `GET /api/admin/stats` so para admin do sistema (`SystemAdmin:Email`). Testes `Estatisticas_ContaUsoAgregado_SemConteudo_SoAdminLe`, `Estatisticas_DoisAtalhosSobrepostos_ContamOsDois`. |
+| Pet/grupo sem login proprio | decidido nao | abertura, 224 | Sem conta separada. Permissao de edicao/visualizacao permanece (`GrantEditar_MembroEdita_VisualizarNaoEdita`). |
+| Circulo temporario com data de fim | feito e testado | 16 a 18, 27 | `Circle.EndsAt`. Ao vencer, `CircleArchiveService` arquiva uma vez com `CircleRowLock`. Testes `CirculoTemporario_DataDeFimPassada_ArquivaSozinhoUmaVez`, `CirculoDuradouro_DataDeFim_NaoConsomeCota`. Playwright `circulo temporario com data de fim arquiva sozinho`. |
+| Arquivo e retrospectiva no proprio sistema | feito e testado | 17, 18, 19, 26, 61 reinicio | Interpretacao 22/11: visiveis no app, qualquer plano, sem PDF/imagem e sem ser beneficio exclusivo do pago. Teste `RecapEArquivo_GratisLeNoApp_NaoDependeDePlanoPago`. UI em `circle/[id].tsx`. |
+| Feed de descoberta com silenciar | adiado pelo Allan | 37 a 39 | Pede moderacao antes. Discover lista circulos; nao e feed e nao ha silenciar. |
+| Denuncia e bloqueio | feito e testado | 21 a 25 | Botao denunciar em perfil, circulo e post. Painel do admin do sistema bloqueia/desbloqueia com `admin_actions`. Teste `DenunciaEBloqueio_AdminBloqueiaEDesbloqueiaComRegistro`. Playwright `denuncia de circulo e post fica registrada`. Apelacao no app ficou para depois. |
+| Cookie httpOnly so na web | feito e testado | 72 | `X-Client: web` grava `circulos.refresh` HttpOnly. Nativo segue Bearer no JSON. Teste `CookieHttpOnly_SoNaWeb_NativoContinuaComBearer`. Playwright `cookie httpOnly na web nao aparece no document.cookie` e `access expirado renova com refresh`. |
+
+Testes locais observados nesta rodada (comandos e exit code):
+
+- `dotnet test --nologo` (backend): Passed 155, Failed 0, Skipped 0, exit 0. Aviso no fim: `VSTEST_ARTIFACTS_DIRECTORY environment variable was not found` e referencia antiga do `Microsoft.NET.Test.Sdk`. Nao quebrou teste.
+- `npm test` (app): 30 pass, 0 fail, exit 0
+- `npx tsc --noEmit` (app): exit 0
+- `npx playwright test` (app): 51 passed, exit 0. Resumo no log: `51 passed (1.6m)`.
+
+CI e CodeQL desta rodada ficam abaixo depois da leitura na API do GitHub.
+
 ## Rodada 9 (tags, mesma entrada, atalho no circulo, e-mail de lembrete, precos aprovados)
 
 Pedido desta rodada: fechar lacunas com regra ja cravada, fora da lista de decisao pendente. Feedback de 1 segundo (105) e estatisticas anonimas (43, 44) nao tinham o recorte fechado (duracao; quais eventos); foram para a secao de decisao. Azure, SMTP real, iOS nativo, PWA, WebSocket, SMS 2FA e cookie httpOnly ficaram fora.
@@ -106,17 +133,13 @@ Antes estavam na lista de pendencias. O dono fechou nesta data:
 
 ## O que ainda depende de decisao do Allan
 
-Lista fechada, sem inventar regra:
+Lista fechada, sem inventar regra. A auditoria linha a linha esta em `docs/auditoria-perguntas.md`.
 
-- 72: cookie httpOnly (sugestao sem Ok/Beleza). Fora desta rodada; o cliente Expo usa Bearer.
-- Login proprio para pet/grupo (conta separada). Nesta rodada so a permissao de edicao/visualizacao.
-- Data de fim automatica do ciclo temporario/diario (16 a 18): arquivar e acao do admin, nao relogio.
-- Arquivamento como beneficio de plano e retrospectiva em PDF/imagem (26, 27, 61 reinicio).
-- Feed de descoberta com silenciar (37 a 39).
-- Denuncia interna / bloqueio pela equipe (21 a 25).
+- Feed de descoberta com silenciar (37 a 39): adiado; pede moderacao antes.
+- Apelacao de bloqueio no app (23 a 25): o dono pode recorrer; sem fila, prazo nem tela.
+- PDF/imagem da retrospectiva (61 reinicio).
 - SMTP real, deploy Azure, iOS nativo, PWA install, WebSocket, SMS 2FA (ainda nao).
-- 105: o feedback do atalho dura 1 segundo? A transcricao sugere 1 segundo sem Ok. Qual a duracao fechada?
-- 43 e 44: estatisticas anonimas so internas, nunca vendidas. Quais eventos entram no catalogo? Sem lista, nada e coletado.
+- Login proprio para pet/grupo: decidido nao; permanece a permissao ja existente.
 
 ## Rodada 6 (memorias, revelacao, modelos, calendario, pet/grupo, observabilidade)
 
@@ -391,13 +414,14 @@ Nao some "feito por ausencia" com entrega de produto. Os buracos que ainda imped
 
 ## Fora desta rodada (nao cravar)
 
-Itens ainda fora, depois da Rodada 9:
+Itens ainda fora, depois da Rodada 10:
 
 - WebSocket (73, 74); o painel usa poll de 5s.
-- Cookie httpOnly (72; sugestao sem Ok). Bearer no app.
 - SMS para 2FA (34 cobriu so o recorte inicial; TOTP ja existe).
-- SMTP real, deploy Azure, iOS nativo.
-- Login proprio para pet/grupo.
-- Feedback de 1 segundo (105) e catalogo de estatisticas anonimas (43, 44): ver secao de decisao.
+- SMTP real, deploy Azure, iOS nativo, PWA.
+- Apelacao de bloqueio no app (23 a 25).
+- Feed de descoberta com silenciar (37 a 39).
+- PDF/imagem da retrospectiva (61 reinicio).
+- Compartilhar ideias de presente no circulo (228).
 
-A lista consolidada do que ainda pede o Allan esta na secao **O que ainda depende de decisao do Allan**.
+A lista consolidada do que ainda pede o Allan esta na secao **O que ainda depende de decisao do Allan**. A auditoria pergunta a pergunta esta em `docs/auditoria-perguntas.md`.

@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary, type DayPanel, type ReminderItem, type ShortcutItem } from '@/lib/api';
 import { playShortcutFeedback } from '@/lib/shortcutFeedback';
+import { SHORTCUT_FLASH_MS } from '@/lib/shortcutFlash';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function HomeScreen() {
@@ -19,6 +20,7 @@ export default function HomeScreen() {
   const [allShortcuts, setAllShortcuts] = useState<ShortcutItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const [flashAt, setFlashAt] = useState(0);
   const [label, setLabel] = useState('');
   const [actionKind, setActionKind] = useState<'done' | 'start' | 'note'>('done');
   const [reminders, setReminders] = useState<ReminderItem[]>([]);
@@ -85,6 +87,16 @@ export default function HomeScreen() {
     };
   }, [load]);
 
+  useEffect(() => {
+    if (!flash) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      setFlash(null);
+    }, SHORTCUT_FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [flash, flashAt]);
+
   async function runShortcut(item: ShortcutItem) {
     if (!token) {
       return;
@@ -97,6 +109,7 @@ export default function HomeScreen() {
       });
       playShortcutFeedback();
       setFlash(result.label);
+      setFlashAt(Date.now());
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Nao foi possivel registrar o atalho.');
@@ -177,7 +190,7 @@ export default function HomeScreen() {
         </Text>
       )}
       <Feedback message={error} />
-      <Feedback message={flash} tone="ok" />
+      <Feedback message={flash} tone="ok" testID="shortcut-flash" />
       {emailsSent.map((title) => (
         <Feedback key={title} message={`Enviamos o lembrete ${title} por e-mail`} tone="ok" />
       ))}

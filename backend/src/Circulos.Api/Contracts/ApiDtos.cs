@@ -64,7 +64,7 @@ public sealed class ConfirmTokenRequest
     public string Token { get; set; } = string.Empty;
 }
 
-public sealed record AuthUserDto(Guid Id, string Email, string Name);
+public sealed record AuthUserDto(Guid Id, string Email, string Name, bool IsSystemAdmin = false);
 
 public sealed record AuthResponse(
     string? Token,
@@ -75,14 +75,12 @@ public sealed record AuthResponse(
 
 public sealed class RefreshRequest
 {
-    [Required(ErrorMessage = "Informe o refresh token.")]
-    public string RefreshToken { get; set; } = string.Empty;
+    public string? RefreshToken { get; set; }
 }
 
 public sealed class LogoutRequest
 {
-    [Required(ErrorMessage = "Informe o refresh token.")]
-    public string RefreshToken { get; set; } = string.Empty;
+    public string? RefreshToken { get; set; }
 }
 
 public sealed class TwoFactorCodeRequest
@@ -254,6 +252,7 @@ public sealed class CreateCircleRequest
     public string? SurpriseSubjectEmail { get; set; }
     public string Kind { get; set; } = "lasting";
     public string? SuccessorEmail { get; set; }
+    public DateTime? EndsAt { get; set; }
 }
 
 public sealed class InviteCircleRequest
@@ -290,7 +289,8 @@ public sealed record CircleSummaryResponse(
     string Kind,
     string Status,
     string Role,
-    int MemberCount);
+    int MemberCount,
+    DateTime? EndsAt = null);
 
 public sealed record CircleJoinRequestDto(Guid Id, Guid UserId, string Name, string Status, DateTime CreatedAt);
 
@@ -310,7 +310,8 @@ public sealed record CircleDetailResponse(
     IReadOnlyList<CirclePostResponse> Posts,
     IReadOnlyList<CircleLogResponse> Log,
     IReadOnlyList<CircleJoinRequestDto> JoinRequests,
-    IReadOnlyList<SharedLifeEntryResponse> SharedEntries);
+    IReadOnlyList<SharedLifeEntryResponse> SharedEntries,
+    DateTime? EndsAt = null);
 
 public sealed record CirclePostResponse(Guid Id, Guid? AuthorUserId, string Body, bool HasPhoto, DateTime CreatedAt);
 public sealed record CircleLogResponse(Guid Id, Guid? ActorUserId, string Action, string Detail, DateTime CreatedAt);
@@ -657,6 +658,7 @@ public static class EnumText
         CircleStatus.Archived => "archived",
         CircleStatus.LockedNoOwner => "locked",
         CircleStatus.Deleted => "deleted",
+        CircleStatus.Blocked => "blocked",
         _ => "active",
     };
 
@@ -861,3 +863,58 @@ public sealed record CircleRecapResponse(
 public sealed record RecapShareCreatedResponse(string Token, string Path);
 
 public sealed record PublicProfileResponse(Guid UserId, string DisplayName, bool HasPhoto, string? Description);
+
+public sealed class ReportRequest
+{
+    [Required]
+    [MaxLength(20)]
+    public string TargetKind { get; set; } = string.Empty;
+
+    [Required]
+    public Guid TargetId { get; set; }
+
+    [MaxLength(500)]
+    public string? Note { get; set; }
+}
+
+public sealed record ReportCreatedResponse(Guid Id);
+
+public sealed record ReportItemResponse(
+    Guid Id,
+    Guid ReporterUserId,
+    string ReporterEmail,
+    string TargetKind,
+    Guid TargetId,
+    string? Note,
+    DateTime CreatedAt);
+
+public sealed class AdminBlockRequest
+{
+    [Required]
+    [MaxLength(20)]
+    public string TargetKind { get; set; } = string.Empty;
+
+    [Required]
+    public Guid TargetId { get; set; }
+
+    public bool Blocked { get; set; } = true;
+}
+
+public sealed record AdminStatsResponse(long ShortcutsTriggered, long EntriesCreated, long ActiveCircles);
+
+public sealed record AdminActionResponse(
+    Guid Id,
+    Guid AdminUserId,
+    string Action,
+    string TargetKind,
+    Guid TargetId,
+    string Detail,
+    DateTime CreatedAt);
+
+public sealed record AdminBlockListResponse(
+    IReadOnlyList<AdminBlockedUserResponse> Users,
+    IReadOnlyList<AdminBlockedCircleResponse> Circles);
+
+public sealed record AdminBlockedUserResponse(Guid Id, string Email, DateTime BlockedAt);
+
+public sealed record AdminBlockedCircleResponse(Guid Id, string Name, DateTime? BlockedAt);

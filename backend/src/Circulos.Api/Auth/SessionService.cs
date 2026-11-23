@@ -9,7 +9,8 @@ namespace Circulos.Api.Auth;
 public sealed class SessionService(
     AppDbContext db,
     JwtTokenService tokens,
-    TimeProvider clock)
+    TimeProvider clock,
+    Microsoft.Extensions.Options.IOptions<Circulos.Api.Services.SystemAdminOptions> adminOptions)
 {
     public async Task<AuthResponse> IssueAsync(User user, CancellationToken cancellationToken, Guid? familyId = null)
     {
@@ -24,6 +25,7 @@ public sealed class SessionService(
             ExpiresAt = now.AddDays(tokens.RefreshDays()),
             CreatedAt = now,
         });
+        PromoteIfAdmin(user);
         await db.SaveChangesAsync(cancellationToken);
         return ToAuth(user, tokens.CreateAccess(user), refresh);
     }
@@ -62,6 +64,7 @@ public sealed class SessionService(
         };
         current.ReplacedById = next.Id;
         db.RefreshTokens.Add(next);
+        PromoteIfAdmin(user);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return ToAuth(user, tokens.CreateAccess(user), nextPlain);
@@ -97,6 +100,14 @@ public sealed class SessionService(
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, now), cancellationToken);
     }
 
+    private void PromoteIfAdmin(User user)
+    {
+        if (adminOptions.Value.Matches(user.Email) && !user.IsSystemAdmin)
+        {
+            user.IsSystemAdmin = true;
+        }
+    }
+
     private static AuthResponse ToAuth(User user, string access, string refresh) =>
-        new(access, refresh, new AuthUserDto(user.Id, user.Email, user.Profile.DisplayName), false, null);
+        new(access, refresh, new AuthUserDto(user.Id, user.Email, user.Profile.DisplayName, user.IsSystemAdmin), false, null);
 }

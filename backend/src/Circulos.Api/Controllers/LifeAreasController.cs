@@ -13,7 +13,7 @@ namespace Circulos.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/life-areas")]
-public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, QuotaService quota) : ControllerBase
+public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, QuotaService quota, UsageStats stats) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<LifeAreaResponse>>> List(CancellationToken cancellationToken)
@@ -112,6 +112,7 @@ public sealed class LifeAreasController(AppDbContext db, IFileStorage storage, Q
         };
         db.LifeEntries.Add(entry);
         await db.SaveChangesAsync(cancellationToken);
+        await stats.IncrementAsync(UsageStats.EntryCreated, cancellationToken);
         if (request.CircleIds is { Length: > 0 })
         {
             var shareError = await ReplaceSharesAsync(entry, request.CircleIds, userId, now, cancellationToken);

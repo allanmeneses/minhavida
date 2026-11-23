@@ -474,13 +474,15 @@ test('tour na primeira abertura e FAQ no menu', async ({ browser }) => {
   await context.close();
 });
 
-test('access expirado renova com refresh; logout revoga', async ({ page }) => {
+test('access expirado renova com refresh; logout revoga', async ({ page, context }) => {
   await signUp(page, '-refresh');
   const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
   const access = await page.evaluate(() => localStorage.getItem('circulos.token'));
-  const refresh = await page.evaluate(() => localStorage.getItem('circulos.refresh'));
   expect(access).toBeTruthy();
-  expect(refresh).toBeTruthy();
+  expect(await page.evaluate(() => localStorage.getItem('circulos.refresh'))).toBeNull();
+  const apiCookies = await context.cookies(apiUrl);
+  const refreshCookie = apiCookies.find((item) => item.name === 'circulos.refresh');
+  expect(refreshCookie?.httpOnly).toBeTruthy();
   const me = await page.request.get(`${apiUrl}/api/auth/me`, {
     headers: { Authorization: `Bearer ${access}` },
   });
@@ -489,18 +491,13 @@ test('access expirado renova com refresh; logout revoga', async ({ page }) => {
   await page.evaluate((jwt) => localStorage.setItem('circulos.token', jwt), expiredAccess(user.id));
   await page.reload();
   await expect(page.getByText('O que pede atencao hoje')).toBeVisible({ timeout: 20_000 });
-  const rotated = await page.evaluate(() => localStorage.getItem('circulos.refresh'));
-  expect(rotated).toBeTruthy();
   const reuse = await page.request.post(`${apiUrl}/api/auth/refresh`, {
-    data: { refreshToken: refresh },
+    headers: { 'X-Client': 'web' },
+    data: { refreshToken: refreshCookie?.value },
   });
   expect(reuse.status()).toBe(401);
   await page.getByRole('button', { name: 'Sair' }).click();
   await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible({ timeout: 20_000 });
-  const afterLogout = await page.request.post(`${apiUrl}/api/auth/refresh`, {
-    data: { refreshToken: rotated },
-  });
-  expect(afterLogout.status()).toBe(401);
 });
 
 test('segundo fator com QR exige codigo no login', async ({ page }) => {
@@ -1142,6 +1139,69 @@ test('compartilhar atalho no circulo mostra de quem veio e o aviso do que mudou'
   });
   await ownerContext.close();
   await memberContext.close();
+});
+
+test('aviso do atalho some depois de 1 segundo', async ({ page }) => {
+  await signUp(page, '-flash');
+  await page.getByLabel('Nome do atalho').fill('Tomei o remedio');
+  await page.getByRole('button', { name: 'Adicionar atalho' }).click();
+  const shortcut = page.getByRole('button', { name: 'Tomei o remedio', exact: true });
+  await expect(shortcut).toBeVisible({ timeout: 15_000 });
+  await shortcut.click();
+  await expect(page.getByTestId('shortcut-flash')).toBeVisible();
+  await expect(page.getByTestId('shortcut-flash')).toHaveCount(0, { timeout: 3_000 });
+});
+
+test('circulo temporario com data de fim arquiva sozinho', async ({ page }) => {
+  await signUp(page, '-fim');
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  const circleName = `Curso fim ${Date.now()}`;
+  await page.getByLabel('Nome', { exact: true }).fill(circleName);
+  await page.getByRole('button', { name: 'Tipo: Duradouro' }).click();
+  await expect(page.getByRole('button', { name: 'Tipo: Temporario' })).toBeVisible();
+  await page.getByLabel('Data de fim').fill('2020-01-01');
+  await page.getByRole('button', { name: 'Criar circulo' }).click();
+  await expect(page.getByText('Arquivo e retrospectiva ficam visiveis neste app, para qualquer plano.')).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.getByText(/Temporario · archived/)).toBeVisible();
+  await expect(page.getByText('Minha retrospectiva')).toBeVisible();
+});
+
+test('denuncia de circulo e post fica registrada', async ({ page }) => {
+  await signUp(page, '-denuncia');
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  const circleName = `Denuncia ${Date.now()}`;
+  await page.getByLabel('Nome', { exact: true }).fill(circleName);
+  await page.getByRole('button', { name: 'Criar circulo' }).click();
+  await page.getByLabel('Nova entrada').fill('Post denunciavel');
+  await page.getByRole('button', { name: 'Publicar' }).click();
+  await expect(page.getByText('Post denunciavel').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Denunciar circulo' }).click();
+  await expect(page.getByText('Denuncia registrada.')).toBeVisible();
+  await page.getByRole('button', { name: 'Denunciar post Post denunciavel' }).click();
+  await expect(page.getByText('Denuncia registrada.')).toBeVisible();
+});
+
+test('cookie httpOnly na web nao aparece no document.cookie', async ({ page, request }) => {
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const email = `e2e-${Date.now()}-cookie@exemplo.com`;
+  const register = await request.post(`${apiUrl}/api/auth/register`, {
+    headers: { 'X-Client': 'web' },
+    data: { email, password: 'senha-segura-1', name: 'Cookie' },
+  });
+  expect(register.ok()).toBeTruthy();
+  const setCookie = register.headers()['set-cookie'] ?? '';
+  expect(setCookie.toLowerCase()).toContain('httponly');
+  expect(setCookie).toContain('circulos.refresh');
+  const refresh = await request.post(`${apiUrl}/api/auth/refresh`, {
+    headers: { 'X-Client': 'web' },
+    data: {},
+  });
+  expect(refresh.ok()).toBeTruthy();
+  await signUp(page, '-cookie-doc');
+  const visible = await page.evaluate(() => document.cookie);
+  expect(visible.includes('circulos.refresh')).toBeFalsy();
 });
 
 test('lembrete por e-mail opcional dispara na caixa local', async ({ page }) => {

@@ -20,7 +20,9 @@ public sealed class AuthController(
     IPasswordHasher<User> passwordHasher,
     SessionService sessions,
     IEmailSender email,
-    TimeProvider clock) : ControllerBase
+    TimeProvider clock,
+    IWebHostEnvironment env,
+    JwtTokenService jwt) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
@@ -58,7 +60,7 @@ public sealed class AuthController(
 
             db.Users.Add(user);
             await db.SaveChangesAsync(cancellationToken);
-            return Created("/api/auth/me", await sessions.IssueAsync(user, cancellationToken));
+            return Created("/api/auth/me", AttachWebCookie(await sessions.IssueAsync(user, cancellationToken)));
         }
         catch (Exception ex) when (IsEmailUniqueViolation(ex) || IsBusyWrite(ex))
         {
@@ -88,6 +90,11 @@ public sealed class AuthController(
             return Unauthorized(new ErrorResponse("E-mail ou senha incorretos."));
         }
 
+        if (user.BlockedAt is not null)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta conta foi bloqueada."));
+        }
+
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await UserRowLock.AcquireAsync(db, user.Id, cancellationToken);
         await db.Entry(user).ReloadAsync(cancellationToken);
@@ -110,28 +117,44 @@ public sealed class AuthController(
 
         var issued = await sessions.IssueAsync(user, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return Ok(issued);
+        return Ok(AttachWebCookie(issued));
     }
 
     [HttpPost("refresh")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthResponse>> Refresh(
-        [FromBody] RefreshRequest request,
+        [FromBody] RefreshRequest? request,
         CancellationToken cancellationToken)
     {
-        var rotated = await sessions.RotateAsync(request.RefreshToken, cancellationToken);
+        var token = FirstRefresh(request?.RefreshToken, AuthCookie.Read(Request));
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return Unauthorized(new ErrorResponse("Sessao expirada. Entre de novo."));
+        }
+
+        var rotated = await sessions.RotateAsync(token, cancellationToken);
         return rotated is null
             ? Unauthorized(new ErrorResponse("Sessao expirada. Entre de novo."))
-            : Ok(rotated);
+            : Ok(AttachWebCookie(rotated));
     }
 
     [HttpPost("logout")]
     [AllowAnonymous]
     public async Task<IActionResult> Logout(
-        [FromBody] LogoutRequest request,
+        [FromBody] LogoutRequest? request,
         CancellationToken cancellationToken)
     {
-        await sessions.RevokeAsync(request.RefreshToken, cancellationToken);
+        var token = FirstRefresh(request?.RefreshToken, AuthCookie.Read(Request));
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            await sessions.RevokeAsync(token, cancellationToken);
+        }
+
+        if (AuthCookie.IsWeb(Request))
+        {
+            AuthCookie.Clear(Response, env.IsProduction());
+        }
+
         return NoContent();
     }
 
@@ -207,7 +230,7 @@ public sealed class AuthController(
             return Unauthorized(new ErrorResponse("Sessao invalida."));
         }
 
-        return Ok(new AuthUserDto(user.Id, user.Email, user.Profile.DisplayName));
+        return Ok(new AuthUserDto(user.Id, user.Email, user.Profile.DisplayName, user.IsSystemAdmin));
     }
 
     [HttpGet("2fa")]
@@ -352,9 +375,15 @@ public sealed class AuthController(
         }
 
         challenge.UsedAt = clock.GetUtcNow().UtcDateTime;
+        if (challenge.User.BlockedAt is not null)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Esta conta foi bloqueada."));
+        }
+
         var issued = await sessions.IssueAsync(challenge.User, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return Ok(issued);
+        return Ok(AttachWebCookie(issued));
     }
 
     private async Task<bool> AcceptFactorAsync(
@@ -386,6 +415,20 @@ public sealed class AuthController(
         stored.UsedAt = clock.GetUtcNow().UtcDateTime;
         return true;
     }
+
+    private AuthResponse AttachWebCookie(AuthResponse issued)
+    {
+        if (!AuthCookie.IsWeb(Request) || string.IsNullOrWhiteSpace(issued.RefreshToken))
+        {
+            return issued;
+        }
+
+        AuthCookie.Set(Response, issued.RefreshToken, env.IsProduction(), jwt.RefreshDays());
+        return issued;
+    }
+
+    private static string? FirstRefresh(string? body, string? cookie) =>
+        !string.IsNullOrWhiteSpace(body) ? body : cookie;
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 

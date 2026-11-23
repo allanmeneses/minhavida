@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react';
 import { Image, ScrollView, Text } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Button } from '@/components/ui/Button';
+import { Feedback } from '@/components/ui/Feedback';
+import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type PublicProfile } from '@/lib/api';
 import { API_URL } from '@/lib/config';
+import { reportTarget } from '@/lib/report';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function PublicProfileScreen() {
@@ -13,8 +16,10 @@ export default function PublicProfileScreen() {
   const { colors } = useTheme();
   const styles = screenStyles(colors);
   const router = useRouter();
+  const { token } = useAuth();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) {
@@ -34,6 +39,7 @@ export default function PublicProfileScreen() {
       <Text style={styles.title}>Perfil publico</Text>
       <Text style={styles.lead}>Quem visita ve nome, foto e descricao. Telefone, e-mail e diario ficam fora.</Text>
       {error ? <Text style={styles.lead}>{error}</Text> : null}
+      <Feedback message={ok} tone="ok" />
       {profile ? (
         <>
           <Text style={styles.item}>{profile.displayName}</Text>
@@ -49,7 +55,19 @@ export default function PublicProfileScreen() {
           )}
         </>
       ) : null}
-      <Button label="Entrar no Circulos" variant="ghost" onPress={() => router.push('/(auth)/login')} />
+      {token && profile ? (
+        <Button
+          label="Denunciar perfil"
+          variant="ghost"
+          onPress={() => {
+            void reportTarget(token, 'profile', profile.userId)
+              .then(() => setOk('Denuncia registrada.'))
+              .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel denunciar.'));
+          }}
+        />
+      ) : (
+        <Button label="Entrar no Circulos" variant="ghost" onPress={() => router.push('/(auth)/login')} />
+      )}
     </ScrollView>
   );
 }

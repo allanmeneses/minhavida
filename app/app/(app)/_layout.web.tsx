@@ -57,6 +57,9 @@ export default function AppWebLayout() {
           <NavItem label="Modelos" active={pathname.includes('templates')} onPress={() => router.push('/(app)/templates')} />
           <NavItem label="FAQ" active={pathname.includes('faq')} onPress={() => router.push('/(app)/faq')} />
           <NavItem label="Ajustes" active={pathname.includes('settings')} onPress={() => router.push('/(app)/settings')} />
+          {user.isSystemAdmin ? (
+            <NavItem label="Painel interno" active={pathname.includes('admin')} onPress={() => router.push('/(app)/admin')} />
+          ) : null}
           <NavItem label="Precos" active={pathname.includes('pricing')} onPress={() => router.push('/pricing')} />
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Sair" onPress={() => void logout()} style={styles.logout}>

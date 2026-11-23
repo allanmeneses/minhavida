@@ -30,6 +30,7 @@ import {
   type ListAccess,
   type ListKind,
 } from '@/lib/listKinds';
+import { reportTarget } from '@/lib/report';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function CircleDetailScreen() {
@@ -270,10 +271,25 @@ export default function CircleDetailScreen() {
       {detail ? (
         <Text style={styles.lead}>
           {CIRCLE_KIND_LABEL[detail.kind as CircleKind] ?? detail.kind} · {detail.status}
+          {detail.endsAt ? ` · fim ${new Date(detail.endsAt).toLocaleDateString('pt-BR')}` : ''}
         </Text>
+      ) : null}
+      {detail?.status === 'archived' ? (
+        <Text style={styles.lead}>Arquivo e retrospectiva ficam visiveis neste app, para qualquer plano.</Text>
       ) : null}
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />
+      {token && circleId ? (
+        <Button
+          label="Denunciar circulo"
+          variant="ghost"
+          onPress={() => {
+            void reportTarget(token, 'circle', circleId)
+              .then(() => setOk('Denuncia registrada.'))
+              .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel denunciar.'));
+          }}
+        />
+      ) : null}
       {isAdmin && detail?.isSurprise && !detail.revealed ? (
         <Button label="Revelar surpresa" onPress={() => void revealSurprise()} />
       ) : null}
@@ -309,6 +325,17 @@ export default function CircleDetailScreen() {
           </Text>
           {isOwner && member.userId !== user?.id ? (
             <Button label={`Transferir dono para ${member.name}`} onPress={() => void transferTo(member.userId)} />
+          ) : null}
+          {token && member.userId !== user?.id ? (
+            <Button
+              label={`Denunciar perfil de ${member.name}`}
+              variant="ghost"
+              onPress={() => {
+                void reportTarget(token, 'profile', member.userId)
+                  .then(() => setOk('Denuncia registrada.'))
+                  .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel denunciar.'));
+              }}
+            />
           ) : null}
         </View>
       ))}
@@ -353,6 +380,17 @@ export default function CircleDetailScreen() {
         <View key={item.id} style={styles.card}>
           <Text style={styles.item}>{item.body}</Text>
           {isMember ? <Button label="Apagar" variant="danger" onPress={() => void removePost(item.id)} /> : null}
+          {token ? (
+            <Button
+              label={`Denunciar post ${item.body}`}
+              variant="ghost"
+              onPress={() => {
+                void reportTarget(token, 'post', item.id)
+                  .then(() => setOk('Denuncia registrada.'))
+                  .catch((err) => setError(err instanceof ApiError ? err.message : 'Nao foi possivel denunciar.'));
+              }}
+            />
+          ) : null}
         </View>
       ))}
 

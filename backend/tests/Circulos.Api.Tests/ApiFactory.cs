@@ -28,6 +28,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Payments:Provider", "Simulated");
         builder.UseSetting("PAYMENTS_PROVIDER", "Simulated");
         builder.UseSetting("PublicBaseUrl", "http://127.0.0.1:5288");
+        builder.UseSetting("SystemAdmin:Email", "admin-sistema@exemplo.com");
         builder.ConfigureServices(services =>
         {
             RemoveService(services, typeof(DbContextOptions<AppDbContext>));

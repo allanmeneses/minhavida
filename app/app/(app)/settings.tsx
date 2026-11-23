@@ -12,7 +12,7 @@ import { API_URL } from '@/lib/config';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function SettingsScreen() {
-  const { token, logout } = useAuth();
+  const { token, logout, user } = useAuth();
   const router = useRouter();
   const tour = useTour();
   const { preference, setPreference, resolved, colors, highContrast, setHighContrast } = useTheme();
@@ -250,6 +250,10 @@ export default function SettingsScreen() {
       <Text style={styles.lead}>Escolha por quantos dias as notificacoes ficam suspensas.</Text>
       <TextField label="Dias de ferias" value={vacationDays} onChangeText={setVacationDays} keyboardType="number-pad" />
       <Button label="Silenciar ferias" onPress={() => void vacation()} />
+
+      {user?.isSystemAdmin ? (
+        <Button label="Painel interno" variant="ghost" onPress={() => router.push('/(app)/admin' as Href)} />
+      ) : null}
 
       <Text style={styles.section}>Ajuda</Text>
       <Button label="FAQ" variant="ghost" onPress={() => router.push('/(app)/faq' as Href)} />
