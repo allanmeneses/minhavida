@@ -14,6 +14,20 @@ Numero da pergunta: transcricao. A segunda serie 60-69 aparece como `N (reinicio
 
 A auditoria pergunta a pergunta desta rodada esta em `docs/auditoria-perguntas.md` (272 linhas, conferidas no codigo).
 
+## Rodada 14 (inatividade, posse sem dono, repo publico)
+
+Pedido: tres decisoes do Allan sobre itens 4, 256/330 e 98.
+
+Totais da auditoria depois desta rodada (contagem no arquivo): feito e testado 236, parcial 5, nao feito 4, decidido nao 22, adiado pelo Allan 5, sem resposta clara 0. Soma 272.
+
+| Item | Status | Origem | Evidencia |
+| --- | --- | --- | --- |
+| Ninguem e inativo por tempo sem uso | feito e testado | 4 | Sem prazo. `MembershipRules.ConsidersMemberInactiveByTime` falso. Testes `Sistema_NaoTemPrazoDeInatividade`, `MembroSemAtividadeHaMuitoTempo_ContinuaMembroComMesmosDireitos`. |
+| Circulo sem dono oferece posse em 40 dias | feito e testado | 330 | Atividade: posts + acoes no log + memorias no circulo; empate pela acao mais recente e depois quem entrou primeiro. Primeiro aceite vira dono. Padrao escolhido sem resposta do Allan, pode ser revisto: reoferta aos proximos mais ativos a cada 40 dias. Testes `SemDono_39Dias_NaoOferecePosse`, `SemDono_40Dias_OfereceAsTresMaisAtivas`, `OfertaDePosse_PrimeiroAceiteViraDono_SegundoFalha`, `OfertaDePosse_DoisAceitesSobrepostos_SoUmViraDono`, `EleicaoAntesDe40Dias_CancelaOferta`, `SemDono_MenosDeTresMembros_OfereceAQuemExiste`, `Exclusao_SemAdminNemSucessor_FicaSemDonoSemTravar`, `CirculoVazioSemDono_40Dias_NaoInventaDono`. Playwright `aceitar posse oferecida no circulo sem dono`. |
+| Repositorio publico | decidido nao | 83 | Decisao do Allan: permanece publico por limite do GitHub. |
+
+Criterio de atividade (objetivo, dados que ja existem): soma de posts no circulo (`CirclePost.AuthorUserId`), acoes no log (`CircleLog.ActorUserId`) e memorias no circulo (`Memory.AuthorUserId`). Nao ha comentarios no produto. Empate: data da acao mais recente; se persistir, `JoinedAt` mais antigo.
+
 ## Rodada 13 (auditoria restante, sem depender do Allan)
 
 Pedido: fechar as 4 perguntas sem resposta clara com padrao conservador; avancar parciais e nao feitas que nao dependem de deploy, Azure, SMTP real, Mercado Pago producao, iOS nativo, PWA, WebSocket, SMS 2FA, push nem feed de descoberta; passar de qualidade.
@@ -125,9 +139,9 @@ Totais da auditoria depois desta rodada (contagem no arquivo): feito e testado 2
 | Perdedor se candidata de novo | feito e testado | 344 | `Perdedor_PodeSeCandidatarNaRodadaSeguinte`. |
 | Feed de descoberta | adiado pelo Allan | 37 a 39 | Nao inventado. |
 | WebSocket, push, PWA, iOS, SMTP, Azure, SMS 2FA | adiado pelo Allan | 40, 73, 74, 100, 305, 64 reinicio, 34 | Linhas ficaram como estavam. |
-| Repositorio privado | nao feito | 83 | `gh repo view`: PUBLIC. Nao alterei visibilidade. |
+| Repositorio privado | decidido nao | 83 | Decisao do Allan: permanece publico por limite do GitHub. |
 | Nuxt | nao feito | 63 reinicio | Cliente permanece Expo. |
-| Trava por inatividade e circulo vazio | parcial | 4, 330 | Sem timer de inatividade. 330: fala 'nunca trava' versus trava do circulo vazio; nao alinhei. |
+| Trava por inatividade e circulo vazio | feito e testado | 4, 330 | Sem prazo de inatividade. Sem dono, oferece posse em 40 dias. Ver secao Rodada 14. |
 
 Testes locais observados nesta rodada (comandos e exit code):
 
@@ -402,7 +416,7 @@ Depois da troca, nesta continuacao: `dotnet list src/Circulos.Api/Circulos.Api.c
 | --- | --- | --- | --- |
 | Dono fixo que pode mudar; historico fica | feito e testado | 2, 3 | POST `/api/circles/{id}/transfer` com `UserRowLock`. Historico e permissoes ficam. Testes `Dono_TransfereEmVida_HistoricoEPermissoesFicam` e `TransferenciaSobreposta_SoUmaVence`. Playwright `transferir dono do circulo em vida`. |
 | Varios gestores | parcial | 3 | Papel `Admin` existe (`CircleRole`). Nao ha varios donos simultaneos. |
-| Sem dono ativo em caso sensivel: trava | parcial | 4 | `CircleStatus.LockedNoOwner` na exclusao sem admin/sucessor. Teste `Exclusao_SemAdminNemSucessor_TravaCirculo`. Sem trava por inatividade. |
+| Sem dono ativo em caso sensivel: trava | feito e testado | 4, 330 | Ninguem vira inativo por tempo. Sem dono, o circulo segue ativo e a posse e oferecida em 40 dias. Testes da Rodada 14. |
 | Circulo nao some na exclusao: transfere ou trava; se nao houver sucessor, votacao | feito e testado | 327 a 331, 330 | Transfere para admin: testado. Sem admin, abre votacao (membros restantes). Solo restante ainda trava. Ver secao Rodada 8. |
 | Votacao de sucessao (maioria simples, 3 dias, todos votam) | feito e testado | 331 a 344, 336 | Decidido em 22/11/2026. Ver secao Rodada 8. |
 | Vida util temporario / duradouro / diario | feito e testado | 16 | Enum `CircleKind` + UI `Tipo:`. Arquivar e acao do admin, sem relogio. Ver secao Rodada 7. |
@@ -549,9 +563,8 @@ Itens ainda fora, depois da Rodada 11:
 - SMTP real, deploy Azure, iOS nativo, PWA.
 - Feed de descoberta com silenciar (37 a 39).
 - PDF/imagem da retrospectiva (61 reinicio).
-- Repositorio privado (83).
+- Repositorio privado (83): decidido nao; permanece publico por limite do GitHub.
 - Nuxt (63 reinicio).
 - Calendario do aparelho puxando compromissos (45).
-- Trava por inatividade (4) e alinhamento da fala 'nunca trava' (330).
 
 A lista consolidada do que ainda pede o Allan esta na secao **O que ainda depende de decisao do Allan**. A auditoria pergunta a pergunta esta em `docs/auditoria-perguntas.md`.

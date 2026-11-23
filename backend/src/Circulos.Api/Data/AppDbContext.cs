@@ -38,6 +38,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<BillingEvent> BillingEvents => Set<BillingEvent>();
     public DbSet<SuccessionVote> SuccessionVotes => Set<SuccessionVote>();
     public DbSet<SuccessionBallot> SuccessionBallots => Set<SuccessionBallot>();
+    public DbSet<OwnershipOffer> OwnershipOffers => Set<OwnershipOffer>();
     public DbSet<LivingProfileGrant> LivingProfileGrants => Set<LivingProfileGrant>();
     public DbSet<UsageCounter> UsageCounters => Set<UsageCounter>();
     public DbSet<ContentReport> ContentReports => Set<ContentReport>();
@@ -197,6 +198,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.RevealedAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.EndsAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.OwnerElectedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.OwnerLostAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.OwnershipNextCheckAt).HasColumnType("timestamp with time zone");
             entity.HasOne(x => x.Owner)
                 .WithMany()
                 .HasForeignKey(x => x.OwnerUserId)
@@ -694,6 +697,25 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasOne(x => x.Circle)
                 .WithMany()
                 .HasForeignKey(x => x.CircleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OwnershipOffer>(entity =>
+        {
+            entity.ToTable("ownership_offers");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.CircleId, x.UserId, x.Status });
+            entity.HasIndex(x => x.RoundId);
+            entity.Property(x => x.OfferedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.ExpiresAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.RespondedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.Circle)
+                .WithMany()
+                .HasForeignKey(x => x.CircleId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

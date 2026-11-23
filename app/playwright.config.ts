@@ -33,13 +33,15 @@ export default defineConfig({
       command: 'dotnet run --project ../backend/src/Circulos.Api --urls http://127.0.0.1:5288 --no-launch-profile',
       url: 'http://127.0.0.1:5288/health',
       reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
+      timeout: 180_000,
       stdout: 'pipe',
       stderr: 'pipe',
       env: envWith({
         ASPNETCORE_ENVIRONMENT: 'Development',
         Database__Provider: databaseProvider,
         ConnectionStrings__Default: connectionString,
+        Logging__LogLevel__Default: 'Warning',
+        Logging__LogLevel__Microsoft: 'Warning',
       }),
     },
     {

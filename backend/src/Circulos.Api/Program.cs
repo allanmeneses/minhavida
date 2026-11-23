@@ -34,6 +34,7 @@ builder.Services.AddScoped<UsageStats>();
 builder.Services.AddScoped<OnboardingService>();
 builder.Services.AddScoped<JobQueue>();
 builder.Services.AddScoped<CircleArchiveService>();
+builder.Services.AddScoped<OwnershipOfferService>();
 builder.Services.Configure<GoogleAuthOptions>(builder.Configuration.GetSection(GoogleAuthOptions.Section));
 builder.Services.PostConfigure<GoogleAuthOptions>(options =>
 {
@@ -199,6 +200,58 @@ app.MapControllers();
 if (PaymentsConfig.IsSimulated(app.Configuration))
 {
     app.MapMethods("/dev/rotina", new[] { "GET", "POST" }, () => Results.Ok(new { ok = true, provider = PaymentsConfig.Simulated }));
+}
+
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+{
+    app.MapPost("/dev/circles/{id:guid}/ownership-due", async (
+        Guid id,
+        AppDbContext db,
+        OwnershipOfferService offers,
+        TimeProvider clock,
+        HttpContext http,
+        CancellationToken cancellationToken) =>
+    {
+        if (http.User.Identity?.IsAuthenticated != true)
+        {
+            return Results.Unauthorized();
+        }
+
+        var userId = http.User.GetUserId();
+        var member = await db.CircleMembers.AnyAsync(
+            item => item.CircleId == id && item.UserId == userId,
+            cancellationToken);
+        if (!member)
+        {
+            return Results.NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var circle = await db.Circles.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (circle is null || circle.Status == CircleStatus.Deleted)
+        {
+            return Results.NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        if (circle.OwnerUserId is not null)
+        {
+            return Results.Conflict(new ErrorResponse("Circulo ainda tem dono."));
+        }
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        circle.OwnerLostAt = now.AddDays(-OwnershipOfferService.WaitDays);
+        circle.OwnershipNextCheckAt = now.AddMinutes(-1);
+        var openVotes = await db.SuccessionVotes
+            .Where(vote => vote.CircleId == id && vote.Status == SuccessionVoteStatus.Open)
+            .ToListAsync(cancellationToken);
+        foreach (var vote in openVotes)
+        {
+            vote.DeadlineAt = now.AddMinutes(-1);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        await offers.ProcessDueAsync(cancellationToken);
+        return Results.NoContent();
+    }).RequireAuthorization();
 }
 
 app.Run();

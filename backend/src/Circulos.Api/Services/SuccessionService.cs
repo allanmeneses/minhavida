@@ -231,6 +231,27 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
         await transaction.CommitAsync(cancellationToken);
     }
 
+    public async Task CloseExpiredLockedAsync(Circle circle, CancellationToken cancellationToken)
+    {
+        var vote = await db.Set<SuccessionVote>()
+            .Include(item => item.Ballots)
+            .Where(item => item.CircleId == circle.Id && item.Status == SuccessionVoteStatus.Open)
+            .OrderByDescending(item => item.OpenedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (vote is null)
+        {
+            return;
+        }
+
+        var now = clock.GetUtcNow().UtcDateTime;
+        if (now < vote.DeadlineAt)
+        {
+            return;
+        }
+
+        await ExpireAsync(circle, vote, now, cancellationToken);
+    }
+
     private async Task TryDecideAsync(Circle circle, SuccessionVote vote, int memberCount, DateTime now, CancellationToken cancellationToken)
     {
         if (memberCount <= 0)
@@ -255,45 +276,17 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
 
     private async Task ElectAsync(Circle circle, SuccessionVote vote, Guid winnerId, DateTime now, CancellationToken cancellationToken)
     {
-        var member = circle.Members.First(item => item.UserId == winnerId);
-        var winner = await db.Users.FirstAsync(item => item.Id == winnerId, cancellationToken);
-        var previousOwnerId = circle.OwnerUserId;
-        if (previousOwnerId is Guid previous && previous != winnerId)
-        {
-            var previousMember = circle.Members.FirstOrDefault(item => item.UserId == previous);
-            if (previousMember is not null)
-            {
-                previousMember.Role = CircleRole.Admin;
-            }
-
-            var previousUser = await db.Users.FirstAsync(item => item.Id == previous, cancellationToken);
-            if (!circle.IsStarter && previousUser.OwnedCircleCount > 0)
-            {
-                previousUser.OwnedCircleCount -= 1;
-            }
-        }
-
-        circle.OwnerUserId = winnerId;
-        circle.Owner = winner;
-        circle.Status = CircleStatus.Active;
-        circle.OwnerElectedAt = now;
-        member.Role = CircleRole.Owner;
-        if (!circle.IsStarter && previousOwnerId != winnerId)
-        {
-            winner.OwnedCircleCount += 1;
-        }
+        await CircleOwnership.AssignAsync(
+            db,
+            circle,
+            winnerId,
+            now,
+            "succession-decided",
+            "Maioria simples, sem quorum, elegeu o novo dono. Historico de votacoes anteriores nao fica visivel.",
+            cancellationToken);
         vote.Status = SuccessionVoteStatus.Decided;
         vote.WinnerUserId = winnerId;
         vote.ClosedAt = now;
-        db.CircleLogs.Add(new CircleLog
-        {
-            Id = Guid.NewGuid(),
-            CircleId = circle.Id,
-            ActorUserId = winnerId,
-            Action = "succession-decided",
-            Detail = "Maioria simples, sem quorum, elegeu o novo dono. Historico de votacoes anteriores nao fica visivel.",
-            CreatedAt = now,
-        });
         await db.SaveChangesAsync(cancellationToken);
     }
 
@@ -315,14 +308,18 @@ public sealed class SuccessionService(AppDbContext db, TimeProvider clock)
         vote.ClosedAt = now;
         if (circle.OwnerUserId is null)
         {
-            circle.Status = CircleStatus.LockedNoOwner;
+            if (circle.OwnerLostAt is null)
+            {
+                CircleOwnership.MarkLost(circle, now);
+            }
+
             db.CircleLogs.Add(new CircleLog
             {
                 Id = Guid.NewGuid(),
                 CircleId = circle.Id,
                 ActorUserId = null,
-                Action = "locked",
-                Detail = "Prazo da votacao acabou sem votos ou com empate. O circulo espera um responsavel.",
+                Action = "succession-expired",
+                Detail = "Prazo da votacao acabou sem eleger. O circulo segue sem dono; a posse e oferecida as pessoas mais ativas apos 40 dias.",
                 CreatedAt = now,
             });
         }

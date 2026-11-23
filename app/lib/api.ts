@@ -120,6 +120,13 @@ export type CircleDetail = {
   joinRequests: CircleJoinRequest[];
   sharedEntries: SharedLifeEntry[];
   endsAt?: string | null;
+  ownershipOffer?: OwnershipOfferNotice | null;
+};
+export type OwnershipOfferNotice = {
+  circleId: string;
+  circleName: string;
+  offeredAt: string;
+  expiresAt: string;
 };
 export type SharedLifeEntry = {
   id: string;
@@ -401,6 +408,7 @@ export type DayPanel = {
   monthlySurprise: MonthlySurprise | null;
   routineStreakDays: number;
   onboarding: OnboardingExample[];
+  ownershipOffers?: OwnershipOfferNotice[];
 };
 export type DocumentItem = {
   id: string;

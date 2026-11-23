@@ -37,11 +37,10 @@ public sealed class AccountDeletionService(
             if (admin is null)
             {
                 var remaining = circle.Members.Where(member => member.UserId != user.Id).ToList();
-                circle.OwnerUserId = null;
+                CircleOwnership.MarkLost(circle, DateTime.UtcNow);
                 if (remaining.Count == 0)
                 {
-                    circle.Status = CircleStatus.LockedNoOwner;
-                    db.CircleLogs.Add(Log(circle.Id, null, "locked", "Sem dono ativo. O circulo espera um responsavel."));
+                    db.CircleLogs.Add(Log(circle.Id, null, "owner-lost", "Sem dono e sem membros. A posse sera oferecida a quem existir apos 40 dias."));
                 }
                 else
                 {

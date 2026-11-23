@@ -20,6 +20,8 @@ public sealed class Circle
     public CircleStatus Status { get; set; } = CircleStatus.Active;
     public DateTime? EndsAt { get; set; }
     public DateTime? OwnerElectedAt { get; set; }
+    public DateTime? OwnerLostAt { get; set; }
+    public DateTime? OwnershipNextCheckAt { get; set; }
     public DateTime CreatedAt { get; set; }
 
     public User? Owner { get; set; }
