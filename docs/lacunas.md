@@ -14,6 +14,53 @@ Numero da pergunta: transcricao. A segunda serie 60-69 aparece como `N (reinicio
 
 A auditoria pergunta a pergunta desta rodada esta em `docs/auditoria-perguntas.md` (272 linhas, conferidas no codigo).
 
+## Rodada 11 (fechar auditoria e engajamento)
+
+Pedido: fechar linhas parciais e nao feito da auditoria, sem tocar em decidido nao / adiado / sem resposta clara; itens de engajamento aprovados em 22/11/2026.
+
+Totais da auditoria depois desta rodada (contagem no arquivo): feito e testado 219, parcial 10, nao feito 5, decidido nao 19, adiado pelo Allan 5, sem resposta clara 14. Soma 272.
+
+| Item | Status | Origem | Evidencia |
+| --- | --- | --- | --- |
+| Cadastro curto com circulos Eu e Familia e 2 ou 3 exemplos | feito e testado | engajamento 1 | `OnboardingService.Seed`. Testes `Cadastro_CriaCirculosEuEFamiliaComTresExemplos`, `Onboarding_ConfirmarEDescartarSobrepostos_DecideUmaVez`. Playwright `cadastro mostra circulos prontos e exemplos para confirmar`. |
+| Login Google por variavel, desligado por padrao | feito e testado | engajamento 1 | `Google:Enabled` / `GOOGLE_ENABLED`. Sem credencial no repo. Testes `Google_DesligadoPorPadrao_GetFalseEPost404`, `Google_LigadoSemClientId_Retorna503`. Playwright `login nao mostra Google desligado por padrao`. |
+| Neste dia e retrospectiva mensal no app | feito e testado | engajamento 2 | `GET /api/home` com `onThisDay` e `monthlySurprise`. Teste `NesteDia_ERetrospectivaMensal_AparecemNoPainelEAckSome`. Playwright `cadastro mostra circulos prontos e exemplos para confirmar`. |
+| Convite por link com texto para WhatsApp | feito e testado | engajamento 3 | `POST /api/circles/{id}/invite-link`, `GET /i/{token}`. Teste `ConvitePorLink_TextoProntoEDoisAceitamSobrepostos`. Playwright `convite por link abre o circulo depois do cadastro`. |
+| Tela inicial: hoje no topo, memoria embaixo, resto a um toque | feito e testado | engajamento 4 | `home.tsx` atrasado/vence hoje, Neste dia, `home.rest`. Playwright do painel do dia. |
+| Sequencia de rotina e album do mes | feito e testado | engajamento 5 | `StreakService.Touch`. Teste `Sequencia_DiaSeguidoSobeEMesmoDiaNaoDuplica`. Album em memorias. |
+| Privacidade visivel e exportar JSON | feito e testado | engajamento 6 | `GET /api/privacy/me`, `GET /api/export?format=json`. Teste `PrivacidadeEExportarJson_MostramQuemVeOQue`. Playwright `privacidade visivel e exportar json`. |
+| Leveza: paginar, comprimir, lazy load, bundle medido | feito e testado | engajamento 7 | `ListPaging`, `LazyPhoto`, compressao ja existente. Teste `ListasGrandes_PaginamQuandoTakeVemEMantemTudoSemTake`. Medida do bundle web abaixo. |
+| Denuncia: admin do circulo e equipe | feito e testado | 21 reformulada | `Denuncia_AdminDoCirculoRecebeEmailEDecideComSobreposicao`. |
+| Apelacao humana sem prazo | feito e testado | 23 a 25 | `Apelacao_BloqueadoRecorreSemPrazoESobrepostoFicaUm`. |
+| i18n preparado, uma lingua | feito e testado | 35 | `app/locales/pt-BR.json`. `npm test` `carrega chaves em portugues a partir de arquivo`. |
+| Fila em tabela | feito e testado | 75, 76 | `background_jobs`. Teste `FilaEmTabela_EnfileiraEProcessa`. NATS e Azure Service Bus fora. |
+| Foto e ideias de presente no circulo (so leitura) | feito e testado | 225 a 228 | `Lembrete_FotoSobeEBaixaComprimida`, `IdeiasDePresente_CompartilhaSoLeituraESobrepostoFicaUm`. Coedicao (229) sem resposta clara. |
+| Diario tipo Notion, export texto corrido | feito e testado | 243 a 250 | `Diario_PaginasTipoNotionEntramNoTextoCorrido`. |
+| Log para sempre | feito e testado | 267 a 271 | `Log_PermaneceEPaginacaoNaoApaga`. |
+| Sem teto de 80 MB no upload | feito e testado | 272 | `Telemetria_RetencaoIndefinidaEUploadSemTetoDe80Mb`. |
+| Transicao instantanea e save mudo | feito e testado | 286, 287 | `npm test` `stack e abas desligam animacao`, `memorias e diario nao disparam som ao salvar`. |
+| Suporte por e-mail no app, sem prazo | feito e testado | 298, 299 | `Suporte_GravaOutboxSemPrazo`. SMTP real adiado. |
+| Plano em dia sem lista de cobranca | feito e testado | 317, 318 | `Plano_EmDiaOuNaoSemListaDeCobranca`. |
+| Perdedor se candidata de novo | feito e testado | 344 | `Perdedor_PodeSeCandidatarNaRodadaSeguinte`. |
+| Feed de descoberta | adiado pelo Allan | 37 a 39 | Nao inventado. |
+| WebSocket, push, PWA, iOS, SMTP, Azure, SMS 2FA | adiado pelo Allan | 40, 73, 74, 100, 305, 64 reinicio, 34 | Linhas ficaram como estavam. |
+| Repositorio privado | nao feito | 83 | `gh repo view`: PUBLIC. Nao alterei visibilidade. |
+| Nuxt | nao feito | 63 reinicio | Cliente permanece Expo. |
+| Trava por inatividade e circulo vazio | parcial | 4, 330 | Sem timer de inatividade. 330: fala 'nunca trava' versus trava do circulo vazio; nao alinhei. |
+
+Testes locais observados nesta rodada (comandos e exit code):
+
+- `dotnet test --nologo` (backend): Passed 176, Failed 0, Skipped 0, exit 0.
+- `npm test` (app): 35 pass, 0 fail, exit 0.
+- `npx tsc --noEmit` (app): exit 0.
+- `npx playwright test` (app): 56 passed (1.4m), exit 0.
+
+Bundle web (`npx expo export --platform web --output-dir`), bytes observados:
+
+- Antes (commit a40687a): 2.448.706 bytes no output (61 arquivos; JS 1.436.669 bytes em 39 arquivos; `entry` 1.124.722; `home` 8.947). Metro: 903 modules.
+- Depois (esta branch): 2.460.381 bytes no output (62 arquivos; JS 1.448.344 bytes em 40 arquivos; `entry` 1.124.521; `home` 11.961). Metro: 908 modules.
+- Delta: +11.675 bytes no total e no JS. Um arquivo JS a mais (`[token]` do convite `/i/{token}`). `entry` caiu 201 bytes; `home` subiu 3.014 bytes.
+
 ## Rodada 10 (auditoria, decisoes 22/11, moderacao e cookie)
 
 Pedido: uma linha por pergunta da transcricao; implementar as decisoes de 22/11/2026; o que ainda tinha regra clara e nao dependia de decisao.
@@ -414,14 +461,16 @@ Nao some "feito por ausencia" com entrega de produto. Os buracos que ainda imped
 
 ## Fora desta rodada (nao cravar)
 
-Itens ainda fora, depois da Rodada 10:
+Itens ainda fora, depois da Rodada 11:
 
 - WebSocket (73, 74); o painel usa poll de 5s.
 - SMS para 2FA (34 cobriu so o recorte inicial; TOTP ja existe).
 - SMTP real, deploy Azure, iOS nativo, PWA.
-- Apelacao de bloqueio no app (23 a 25).
 - Feed de descoberta com silenciar (37 a 39).
 - PDF/imagem da retrospectiva (61 reinicio).
-- Compartilhar ideias de presente no circulo (228).
+- Repositorio privado (83).
+- Nuxt (63 reinicio).
+- Calendario do aparelho puxando compromissos (45).
+- Trava por inatividade (4) e alinhamento da fala 'nunca trava' (330).
 
 A lista consolidada do que ainda pede o Allan esta na secao **O que ainda depende de decisao do Allan**. A auditoria pergunta a pergunta esta em `docs/auditoria-perguntas.md`.

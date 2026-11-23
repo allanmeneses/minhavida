@@ -7,7 +7,8 @@ import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useTour } from '@/context/TourContext';
-import { api, ApiError, downloadNamedBlob, type PlanInfo, type TwoFactorSetup } from '@/lib/api';
+import { api, ApiError, downloadNamedBlob, type PlanInfo, type PrivacyItem, type TwoFactorSetup } from '@/lib/api';
+import { t } from '@/lib/i18n';
 import { API_URL } from '@/lib/config';
 import { screenStyles } from '@/lib/screenStyles';
 
@@ -27,6 +28,8 @@ export default function SettingsScreen() {
   const [ok, setOk] = useState<string | null>(null);
   const [emailReminders, setEmailReminders] = useState(false);
   const [emailRemindersLoaded, setEmailRemindersLoaded] = useState(false);
+  const [privacy, setPrivacy] = useState<PrivacyItem[]>([]);
+  const [supportBody, setSupportBody] = useState('');
 
   useEffect(() => {
     if (!token) {
@@ -44,6 +47,9 @@ export default function SettingsScreen() {
         setEmailRemindersLoaded(true);
       })
       .catch(() => setEmailRemindersLoaded(true));
+    void api<{ items: PrivacyItem[] }>('/api/privacy/me', { token })
+      .then((payload) => setPrivacy(payload.items))
+      .catch(() => setPrivacy([]));
   }, [token]);
 
   async function vacation() {
@@ -127,6 +133,32 @@ export default function SettingsScreen() {
     setOk('Backup do perfil baixado.');
   }
 
+  async function exportJson() {
+    if (!token) {
+      return;
+    }
+    await downloadNamedBlob('/api/export/me?format=json', 'circulos-perfil.json', token);
+    setOk('JSON com todos os seus dados baixado.');
+  }
+
+  async function sendSupport() {
+    if (!token || supportBody.trim().length < 8) {
+      return;
+    }
+    setError(null);
+    try {
+      await api('/api/account/support', {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ body: supportBody.trim() }),
+      });
+      setSupportBody('');
+      setOk('Recebemos seu pedido. Sem prazo prometido de resposta.');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Nao foi possivel enviar o suporte.');
+    }
+  }
+
   const used = plan ? Math.round((plan.storageUsedBytes / plan.storageLimitBytes) * 100) : 0;
   const bar = Math.max(0, Math.min(100, used));
 
@@ -187,8 +219,18 @@ export default function SettingsScreen() {
         {plan ? Math.round(plan.storageLimitBytes / (1024 * 1024)) : 0} MB. Sem separar por tipo.
       </Text>
 
+      <Text style={styles.section}>{t('privacy.title')}</Text>
+      <View testID="privacy-overview">
+        {privacy.map((item) => (
+          <Text key={item.what} style={styles.lead}>
+            {item.what}: {item.who}
+          </Text>
+        ))}
+      </View>
+
       <Text style={styles.section}>Backup</Text>
       <Button label="Exportar meu perfil" onPress={() => void exportProfile()} />
+      <Button label={t('export.json')} variant="ghost" onPress={() => void exportJson()} />
 
       <Text style={styles.section}>Segundo fator</Text>
       <Text style={styles.lead}>
@@ -256,6 +298,14 @@ export default function SettingsScreen() {
       ) : null}
 
       <Text style={styles.section}>Ajuda</Text>
+      <Text style={styles.lead}>So por e-mail, sem prazo prometido.</Text>
+      <TextField label="Mensagem para o suporte" value={supportBody} onChangeText={setSupportBody} />
+      <Button
+        label={t('support.send')}
+        variant="ghost"
+        onPress={() => void sendSupport()}
+        disabled={supportBody.trim().length < 8}
+      />
       <Button label="FAQ" variant="ghost" onPress={() => router.push('/(app)/faq' as Href)} />
       <Button label="Status do sistema" variant="ghost" onPress={() => void Linking.openURL(`${API_URL}/status`)} />
       <Button label="Ver tour de novo" variant="ghost" onPress={() => void tour.replay()} />

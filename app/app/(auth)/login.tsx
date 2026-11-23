@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { Link, router, type Href } from 'expo-router';
 import { BrandMark } from '@/components/BrandMark';
@@ -7,7 +7,8 @@ import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { ApiError, TwoFactorRequiredError } from '@/lib/api';
+import { api, ApiError, TwoFactorRequiredError } from '@/lib/api';
+import { t } from '@/lib/i18n';
 
 export default function LoginScreen() {
   const { login, verifyTwoFactor } = useAuth();
@@ -18,6 +19,13 @@ export default function LoginScreen() {
   const [recovery, setRecovery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+
+  useEffect(() => {
+    void api<{ enabled: boolean }>('/api/auth/google')
+      .then((status) => setGoogleEnabled(status.enabled))
+      .catch(() => setGoogleEnabled(false));
+  }, []);
 
   async function onSubmit() {
     setError(null);
@@ -83,6 +91,7 @@ export default function LoginScreen() {
         loading={busy}
         disabled={!email || !password || (Boolean(challenge) && !code.trim() && !recovery.trim())}
       />
+      {googleEnabled ? <Button label={t('google.login')} variant="ghost" onPress={() => undefined} /> : null}
       <Text style={styles.hint}>
         <Link href="/(auth)/forgot" style={styles.link}>
           Esqueci a senha

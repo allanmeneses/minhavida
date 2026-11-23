@@ -17,9 +17,12 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<MemoryResponse>>> List(
         [FromQuery] Guid? circleId,
+        [FromQuery] int? skip,
+        [FromQuery] int? take,
         CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
+        List<Memory> source;
         if (circleId is Guid cid)
         {
             var circle = await db.Circles.Include(x => x.Members).FirstOrDefaultAsync(x => x.Id == cid, cancellationToken);
@@ -28,20 +31,69 @@ public sealed class MemoriesController(AppDbContext db, IFileStorage storage, Qu
                 return NotFound(new ErrorResponse("Circulo nao encontrado."));
             }
 
-            var circleItems = await db.Memories.AsNoTracking()
+            source = await db.Memories.AsNoTracking()
                 .Where(x => x.CircleId == cid)
                 .OrderByDescending(x => x.OccurredOn)
                 .ThenByDescending(x => x.CreatedAt)
                 .ToListAsync(cancellationToken);
-            return Ok(circleItems.Select(ToResponse).ToList());
+        }
+        else
+        {
+            source = await db.Memories.AsNoTracking()
+                .Where(x => x.AuthorUserId == userId && x.CircleId == null)
+                .OrderByDescending(x => x.OccurredOn)
+                .ThenByDescending(x => x.CreatedAt)
+                .ToListAsync(cancellationToken);
         }
 
-        var solo = await db.Memories.AsNoTracking()
-            .Where(x => x.AuthorUserId == userId && x.CircleId == null)
-            .OrderByDescending(x => x.OccurredOn)
-            .ThenByDescending(x => x.CreatedAt)
+        var page = ListPaging.Clamp(skip, take);
+        Response.Headers["X-Total-Count"] = source.Count.ToString();
+        var slice = page.Take == int.MaxValue ? source.Skip(page.Skip) : source.Skip(page.Skip).Take(page.Take);
+        return Ok(slice.Select(ToResponse).ToList());
+    }
+
+    [HttpGet("on-this-day")]
+    public async Task<ActionResult<IReadOnlyList<OnThisDayItem>>> OnThisDay(CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var items = await db.Memories.AsNoTracking()
+            .Where(item => item.AuthorUserId == userId
+                && item.OccurredOn != null
+                && item.OccurredOn.Value.Month == today.Month
+                && item.OccurredOn.Value.Day == today.Day
+                && item.OccurredOn.Value.Year < today.Year)
+            .OrderByDescending(item => item.OccurredOn)
             .ToListAsync(cancellationToken);
-        return Ok(solo.Select(ToResponse).ToList());
+        return Ok(items.Select(item => new OnThisDayItem(
+            "memory",
+            item.Id,
+            item.Title,
+            item.OccurredOn!.Value.Year,
+            item.OccurredOn,
+            item.PhotoStorageKey is not null)).ToList());
+    }
+
+    [HttpGet("album")]
+    public async Task<ActionResult<MonthlyAlbumResponse>> Album(
+        [FromQuery] int? year,
+        [FromQuery] int? month,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var today = DateTime.UtcNow;
+        var y = year ?? today.Year;
+        var m = month ?? today.Month;
+        var start = new DateOnly(y, m, 1);
+        var end = start.AddMonths(1);
+        var items = await db.Memories.AsNoTracking()
+            .Where(item => item.AuthorUserId == userId
+                && item.OccurredOn != null
+                && item.OccurredOn >= start
+                && item.OccurredOn < end)
+            .OrderBy(item => item.OccurredOn)
+            .ToListAsync(cancellationToken);
+        return Ok(new MonthlyAlbumResponse(y, m, items.Select(ToResponse).ToList()));
     }
 
     [HttpPost]

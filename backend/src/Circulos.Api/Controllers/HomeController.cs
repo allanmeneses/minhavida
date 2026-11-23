@@ -18,7 +18,8 @@ public sealed class HomeController(
     BillingService billing,
     ReminderEmailService reminderEmails,
     CircleArchiveService archive,
-    UsageStats stats) : ControllerBase
+    UsageStats stats,
+    OnboardingService onboarding) : ControllerBase
 {
     [HttpGet("home")]
     public async Task<ActionResult<DayPanelResponse>> Home(CancellationToken cancellationToken)
@@ -79,6 +80,10 @@ public sealed class HomeController(
             cancellationToken);
 
         var plan = billing.ToPlan(user);
+        var today = DateOnly.FromDateTime(now);
+        var onThisDay = await OnThisDayAsync(userId, today, cancellationToken);
+        var monthly = await MonthlySurpriseAsync(user, today, cancellationToken);
+        var onboardingItems = await OnboardingItemsAsync(userId, cancellationToken);
         return Ok(new DayPanelResponse(
             overdue.OrderBy(x => x.At).ToList(),
             dueToday.OrderBy(x => x.At).ToList(),
@@ -89,7 +94,11 @@ public sealed class HomeController(
             plan,
             notices,
             emailed,
-            user.EmailRemindersEnabled));
+            user.EmailRemindersEnabled,
+            onThisDay,
+            monthly,
+            user.RoutineStreakDays,
+            onboardingItems));
     }
 
     [HttpGet("plan")]
@@ -271,6 +280,7 @@ public sealed class HomeController(
             }
         }
 
+        StreakService.Touch(owner, now);
         await db.SaveChangesAsync(cancellationToken);
         await stats.IncrementAsync(UsageStats.ShortcutRun, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -556,5 +566,81 @@ public sealed class HomeController(
             sharedByUserId,
             sharedByName,
             circleId);
+
+    private async Task<List<OnThisDayItem>> OnThisDayAsync(Guid userId, DateOnly today, CancellationToken cancellationToken)
+    {
+        var memories = await db.Memories.AsNoTracking()
+            .Where(item => item.AuthorUserId == userId
+                && item.OccurredOn != null
+                && item.OccurredOn.Value.Month == today.Month
+                && item.OccurredOn.Value.Day == today.Day
+                && item.OccurredOn.Value.Year < today.Year)
+            .OrderByDescending(item => item.OccurredOn)
+            .Take(5)
+            .ToListAsync(cancellationToken);
+        var entries = await db.LifeEntries.AsNoTracking()
+            .Where(item => item.UserId == userId
+                && item.OccurredOn != null
+                && item.OccurredOn.Value.Month == today.Month
+                && item.OccurredOn.Value.Day == today.Day
+                && item.OccurredOn.Value.Year < today.Year)
+            .OrderByDescending(item => item.OccurredOn)
+            .Take(5)
+            .ToListAsync(cancellationToken);
+        return memories.Select(item => new OnThisDayItem("memory", item.Id, item.Title, item.OccurredOn!.Value.Year, item.OccurredOn, item.PhotoStorageKey is not null))
+            .Concat(entries.Select(item => new OnThisDayItem("entry", item.Id, item.Title, item.OccurredOn!.Value.Year, item.OccurredOn, item.PhotoStorageKey is not null)))
+            .OrderByDescending(item => item.Year)
+            .Take(5)
+            .ToList();
+    }
+
+    private async Task<MonthlySurpriseResponse?> MonthlySurpriseAsync(User user, DateOnly today, CancellationToken cancellationToken)
+    {
+        var previous = today.AddDays(1 - today.Day).AddDays(-1);
+        var monthStart = new DateOnly(previous.Year, previous.Month, 1);
+        var monthEnd = monthStart.AddMonths(1);
+        if (user.LastMonthlyRecapSeenOn == monthStart)
+        {
+            return null;
+        }
+
+        var memories = await db.Memories.AsNoTracking()
+            .Where(item => item.AuthorUserId == user.Id
+                && item.OccurredOn != null
+                && item.OccurredOn >= monthStart
+                && item.OccurredOn < monthEnd)
+            .OrderBy(item => item.OccurredOn)
+            .Select(item => item.Title)
+            .Take(8)
+            .ToListAsync(cancellationToken);
+        var entries = await db.LifeEntries.AsNoTracking()
+            .Where(item => item.UserId == user.Id
+                && item.OccurredOn != null
+                && item.OccurredOn >= monthStart
+                && item.OccurredOn < monthEnd)
+            .CountAsync(cancellationToken);
+        if (memories.Count == 0 && entries == 0)
+        {
+            return null;
+        }
+
+        return new MonthlySurpriseResponse(monthStart.Year, monthStart.Month, memories.Count, entries, memories);
+    }
+
+    private async Task<List<OnboardingExampleResponse>> OnboardingItemsAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var snapshot = await onboarding.SnapshotAsync(userId, cancellationToken);
+        return snapshot.Examples
+            .Where(item => item.ConfirmedAt is null && item.DiscardedAt is null)
+            .Select(item => new OnboardingExampleResponse(
+                item.Id,
+                item.CircleId,
+                item.CircleId is Guid id && snapshot.CircleNames.TryGetValue(id, out var name) ? name : null,
+                item.Kind,
+                item.Title,
+                item.Body,
+                true))
+            .ToList();
+    }
 }
 

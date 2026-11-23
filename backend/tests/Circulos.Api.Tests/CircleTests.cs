@@ -271,10 +271,6 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
         var client = _factory.CreateClient();
         var auth = await AuthHelper.RegisterAsync(client);
         client.WithToken(auth.Token);
-        for (var i = 0; i < 2; i++)
-        {
-            (await client.PostAsJsonAsync("/api/circles", new { name = $"C{i}" })).EnsureSuccessStatusCode();
-        }
 
         var outro = _factory.CreateClient();
         outro.WithToken(auth.Token);

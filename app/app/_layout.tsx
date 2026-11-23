@@ -13,6 +13,7 @@ function ThemedStack() {
       <Stack
         screenOptions={{
           headerShown: false,
+          animation: 'none',
           contentStyle: { backgroundColor: colors.bg },
         }}
       />

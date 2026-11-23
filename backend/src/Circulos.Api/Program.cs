@@ -31,7 +31,28 @@ builder.Services.PostConfigure<SystemAdminOptions>(options =>
     }
 });
 builder.Services.AddScoped<UsageStats>();
+builder.Services.AddScoped<OnboardingService>();
+builder.Services.AddScoped<JobQueue>();
 builder.Services.AddScoped<CircleArchiveService>();
+builder.Services.Configure<GoogleAuthOptions>(builder.Configuration.GetSection(GoogleAuthOptions.Section));
+builder.Services.PostConfigure<GoogleAuthOptions>(options =>
+{
+    if (string.Equals(builder.Configuration["GOOGLE_ENABLED"], "true", StringComparison.OrdinalIgnoreCase))
+    {
+        options.Enabled = true;
+    }
+
+    if (string.IsNullOrWhiteSpace(options.ClientId))
+    {
+        options.ClientId = builder.Configuration["GOOGLE_CLIENT_ID"];
+    }
+});
+builder.Services.AddHttpClient("google-auth", client => client.Timeout = TimeSpan.FromSeconds(10));
+builder.Services.AddScoped<IGoogleIdTokenValidator, GoogleIdTokenValidator>();
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddHostedService<JobWorker>();
+}
 builder.Services.AddSingleton<IEncryptionKeyProvider, ConfigurationEncryptionKeyProvider>();
 builder.Services.AddSingleton<LocalFileStorage>();
 builder.Services.AddSingleton<IFileStorage>(sp =>
@@ -155,7 +176,8 @@ app.Use(async (context, next) =>
     if (context.User.Identity?.IsAuthenticated == true)
     {
         var path = context.Request.Path.Value ?? string.Empty;
-        if (!path.StartsWith("/api/auth/logout", StringComparison.OrdinalIgnoreCase))
+        if (!path.StartsWith("/api/auth/logout", StringComparison.OrdinalIgnoreCase)
+            && !path.StartsWith("/api/account/appeals", StringComparison.OrdinalIgnoreCase))
         {
             var db = context.RequestServices.GetRequiredService<AppDbContext>();
             var userId = context.User.GetUserId();

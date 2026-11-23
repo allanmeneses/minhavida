@@ -39,5 +39,8 @@ describe('pipeline de seguranca', () => {
     assert.match(text, /actions\/setup-java@v6/);
     assert.match(text, /actions\/setup-dotnet@v6/);
     assert.match(text, /actions\/upload-artifact@v7/);
+    assert.match(text, /package --vulnerable/);
+    assert.match(text, /ci-ok:/);
+    assert.match(text, /needs: \[backend, app\]/);
   });
 });

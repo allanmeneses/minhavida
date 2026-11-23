@@ -19,6 +19,17 @@ public sealed class RecapController(AppDbContext db, RecapService recap, CircleA
         return Ok(await recap.ForProfileAsync(User.GetUserId(), cancellationToken));
     }
 
+    [HttpPost("api/recap/monthly/ack")]
+    public async Task<IActionResult> AckMonthly(CancellationToken cancellationToken)
+    {
+        var user = await db.Users.FirstAsync(item => item.Id == User.GetUserId(), cancellationToken);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var previous = today.AddDays(1 - today.Day).AddDays(-1);
+        user.LastMonthlyRecapSeenOn = new DateOnly(previous.Year, previous.Month, 1);
+        await db.SaveChangesAsync(cancellationToken);
+        return NoContent();
+    }
+
     [HttpGet("api/circles/{id:guid}/recap")]
     public async Task<ActionResult<CircleRecapResponse>> Circle(Guid id, CancellationToken cancellationToken)
     {

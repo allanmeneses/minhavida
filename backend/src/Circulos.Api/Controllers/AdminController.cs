@@ -104,6 +104,80 @@ public sealed class AdminController(
             item.CreatedAt)).ToList());
     }
 
+    [HttpGet("appeals")]
+    public async Task<ActionResult<IReadOnlyList<AppealResponse>>> Appeals(CancellationToken cancellationToken)
+    {
+        var admin = await RequireAdmin(cancellationToken);
+        if (admin is null)
+        {
+            return NotFound(new ErrorResponse("Painel nao encontrado."));
+        }
+
+        var items = await db.AccountAppeals.AsNoTracking()
+            .Include(item => item.User)
+            .OrderByDescending(item => item.CreatedAt)
+            .Take(200)
+            .ToListAsync(cancellationToken);
+        return Ok(items.Select(item => new AppealResponse(
+            item.Id,
+            item.UserId,
+            item.User.Email,
+            item.Note,
+            item.Status,
+            item.CreatedAt,
+            item.ResolvedAt)).ToList());
+    }
+
+    [HttpPost("appeals/{id:guid}/resolve")]
+    public async Task<IActionResult> ResolveAppeal(
+        Guid id,
+        [FromBody] ResolveAppealRequest request,
+        CancellationToken cancellationToken)
+    {
+        var admin = await RequireAdmin(cancellationToken);
+        if (admin is null)
+        {
+            return NotFound(new ErrorResponse("Painel nao encontrado."));
+        }
+
+        var appeal = await db.AccountAppeals.Include(item => item.User).FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
+        if (appeal is null)
+        {
+            return NotFound(new ErrorResponse("Recurso nao encontrado."));
+        }
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, appeal.UserId, cancellationToken);
+        await db.Entry(appeal).ReloadAsync(cancellationToken);
+        await db.Entry(appeal.User).ReloadAsync(cancellationToken);
+        if (appeal.Status != "open")
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return NoContent();
+        }
+
+        appeal.Status = request.Accept ? "accepted" : "rejected";
+        appeal.ResolvedAt = DateTime.UtcNow;
+        if (request.Accept)
+        {
+            appeal.User.BlockedAt = null;
+        }
+
+        db.AdminActions.Add(new AdminAction
+        {
+            Id = Guid.NewGuid(),
+            AdminUserId = admin.Id,
+            Action = request.Accept ? "appeal-accept" : "appeal-reject",
+            TargetKind = "profile",
+            TargetId = appeal.UserId,
+            Detail = request.Accept ? "Recurso aceito. Sem prazo." : "Recurso recusado. Sem prazo.",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return NoContent();
+    }
+
     [HttpPost("blocks")]
     public async Task<IActionResult> SetBlock(
         [FromBody] AdminBlockRequest request,

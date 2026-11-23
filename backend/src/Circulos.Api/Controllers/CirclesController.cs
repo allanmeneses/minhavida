@@ -18,7 +18,8 @@ public sealed class CirclesController(
     IEmailSender email,
     IFileStorage storage,
     SuccessionService succession,
-    CircleArchiveService archive) : ControllerBase
+    CircleArchiveService archive,
+    IConfiguration configuration) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<CircleSummaryResponse>>> Mine(CancellationToken cancellationToken)
@@ -226,7 +227,56 @@ public sealed class CirclesController(
             "Convite para um circulo",
             $"Use este codigo de convite: {token}",
             cancellationToken);
-        return Ok(new InviteCreatedResponse(token));
+        return Ok(ShareInvite(token, circle.Name));
+    }
+
+    [HttpPost("{id:guid}/invite-link")]
+    public async Task<ActionResult<InviteCreatedResponse>> InviteLink(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        if (circle is null || HiddenSurprise(circle, userId))
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
+        if (member is null || member.Role < CircleRole.Admin)
+        {
+            return Forbid();
+        }
+
+        var token = TokenHash.NewToken();
+        db.CircleInvites.Add(new CircleInvite
+        {
+            Id = Guid.NewGuid(),
+            CircleId = circle.Id,
+            CreatedByUserId = userId,
+            Email = string.Empty,
+            IsOpenLink = true,
+            TokenHash = TokenHash.Hash(token),
+            Role = CircleRole.Viewer,
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            CreatedAt = DateTime.UtcNow,
+        });
+        db.CircleLogs.Add(Log(circle.Id, userId, "invited", "Link de convite criado."));
+        await db.SaveChangesAsync(cancellationToken);
+        return Ok(ShareInvite(token, circle.Name));
+    }
+
+    [AllowAnonymous]
+    [HttpGet("invites/{token}")]
+    public async Task<ActionResult<InvitePreviewResponse>> PreviewInvite(string token, CancellationToken cancellationToken)
+    {
+        var hash = TokenHash.Hash(token);
+        var invite = await db.CircleInvites.Include(x => x.Circle)
+            .FirstOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
+        if (invite is null || invite.ExpiresAt < DateTime.UtcNow || (invite.AcceptedAt is not null && !invite.IsOpenLink))
+        {
+            return NotFound(new ErrorResponse("Convite invalido."));
+        }
+
+        return Ok(new InvitePreviewResponse(invite.Circle.Name, EnumText.Role(invite.Role), invite.IsOpenLink, invite.ExpiresAt));
     }
 
     [HttpPost("invites/{token}/accept")]
@@ -236,13 +286,24 @@ public sealed class CirclesController(
         var hash = TokenHash.Hash(token);
         var invite = await db.CircleInvites.Include(x => x.Circle).ThenInclude(x => x.Members)
             .FirstOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
-        if (invite is null || invite.AcceptedAt is not null || invite.ExpiresAt < DateTime.UtcNow)
+        if (invite is null
+            || invite.ExpiresAt < DateTime.UtcNow
+            || (invite.AcceptedAt is not null && !invite.IsOpenLink))
+        {
+            return BadRequest(new ErrorResponse("Convite invalido."));
+        }
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await CircleRowLock.AcquireAsync(db, invite.CircleId, cancellationToken);
+        await db.Entry(invite).ReloadAsync(cancellationToken);
+        await db.Entry(invite.Circle).Collection(x => x.Members).LoadAsync(cancellationToken);
+        if (invite.ExpiresAt < DateTime.UtcNow || (invite.AcceptedAt is not null && !invite.IsOpenLink))
         {
             return BadRequest(new ErrorResponse("Convite invalido."));
         }
 
         var user = await db.Users.FirstAsync(x => x.Id == userId, cancellationToken);
-        if (!string.Equals(user.Email, invite.Email, StringComparison.OrdinalIgnoreCase))
+        if (!invite.IsOpenLink && !string.Equals(user.Email, invite.Email, StringComparison.OrdinalIgnoreCase))
         {
             return BadRequest(new ErrorResponse("Este convite e para outro e-mail."));
         }
@@ -262,13 +323,19 @@ public sealed class CirclesController(
                 Role = invite.Role,
                 JoinedAt = DateTime.UtcNow,
             });
+            db.CircleLogs.Add(Log(invite.CircleId, userId, "joined", "Entrou no circulo por convite."));
         }
 
-        invite.AcceptedAt = DateTime.UtcNow;
-        db.CircleLogs.Add(Log(invite.CircleId, userId, "joined", "Entrou no circulo por convite."));
+        if (!invite.IsOpenLink)
+        {
+            invite.AcceptedAt = DateTime.UtcNow;
+        }
+
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         var circle = await LoadCircle(invite.CircleId, cancellationToken);
-        return Ok(ToSummary(circle!, invite.Role, userId));
+        var role = circle!.Members.First(x => x.UserId == userId).Role;
+        return Ok(ToSummary(circle, role, userId));
     }
 
     [HttpPost("{id:guid}/join")]
@@ -718,6 +785,8 @@ public sealed class CirclesController(
         Guid id,
         [FromQuery] string? action,
         [FromQuery] Guid? actorUserId,
+        [FromQuery] int? skip,
+        [FromQuery] int? take,
         CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
@@ -738,7 +807,100 @@ public sealed class CirclesController(
             logs = logs.Where(item => item.ActorUserId == actor);
         }
 
-        return Ok(logs.OrderByDescending(x => x.CreatedAt).Select(ToLog).ToList());
+        var page = ListPaging.Clamp(skip, take);
+        var ordered = logs.OrderByDescending(x => x.CreatedAt).ToList();
+        Response.Headers["X-Total-Count"] = ordered.Count.ToString();
+        return Ok(ordered.Skip(page.Skip).Take(page.Take == int.MaxValue ? ordered.Count : page.Take).Select(ToLog).ToList());
+    }
+
+    [HttpGet("{id:guid}/reports")]
+    public async Task<ActionResult<IReadOnlyList<ReportItemResponse>>> CircleReports(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        if (circle is null || HiddenSurprise(circle, userId))
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var member = circle.Members.FirstOrDefault(x => x.UserId == userId);
+        if (member is null || member.Role < CircleRole.Admin)
+        {
+            return Forbid();
+        }
+
+        var items = await db.ContentReports.AsNoTracking()
+            .Include(item => item.Reporter)
+            .Where(item => item.CircleId == id)
+            .OrderByDescending(item => item.CreatedAt)
+            .ToListAsync(cancellationToken);
+        return Ok(items.Select(ToReport).ToList());
+    }
+
+    [HttpPost("{id:guid}/reports/{reportId:guid}/decide")]
+    public async Task<IActionResult> DecideReport(
+        Guid id,
+        Guid reportId,
+        [FromBody] CircleReportDecisionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await CircleRowLock.AcquireAsync(db, id, cancellationToken);
+        var circle = await LoadCircle(id, cancellationToken);
+        var member = circle?.Members.FirstOrDefault(x => x.UserId == userId);
+        if (circle is null || member is null || member.Role < CircleRole.Admin)
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var report = await db.ContentReports.FirstOrDefaultAsync(item => item.Id == reportId && item.CircleId == id, cancellationToken);
+        if (report is null)
+        {
+            return NotFound(new ErrorResponse("Denuncia nao encontrada."));
+        }
+
+        if (report.Status == "circle-resolved")
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return NoContent();
+        }
+
+        var decision = request.Decision.Trim().ToLowerInvariant();
+        if (decision is not "keep" and not "hide")
+        {
+            return BadRequest(new ErrorResponse("Decida manter ou esconder."));
+        }
+
+        report.Status = "circle-resolved";
+        report.CircleDecision = decision;
+        report.CircleReviewerUserId = userId;
+        report.CircleReviewedAt = DateTime.UtcNow;
+        db.CircleLogs.Add(Log(id, userId, "report-decided", decision == "hide" ? "Denuncia: conteudo escondido." : "Denuncia: conteudo mantido."));
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("{id:guid}/gift-ideas")]
+    public async Task<ActionResult<IReadOnlyList<GiftIdeaShareResponse>>> GiftIdeas(Guid id, CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        var circle = await LoadCircle(id, cancellationToken);
+        if (circle is null || HiddenSurprise(circle, userId) || circle.Members.All(x => x.UserId != userId))
+        {
+            return NotFound(new ErrorResponse("Circulo nao encontrado."));
+        }
+
+        var shares = await db.GiftIdeaShares.AsNoTracking()
+            .Include(item => item.Reminder)
+            .Where(item => item.CircleId == id)
+            .ToListAsync(cancellationToken);
+        return Ok(shares.Select(item => new GiftIdeaShareResponse(
+            item.ReminderId,
+            item.Reminder.Title,
+            item.Reminder.PersonName,
+            System.Text.Json.JsonSerializer.Deserialize<string[]>(item.Reminder.GiftIdeasJson) ?? [])).ToList());
     }
 
     private Task<Circle?> LoadCircle(Guid id, CancellationToken cancellationToken) =>
@@ -936,4 +1098,26 @@ public sealed class CirclesController(
             Detail = detail,
             CreatedAt = DateTime.UtcNow,
         };
+
+    private InviteCreatedResponse ShareInvite(string token, string circleName)
+    {
+        var root = (configuration["PUBLIC_BASE_URL"] ?? configuration["PublicBaseUrl"] ?? string.Empty).TrimEnd('/');
+        var path = $"/i/{token}";
+        var url = string.IsNullOrWhiteSpace(root) ? path : $"{root}{path}";
+        var text = $"Entre no circulo {circleName} no Circulos: {url}";
+        return new InviteCreatedResponse(token, text, url);
+    }
+
+    private static ReportItemResponse ToReport(ContentReport item) =>
+        new(
+            item.Id,
+            item.ReporterUserId,
+            item.Reporter.Email,
+            item.TargetKind,
+            item.TargetId,
+            item.Note,
+            item.CreatedAt,
+            item.CircleId,
+            item.Status,
+            item.CircleDecision);
 }

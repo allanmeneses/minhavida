@@ -20,6 +20,11 @@ public sealed class User
     public bool TwoFactorEnabled { get; set; }
     public string? TwoFactorSecret { get; set; }
     public string? CalendarFeedToken { get; set; }
+    public DateTime? OnboardingCompletedAt { get; set; }
+    public DateOnly? LastMonthlyRecapSeenOn { get; set; }
+    public DateOnly? LastRoutineDate { get; set; }
+    public int RoutineStreakDays { get; set; }
+    public string? GoogleSubject { get; set; }
 
     public Profile Profile { get; set; } = null!;
     public ICollection<PersonalDocument> Documents { get; set; } = new List<PersonalDocument>();

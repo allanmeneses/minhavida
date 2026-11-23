@@ -17,7 +17,9 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
         var client = _factory.CreateClient();
         client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
         var empty = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
-        Assert.Empty(empty.GetProperty("flows").EnumerateArray());
+        var initial = empty.GetProperty("flows").EnumerateArray().ToList();
+        Assert.Contains(initial, x => x.GetProperty("key").GetString() == "circles" && x.GetProperty("count").GetInt32() == 2);
+        Assert.DoesNotContain(initial, x => x.GetProperty("key").GetString() == "vaccine");
 
         var areas = await client.GetFromJsonAsync<List<AreaDto>>("/api/life-areas", Json);
         var vacinas = areas!.Single(x => x.Kind == "vaccine");
@@ -31,8 +33,8 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
         var recap = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
         var flows = recap.GetProperty("flows").EnumerateArray().ToList();
         Assert.Contains(flows, x => x.GetProperty("key").GetString() == "vaccine" && x.GetProperty("count").GetInt32() == 1);
+        Assert.Contains(flows, x => x.GetProperty("key").GetString() == "circles" && x.GetProperty("count").GetInt32() == 2);
         Assert.DoesNotContain(flows, x => x.GetProperty("key").GetString() == "diary");
-        Assert.DoesNotContain(flows, x => x.GetProperty("key").GetString() == "circles");
     }
 
     [Fact]
@@ -123,8 +125,8 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
     {
         var client = _factory.CreateClient();
         client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
-        var lasting = await (await client.PostAsJsonAsync("/api/circles", new { name = "Familia", kind = "lasting" }))
-            .Content.ReadFromJsonAsync<CircleDto>(Json);
+        var mine = await client.GetFromJsonAsync<List<CircleDto>>("/api/circles", Json);
+        var lasting = mine!.Single(x => x.Name == "Familia");
         var denied = await client.PostAsync($"/api/circles/{lasting!.Id}/archive", null);
         Assert.Equal(HttpStatusCode.BadRequest, denied.StatusCode);
 
@@ -194,6 +196,6 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
     }
 
     private sealed record AreaDto(Guid Id, string Kind);
-    private sealed record CircleDto(Guid Id);
+    private sealed record CircleDto(Guid Id, string? Name);
     private sealed record InviteDto(string Token);
 }

@@ -22,7 +22,7 @@ type AuthContextValue = {
   profile: Profile | null;
   photoRevision: number;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<string>;
   verifyTwoFactor: (twoFactorToken: string, code?: string, recoveryCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -158,6 +158,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       skipRefresh: true,
     });
     await storeSession(result);
+    if (!result.token) {
+      throw new Error('Sessao incompleta.');
+    }
+    return result.token;
   }, [storeSession]);
 
   const verifyTwoFactor = useCallback(async (twoFactorToken: string, code?: string, recoveryCode?: string) => {

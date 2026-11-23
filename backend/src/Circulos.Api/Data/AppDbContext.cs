@@ -42,6 +42,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<UsageCounter> UsageCounters => Set<UsageCounter>();
     public DbSet<ContentReport> ContentReports => Set<ContentReport>();
     public DbSet<AdminAction> AdminActions => Set<AdminAction>();
+    public DbSet<OnboardingExample> OnboardingExamples => Set<OnboardingExample>();
+    public DbSet<AccountAppeal> AccountAppeals => Set<AccountAppeal>();
+    public DbSet<BackgroundJob> BackgroundJobs => Set<BackgroundJob>();
+    public DbSet<GiftIdeaShare> GiftIdeaShares => Set<GiftIdeaShare>();
+    public DbSet<DiaryPage> DiaryPages => Set<DiaryPage>();
+    public DbSet<SupportMessage> SupportMessages => Set<SupportMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,6 +65,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.SubscriptionProviderId).HasMaxLength(80);
             entity.Property(x => x.PaidUntil).HasColumnType("timestamp with time zone");
             entity.Property(x => x.BlockedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.OnboardingCompletedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.GoogleSubject).HasMaxLength(128);
+            entity.HasIndex(x => x.GoogleSubject).IsUnique().HasFilter("\"GoogleSubject\" IS NOT NULL");
             entity.HasIndex(x => x.CalendarFeedToken).IsUnique().HasFilter("\"CalendarFeedToken\" IS NOT NULL");
             entity.HasOne(x => x.Profile)
                 .WithOne(x => x.User)
@@ -230,6 +239,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.TokenHash).IsUnique();
             entity.Property(x => x.Email).HasMaxLength(256).IsRequired();
+            entity.Property(x => x.IsOpenLink);
             entity.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
             entity.Property(x => x.ExpiresAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.AcceptedAt).HasColumnType("timestamp with time zone");
@@ -287,6 +297,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.PersonName).HasMaxLength(120);
             entity.Property(x => x.GiftIdeasJson).HasMaxLength(4000).IsRequired();
             entity.Property(x => x.PhotoStorageKey).HasMaxLength(260);
+            entity.Property(x => x.PhotoContentType).HasMaxLength(120);
             entity.Property(x => x.StartAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.NextFireAt).HasColumnType("timestamp with time zone");
             entity.Property(x => x.UntilAt).HasColumnType("timestamp with time zone");
@@ -596,8 +607,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasIndex(x => new { x.TargetKind, x.TargetId });
             entity.HasIndex(x => x.CreatedAt);
             entity.Property(x => x.TargetKind).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.CircleDecision).HasMaxLength(20);
             entity.Property(x => x.Note).HasMaxLength(500);
             entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.CircleReviewedAt).HasColumnType("timestamp with time zone");
+            entity.HasIndex(x => x.CircleId);
             entity.HasOne(x => x.Reporter)
                 .WithMany()
                 .HasForeignKey(x => x.ReporterUserId)
@@ -617,6 +632,87 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
                 .WithMany()
                 .HasForeignKey(x => x.AdminUserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<OnboardingExample>(entity =>
+        {
+            entity.ToTable("onboarding_examples");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.UserId);
+            entity.Property(x => x.Kind).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Body).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.ConfirmedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.DiscardedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AccountAppeal>(entity =>
+        {
+            entity.ToTable("account_appeals");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.UserId);
+            entity.Property(x => x.Note).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.ResolvedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.User)
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BackgroundJob>(entity =>
+        {
+            entity.ToTable("background_jobs");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.Status, x.RunAt });
+            entity.Property(x => x.Kind).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.Payload).HasMaxLength(4000).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(20).IsRequired();
+            entity.Property(x => x.RunAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.CompletedAt).HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<GiftIdeaShare>(entity =>
+        {
+            entity.ToTable("gift_idea_shares");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.ReminderId, x.CircleId }).IsUnique();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.Reminder)
+                .WithMany()
+                .HasForeignKey(x => x.ReminderId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Circle)
+                .WithMany()
+                .HasForeignKey(x => x.CircleId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DiaryPage>(entity =>
+        {
+            entity.ToTable("diary_pages");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.LifeAreaId);
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Body).HasMaxLength(20000).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone");
+        });
+
+        modelBuilder.Entity<SupportMessage>(entity =>
+        {
+            entity.ToTable("support_messages");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Email).HasMaxLength(256).IsRequired();
+            entity.Property(x => x.Body).HasMaxLength(4000).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
         });
     }
 }

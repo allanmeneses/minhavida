@@ -14,6 +14,7 @@ export default function AdminScreen() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [reports, setReports] = useState<AdminReport[]>([]);
   const [actions, setActions] = useState<AdminActionItem[]>([]);
+  const [appeals, setAppeals] = useState<{ id: string; email: string; note: string; status: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
@@ -24,6 +25,11 @@ export default function AdminScreen() {
     setStats(await api<AdminStats>('/api/admin/stats', { token }));
     setReports(await api<AdminReport[]>('/api/admin/reports', { token }));
     setActions(await api<AdminActionItem[]>('/api/admin/actions', { token }));
+    try {
+      setAppeals(await api('/api/admin/appeals', { token }));
+    } catch {
+      setAppeals([]);
+    }
   }, [token]);
 
   useEffect(() => {
@@ -76,6 +82,32 @@ export default function AdminScreen() {
           <Text style={styles.item}>Circulos ativos: {stats.activeCircles}</Text>
         </View>
       ) : null}
+
+      <Text style={styles.section}>Recursos de bloqueio</Text>
+      {appeals.length === 0 ? <Text style={styles.lead}>Nenhum recurso aberto.</Text> : null}
+      {appeals.map((item) => (
+        <View key={item.id} style={styles.card}>
+          <Text style={styles.item}>{item.email}</Text>
+          <Text style={styles.lead}>{item.note}</Text>
+          {item.status === 'open' ? (
+            <Button
+              label={`Aceitar recurso de ${item.email}`}
+              onPress={() => {
+                if (!token) {
+                  return;
+                }
+                void api(`/api/admin/appeals/${item.id}/resolve`, {
+                  method: 'POST',
+                  token,
+                  body: JSON.stringify({ accept: true }),
+                }).then(() => load());
+              }}
+            />
+          ) : (
+            <Text style={styles.lead}>{item.status}</Text>
+          )}
+        </View>
+      ))}
 
       <Text style={styles.section}>Denuncias</Text>
       {reports.length === 0 ? <Text style={styles.lead}>Nenhuma denuncia.</Text> : null}

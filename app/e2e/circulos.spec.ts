@@ -281,15 +281,16 @@ test('ferias com prazo escolhido', async ({ page }) => {
 
 test('atalho marca lembrete de circulo como feito', async ({ page }) => {
   await signUp(page, '-atalho-ciclo');
-  await page.getByRole('button', { name: 'Circulos' }).click();
-  await page.getByLabel('Nome', { exact: true }).fill('Casa');
-  await page.getByRole('button', { name: 'Criar circulo' }).click();
-  await expect(page.getByText('Quem esta aqui')).toBeVisible();
-  await page.getByRole('button', { name: 'Hoje' }).click();
   await page.getByRole('button', { name: 'Lembretes' }).first().click();
   await page.getByLabel('Titulo').fill('Tomei');
-  await page.getByRole('button', { name: 'Sem circulo' }).click();
-  await expect(page.getByRole('button', { name: 'Casa' })).toBeVisible();
+  const reminderCircle = page.getByRole('button', { name: /^(Sem circulo|Eu|Familia)$/ });
+  for (let i = 0; i < 4; i++) {
+    if (await page.getByRole('button', { name: 'Familia', exact: true }).isVisible()) {
+      break;
+    }
+    await reminderCircle.click();
+  }
+  await expect(page.getByRole('button', { name: 'Familia', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Criar lembrete' }).click();
   await expect(page.getByText('Tomei', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Hoje' }).click();
@@ -678,6 +679,12 @@ test('perfil de pet no circulo', async ({ page }) => {
   await page.getByPlaceholder('Luna').fill('Luna');
   await page.getByPlaceholder('Nossa cachorra').fill('Nossa cachorra');
   await page.getByRole('button', { name: 'So no meu perfil' }).click();
+  for (let i = 0; i < 6; i++) {
+    if (await page.getByRole('button', { name: `Circulo: ${circleName}` }).isVisible()) {
+      break;
+    }
+    await page.getByRole('button', { name: /^Circulo: / }).click();
+  }
   await expect(page.getByRole('button', { name: `Circulo: ${circleName}` })).toBeVisible();
   await page.getByRole('button', { name: 'Criar perfil' }).click();
   await expect(page.getByText('Luna', { exact: true })).toBeVisible();
@@ -743,7 +750,8 @@ test('recap de uso no perfil so mostra fluxo usado', async ({ page }) => {
   await signUp(page, '-recap');
   await page.getByRole('button', { name: 'Perfil' }).click();
   await page.getByRole('button', { name: 'Resumo de uso' }).click();
-  await expect(page.getByText('Ainda nao ha uso para resumir.')).toBeVisible();
+  await expect(page.getByText('Circulos · 2')).toBeVisible();
+  await expect(page.getByText('Ainda nao ha uso para resumir.')).toHaveCount(0);
   await page.getByRole('button', { name: 'Perfil' }).click();
   await page.getByText('Vacinas', { exact: true }).click();
   await page.getByLabel('Titulo').fill('Hepatite B');
@@ -1023,6 +1031,12 @@ test('permissao de pet e grupo', async ({ browser }) => {
   await owner.getByPlaceholder('Luna').fill('Luna');
   await owner.getByPlaceholder('Nossa cachorra').fill('Nossa cachorra');
   await owner.getByRole('button', { name: 'So no meu perfil' }).click();
+  for (let i = 0; i < 6; i++) {
+    if (await owner.getByRole('button', { name: 'Circulo: Casa pet' }).isVisible()) {
+      break;
+    }
+    await owner.getByRole('button', { name: /^Circulo: / }).click();
+  }
   await expect(owner.getByRole('button', { name: 'Circulo: Casa pet' })).toBeVisible();
   await owner.getByRole('button', { name: 'Criar perfil' }).click();
   await expect(owner.getByText('Luna', { exact: true })).toBeVisible();
@@ -1069,28 +1083,20 @@ test('tags opcionais na entrada e busca', async ({ page }) => {
 
 test('a mesma entrada aparece em dois circulos sem duplicar', async ({ page }) => {
   await signUp(page, '-share-entry');
-  await page.getByRole('button', { name: 'Circulos' }).click();
-  await page.getByLabel('Nome', { exact: true }).fill('Pessoal corrida');
-  await page.getByRole('button', { name: 'Criar circulo' }).click();
-  await expect(page.getByText('Quem esta aqui')).toBeVisible();
-  await page.getByRole('button', { name: 'Circulos' }).click();
-  await page.getByLabel('Nome', { exact: true }).fill('Equipe corrida');
-  await page.getByRole('button', { name: 'Criar circulo' }).click();
-  await expect(page.getByText('Quem esta aqui')).toBeVisible();
   await page.getByRole('button', { name: 'Perfil' }).click();
   await page.getByText('Diario', { exact: true }).click();
   await page.getByLabel('Titulo').fill('Corrida 200m');
-  await page.getByRole('button', { name: 'Fora do circulo: Pessoal corrida' }).click();
-  await page.getByRole('button', { name: 'Fora do circulo: Equipe corrida' }).click();
+  await page.getByRole('button', { name: 'Fora do circulo: Eu' }).click();
+  await page.getByRole('button', { name: 'Fora do circulo: Familia' }).click();
   await page.getByRole('button', { name: 'Guardar entrada' }).click();
   await expect(page.getByText('Corrida 200m')).toBeVisible();
   await page.getByRole('button', { name: 'Circulos' }).click();
-  await page.getByRole('button', { name: 'Abrir Pessoal corrida' }).click();
+  await page.getByRole('button', { name: 'Abrir Eu' }).click();
   await expect(page.getByText('Entradas compartilhadas', { exact: true })).toBeVisible();
   await expect(page.getByText('Corrida 200m').first()).toBeVisible();
   await expect(page.getByText('A mesma entrada, sem duplicar.')).toBeVisible();
   await page.getByRole('button', { name: 'Circulos' }).click();
-  await page.getByRole('button', { name: 'Abrir Equipe corrida' }).click();
+  await page.getByRole('button', { name: 'Abrir Familia' }).click();
   await expect(page.getByText('Corrida 200m').first()).toBeVisible();
   await expect(page.getByText('Entradas compartilhadas', { exact: true })).toHaveCount(1);
 });
@@ -1225,5 +1231,76 @@ test('lembrete por e-mail opcional dispara na caixa local', async ({ page }) => 
   await expect(page.getByText('Enviamos o lembrete Remedio das oito por e-mail')).toBeVisible({
     timeout: 15_000,
   });
+});
+
+test('cadastro mostra circulos prontos e exemplos para confirmar', async ({ page }) => {
+  await signUp(page, '-onboarding');
+  await expect(page.getByTestId('onboarding-examples')).toBeVisible();
+  await expect(page.getByText('Como foi o meu dia')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Confirmar' }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Descartar' }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Circulos' }).click();
+  await expect(page.getByText('Eu', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Familia').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Hoje' }).click();
+  await expect(page.getByTestId('on-this-day')).toBeVisible();
+  await expect(page.getByText('Neste dia')).toBeVisible();
+});
+
+test('login nao mostra Google desligado por padrao', async ({ page }) => {
+  await page.goto('/(auth)/login');
+  await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Entrar com Google' })).toHaveCount(0);
+});
+
+test('convite por link abre o circulo depois do cadastro', async ({ browser }) => {
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await signUp(owner, '-convite-link');
+  await owner.getByRole('button', { name: 'Circulos' }).click();
+  await owner.getByRole('button', { name: 'Abrir Familia' }).click();
+  await expect(owner.getByText('Quem esta aqui')).toBeVisible();
+  await owner.getByRole('button', { name: 'Criar link para WhatsApp' }).click();
+  const shareBox = owner.getByTestId('invite-share-text');
+  await expect(shareBox).toBeVisible();
+  await expect(shareBox).toContainText(/Entre no circulo Familia/);
+  const share = await shareBox.innerText();
+  const match = share.match(/\/i\/([A-Za-z0-9_-]+)/);
+  expect(match).toBeTruthy();
+  const inviteToken = match![1];
+
+  const guestContext = await browser.newContext();
+  const guest = await guestContext.newPage();
+  await guest.goto(`/i/${inviteToken}`);
+  await expect(guest.getByText('Familia').first()).toBeVisible();
+  await guest.getByRole('button', { name: 'Criar conta e entrar' }).click();
+  await guest.getByLabel('Nome', { exact: true }).fill('Convidada');
+  await guest.getByLabel('E-mail').fill(`e2e-${Date.now()}-convite@exemplo.com`);
+  await guest.getByLabel('Senha').fill('senha-segura-1');
+  await guest.getByRole('button', { name: 'Criar conta' }).click();
+  const skip = guest.getByRole('button', { name: 'Pular tour' });
+  const inside = guest.getByText('Quem esta aqui');
+  await expect(skip.or(inside)).toBeVisible({ timeout: 20_000 });
+  if (await skip.isVisible()) {
+    await skip.click();
+  }
+  await expect(inside).toBeVisible({ timeout: 20_000 });
+  await expect(guest.getByText('Convidada', { exact: true })).toBeVisible();
+});
+
+test('privacidade visivel e exportar json', async ({ page }) => {
+  await signUp(page, '-privacidade');
+  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await expect(page.getByTestId('privacy-overview')).toBeVisible();
+  await expect(page.getByText(/Diario, documentos e vacinas/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Exportar meus dados em JSON' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Enviar mensagem ao suporte' })).toBeVisible();
+});
+
+test('leitor de tela acha cadastro pelo papel de botao', async ({ page }) => {
+  await page.goto('/(auth)/register');
+  await expect(page.getByRole('button', { name: 'Criar conta' })).toBeVisible();
+  await expect(page.getByLabel('Nome', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('E-mail')).toBeVisible();
 });
 

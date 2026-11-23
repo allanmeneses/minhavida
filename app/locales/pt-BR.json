@@ -1,0 +1,16 @@
+{
+  "home.title": "O que pede atencao hoje",
+  "home.kicker": "Painel do dia",
+  "home.onThisDay": "Neste dia",
+  "home.rest": "Ver o resto do dia",
+  "home.hideRest": "Esconder o resto",
+  "home.streak": "Dias seguidos cuidando da rotina",
+  "home.album": "Album do mes",
+  "onboarding.confirm": "Confirmar",
+  "onboarding.discard": "Descartar",
+  "invite.share": "Criar link para WhatsApp",
+  "privacy.title": "Quem ve o que",
+  "export.json": "Exportar meus dados em JSON",
+  "support.send": "Enviar mensagem ao suporte",
+  "google.login": "Entrar com Google"
+}

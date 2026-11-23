@@ -18,13 +18,18 @@ export default function MemoriesScreen() {
   const [body, setBody] = useState('');
   const [occurredOn, setOccurredOn] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [skip, setSkip] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const pageSize = 20;
 
   const load = useCallback(async () => {
     if (!token) {
       return;
     }
-    setItems(await api<MemoryItem[]>('/api/memories', { token }));
-  }, [token]);
+    const next = await api<MemoryItem[]>(`/api/memories?skip=${skip}&take=${pageSize}`, { token });
+    setHasMore(next.length === pageSize);
+    setItems((current) => (skip === 0 ? next : [...current, ...next]));
+  }, [token, skip]);
 
   useEffect(() => {
     void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Falha ao abrir as memorias.'));
@@ -46,6 +51,7 @@ export default function MemoriesScreen() {
     setTitle('');
     setBody('');
     setOccurredOn('');
+    setSkip(0);
     await load();
   }
 
@@ -73,6 +79,9 @@ export default function MemoriesScreen() {
       {items.map((item) => (
         <MemoryCard key={item.id} item={item} onSave={(next) => void saveSilent(next)} />
       ))}
+      {hasMore ? (
+        <Button label="Ver mais memorias" variant="ghost" onPress={() => setSkip((current) => current + pageSize)} />
+      ) : null}
     </ScrollView>
   );
 }

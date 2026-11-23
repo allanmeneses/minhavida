@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { Link, router, type Href } from 'expo-router';
 import { BrandMark } from '@/components/BrandMark';
@@ -7,7 +7,9 @@ import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
-import { ApiError } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
+import { t } from '@/lib/i18n';
+import { clearPendingInvite, readPendingInvite } from '@/lib/pending-invite';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
@@ -16,12 +18,30 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
+
+  useEffect(() => {
+    void api<{ enabled: boolean }>('/api/auth/google')
+      .then((status) => setGoogleEnabled(status.enabled))
+      .catch(() => setGoogleEnabled(false));
+  }, []);
 
   async function onSubmit() {
     setError(null);
     setBusy(true);
     try {
-      await register(name.trim(), email.trim(), password);
+      const token = await register(name.trim(), email.trim(), password);
+      const pending = readPendingInvite();
+      if (pending) {
+        const joined = await api<{ id: string }>(`/api/circles/invites/${pending}/accept`, {
+          method: 'POST',
+          token,
+          body: JSON.stringify({}),
+        });
+        clearPendingInvite();
+        router.replace(`/(app)/circle/${joined.id}` as Href);
+        return;
+      }
       router.replace('/(app)/home');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Nao foi possivel criar a conta.');
@@ -63,6 +83,7 @@ export default function RegisterScreen() {
         loading={busy}
         disabled={!name || !email || password.length < 8}
       />
+      {googleEnabled ? <Button label={t('google.login')} variant="ghost" onPress={() => undefined} /> : null}
       <Text style={styles.hint}>
         Ja tem conta?{' '}
         <Link href="/(auth)/login" style={styles.link}>
