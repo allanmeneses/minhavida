@@ -8,6 +8,11 @@ import { CaptureBar } from '@/components/CaptureBar';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary, type DayPanel, type ReminderItem, type ShortcutItem } from '@/lib/api';
+import {
+  canCycleCircleReminders,
+  circleReminderButtonLabel,
+  nextCircleReminderId,
+} from '@/lib/circleReminderPicker';
 import { t } from '@/lib/i18n';
 import { countNoun } from '@/lib/plural';
 import { type HomeRecordType } from '@/lib/records';
@@ -41,8 +46,13 @@ export default function HomeScreen() {
     if (!token) {
       return;
     }
+    const reminderPromise = api<ReminderItem[]>('/api/reminders', { token }).catch(() => null);
     try {
       const next = await api<DayPanel>('/api/home', { token });
+      const reminderList = await reminderPromise;
+      if (reminderList) {
+        setReminders(reminderList);
+      }
       setPanel(next);
       setRecordTypes(next.recordTypes ?? []);
       if ((next.reminderEmailsSent ?? []).length > 0) {
@@ -62,11 +72,6 @@ export default function HomeScreen() {
       }
     } catch {
       // atalho não entra no cache de leitura desta rodada
-    }
-    try {
-      setReminders(await api<ReminderItem[]>('/api/reminders', { token }));
-    } catch {
-      // lembretes usam cache quando a rede some
     }
     try {
       setCircles(await api<CircleSummary[]>('/api/circles', { token }));
@@ -200,7 +205,6 @@ export default function HomeScreen() {
   }
 
   const inactiveShortcuts = allShortcuts.filter((item) => !item.isActive);
-  const circleReminders = reminders.filter((item) => item.circleId);
 
   async function decideExample(id: string, confirm: boolean) {
     if (!token) {
@@ -461,17 +465,11 @@ export default function HomeScreen() {
           }
         />
         <Button
-          label={reminderId ? `Lembrete: ${circleReminders.find((item) => item.id === reminderId)?.title}` : 'Sem lembrete de círculo'}
+          label={circleReminderButtonLabel(reminders, reminderId)}
           variant="ghost"
-          onPress={() => {
-            if (circleReminders.length === 0) {
-              setReminderId(null);
-              return;
-            }
-            const index = circleReminders.findIndex((item) => item.id === reminderId);
-            const next = circleReminders[(index + 1) % (circleReminders.length + 1)];
-            setReminderId(next?.id ?? null);
-          }}
+          disabled={!canCycleCircleReminders(reminders)}
+          disabledHint="Crie um lembrete em um círculo para vincular o atalho."
+          onPress={() => setReminderId(nextCircleReminderId(reminders, reminderId))}
         />
         <Button
           label="Adicionar atalho"
