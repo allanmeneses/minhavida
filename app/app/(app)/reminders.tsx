@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary, type ReminderItem } from '@/lib/api';
 import { FREQUENCY_LABEL, displayLabel } from '@/lib/labels';
+import { formatPersonTime } from '@/lib/formatPersonTime';
 import { examplePlaceholder } from '@/lib/placeholders';
 import { screenStyles } from '@/lib/screenStyles';
 
@@ -163,7 +164,7 @@ export default function RemindersScreen() {
           <TextField label="Ideias de presente" value={ideas} onChangeText={setIdeas} placeholder={examplePlaceholder('Livro, planta')} />
         </>
       ) : null}
-      <Text style={styles.lead}>Círculo ciclico (opcional). O atalho marca que foi feito.</Text>
+      <Text style={styles.lead}>Círculo cíclico (opcional). O atalho marca que foi feito.</Text>
       <Button
         label={circleId ? circles.find((item) => item.id === circleId)?.name ?? 'Círculo' : 'Sem círculo'}
         variant="ghost"
@@ -187,7 +188,7 @@ export default function RemindersScreen() {
         <View key={item.id} style={styles.card}>
           <Text style={styles.item}>{item.title}</Text>
           <Text style={styles.lead}>
-            {displayLabel(item.recurrence?.frequency ?? 'none', FREQUENCY_LABEL)} · {new Date(item.nextFireAt).toLocaleString('pt-BR')}
+            {displayLabel(item.recurrence?.frequency ?? 'none', FREQUENCY_LABEL)} · {formatPersonTime(item.nextFireAt)}
           </Text>
           {item.endingSoon ? <Text style={styles.lead}>Recorrência acabando</Text> : null}
           {item.giftIdeas?.length ? <Text style={styles.lead}>{item.giftIdeas.join(', ')}</Text> : null}

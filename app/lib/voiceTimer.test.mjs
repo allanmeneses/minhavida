@@ -13,5 +13,7 @@ describe('timer da gravação na tela', () => {
     assert.equal(source.split('recordingLabel(elapsed)').length - 1, 1);
     assert.doesNotMatch(source, /formatElapsed\(elapsed\)/);
     assert.match(source, /Novo tipo/);
+    assert.match(source, /setElapsed\(0\)/);
+    assert.match(source, /, 1000\)/);
   });
 });

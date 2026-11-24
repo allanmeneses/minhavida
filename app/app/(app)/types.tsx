@@ -71,12 +71,12 @@ export default function TypesScreen() {
         label="Descrever um tipo"
         value={sentence}
         onChangeText={setSentence}
-        placeholder="quero anotar as vacinas do meu filho, com data, posto e lote"
+        placeholder="ex.: vacinas do meu filho"
       />
       <Button
         label="Sugerir tipo"
-        variant="ghost"
         disabled={!sentence.trim()}
+        disabledHint="Escreva o que você quer guardar para sugerir o tipo."
         onPress={() => {
           if (!token || !sentence.trim()) {
             return;

@@ -487,6 +487,7 @@ export default function CircleDetailScreen() {
           {(detail?.sharedEntries ?? []).map((item) => (
             <View key={item.id} style={styles.card}>
               <Text style={styles.item}>{item.title}</Text>
+              {item.body ? <Text style={styles.lead}>{item.body}</Text> : null}
               <Text style={styles.lead}>De {item.authorName}. A mesma entrada, sem duplicar.</Text>
               {(item.tags ?? []).length > 0 ? (
                 <Text style={styles.lead}>Tags: {(item.tags ?? []).join(', ')}</Text>
@@ -496,6 +497,7 @@ export default function CircleDetailScreen() {
           {(detail?.sharedRecords ?? []).map((item) => (
             <View key={item.id} style={styles.card}>
               <Text style={styles.item}>{item.title}</Text>
+              {item.body ? <Text style={styles.lead}>{item.body}</Text> : null}
               <Text style={styles.lead}>De {item.authorName}. A mesma entrada, sem duplicar.</Text>
             </View>
           ))}
@@ -743,7 +745,7 @@ export default function CircleDetailScreen() {
           <Text style={styles.section}>Votação de sucessão</Text>
           <Text style={styles.lead}>
             Maioria simples, sem quorum. Prazo de 3 dias. Todos os membros votam. Status: {displayLabel(vote.status, SUCCESSION_STATUS_LABEL)}. Encerra em{' '}
-            {new Date(vote.deadlineAt).toLocaleString('pt-BR')}.
+            {formatPersonTime(vote.deadlineAt)}.
           </Text>
           {vote.replacementBlockedMessage ? (
             <Text style={styles.lead}>{vote.replacementBlockedMessage}</Text>

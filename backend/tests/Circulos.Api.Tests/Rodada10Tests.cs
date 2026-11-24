@@ -79,11 +79,12 @@ public sealed class Rodada10Tests : IClassFixture<ApiFactory>
 
         var lasting = await dono.PostAsJsonAsync("/api/circles", new
         {
-            name = "Família",
+            name = "Clube da rua",
             kind = "lasting",
             endsAt,
         });
         Assert.Equal(HttpStatusCode.BadRequest, lasting.StatusCode);
+        Assert.Contains("Data de fim só vale em círculo temporário ou diário.", await lasting.Content.ReadAsStringAsync());
 
         var a = _factory.CreateClient();
         a.WithToken(donoAuth.Token);

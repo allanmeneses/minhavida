@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Text } from 'react-native';
-import { useRouter, type Href } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type SharedListSummary } from '@/lib/api';
 import { LIST_KIND_LABEL, LIST_KINDS, nextOf, type ListKind } from '@/lib/listKinds';
+import { listProgressLabel } from '@/lib/listProgress';
 import { examplePlaceholder } from '@/lib/placeholders';
 import { screenStyles } from '@/lib/screenStyles';
 
@@ -28,9 +29,11 @@ export default function ListsScreen() {
     setItems(await api<SharedListSummary[]>('/api/lists', { token }));
   }, [token]);
 
-  useEffect(() => {
-    void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Falha ao abrir as listas.'));
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      void load().catch((err) => setError(err instanceof ApiError ? err.message : 'Falha ao abrir as listas.'));
+    }, [load]),
+  );
 
   async function create() {
     if (!token || !name.trim()) {
@@ -66,7 +69,7 @@ export default function ListsScreen() {
           onPress={() => router.push(`/(app)/list/${item.id}` as Href)}>
           <Text style={styles.item}>{item.name}</Text>
           <Text style={styles.lead}>
-            {LIST_KIND_LABEL[item.kind as ListKind] ?? item.kind} · {item.doneCount}/{item.itemCount}
+            {LIST_KIND_LABEL[item.kind as ListKind] ?? item.kind} · {listProgressLabel(item.doneCount, item.itemCount)}
           </Text>
         </Pressable>
       ))}

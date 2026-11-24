@@ -170,13 +170,16 @@ export default function HomeScreen() {
     if (!token || !label.trim()) {
       return;
     }
-    await api('/api/shortcuts', {
+    const created = await api<ShortcutItem>('/api/shortcuts', {
       method: 'POST',
       token,
       body: JSON.stringify({ label: label.trim(), actionKind, reminderId }),
     });
     setLabel('');
     setReminderId(null);
+    setPanel((current) =>
+      current ? { ...current, shortcuts: [...current.shortcuts, created] } : current,
+    );
     await load();
   }
 
@@ -314,65 +317,7 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
-      {(panel?.onboarding ?? []).length > 0 ? (
-        <View style={styles.card} testID="onboarding-examples">
-          <Text style={styles.section}>Comece por aqui</Text>
-          <Text style={styles.lead}>Círculos Eu e Família já estão prontos. Confirme ou descarte os exemplos.</Text>
-          {(panel?.onboarding ?? []).map((item) => (
-            <View key={item.id} style={extra.onboarding}>
-              <Text style={styles.item}>{item.title}</Text>
-              <Text style={styles.lead}>
-                {item.circleName} · {item.body}
-              </Text>
-              <Button label={t('onboarding.confirm')} onPress={() => void decideExample(item.id, true)} />
-              <Button label={t('onboarding.discard')} variant="ghost" onPress={() => void decideExample(item.id, false)} />
-            </View>
-          ))}
-        </View>
-      ) : null}
-
-      <Section title="Atrasado" items={panel?.overdue ?? []} />
-      <Section title="Vence hoje" items={panel?.dueToday ?? []} />
-
-      {(panel?.onThisDay ?? []).length > 0 ? (
-        <View style={styles.card} testID="on-this-day">
-          <Text style={styles.section}>{t('home.onThisDay')}</Text>
-          {(panel?.onThisDay ?? []).map((item) => (
-            <Text key={item.id} style={styles.item}>
-              {item.year}: {item.title}
-            </Text>
-          ))}
-        </View>
-      ) : (
-        <View style={styles.card} testID="on-this-day">
-          <Text style={styles.section}>{t('home.onThisDay')}</Text>
-          <Text style={styles.lead}>Quando houver uma memória desta data em outro ano, ela aparece aqui.</Text>
-        </View>
-      )}
-
-      {panel?.routineStreakDays ? (
-        <Text style={styles.lead} testID="routine-streak">
-          {t('home.streak')}: {panel.routineStreakDays}
-        </Text>
-      ) : null}
-
-      {panel?.monthlySurprise ? (
-        <View style={styles.card} testID="monthly-surprise">
-          <Text style={styles.section}>Retrospectiva de {panel.monthlySurprise.month}/{panel.monthlySurprise.year}</Text>
-          <Text style={styles.lead}>
-            {countNoun(panel.monthlySurprise.memoryCount, 'memória', 'memórias')} e{' '}
-            {countNoun(panel.monthlySurprise.entryCount, 'entrada', 'entradas')} no mês passado.
-          </Text>
-          {panel.monthlySurprise.titles.map((title) => (
-            <Text key={title} style={styles.item}>
-              {title}
-            </Text>
-          ))}
-          <Button label="Ok, vi a retrospectiva" variant="ghost" onPress={() => void ackMonthly()} />
-        </View>
-      ) : null}
-
-      <View style={extra.row}>
+      <View style={extra.row} testID="home-shortcuts">
         {panel?.shortcuts.map((item) => (
           <View key={item.id} style={extra.shortcutWrap}>
             <Pressable
@@ -439,6 +384,64 @@ export default function HomeScreen() {
           </View>
         ))}
       </View>
+
+      {(panel?.onboarding ?? []).length > 0 ? (
+        <View style={styles.card} testID="onboarding-examples">
+          <Text style={styles.section}>Comece por aqui</Text>
+          <Text style={styles.lead}>Círculos Eu e Família já estão prontos. Confirme ou descarte os exemplos.</Text>
+          {(panel?.onboarding ?? []).map((item) => (
+            <View key={item.id} style={extra.onboarding}>
+              <Text style={styles.item}>{item.title}</Text>
+              <Text style={styles.lead}>
+                {item.circleName} · {item.body}
+              </Text>
+              <Button label={t('onboarding.confirm')} onPress={() => void decideExample(item.id, true)} />
+              <Button label={t('onboarding.discard')} variant="ghost" onPress={() => void decideExample(item.id, false)} />
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      <Section title="Atrasado" items={panel?.overdue ?? []} />
+      <Section title="Vence hoje" items={panel?.dueToday ?? []} />
+
+      {(panel?.onThisDay ?? []).length > 0 ? (
+        <View style={styles.card} testID="on-this-day">
+          <Text style={styles.section}>{t('home.onThisDay')}</Text>
+          {(panel?.onThisDay ?? []).map((item) => (
+            <Text key={item.id} style={styles.item}>
+              {item.year}: {item.title}
+            </Text>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.card} testID="on-this-day">
+          <Text style={styles.section}>{t('home.onThisDay')}</Text>
+          <Text style={styles.lead}>Quando houver uma memória desta data em outro ano, ela aparece aqui.</Text>
+        </View>
+      )}
+
+      {panel?.routineStreakDays ? (
+        <Text style={styles.lead} testID="routine-streak">
+          {t('home.streak')}: {panel.routineStreakDays}
+        </Text>
+      ) : null}
+
+      {panel?.monthlySurprise ? (
+        <View style={styles.card} testID="monthly-surprise">
+          <Text style={styles.section}>Retrospectiva de {panel.monthlySurprise.month}/{panel.monthlySurprise.year}</Text>
+          <Text style={styles.lead}>
+            {countNoun(panel.monthlySurprise.memoryCount, 'memória', 'memórias')} e{' '}
+            {countNoun(panel.monthlySurprise.entryCount, 'entrada', 'entradas')} no mês passado.
+          </Text>
+          {panel.monthlySurprise.titles.map((title) => (
+            <Text key={title} style={styles.item}>
+              {title}
+            </Text>
+          ))}
+          <Button label="Ok, vi a retrospectiva" variant="ghost" onPress={() => void ackMonthly()} />
+        </View>
+      ) : null}
 
       {inactiveShortcuts.length > 0 ? (
         <View style={styles.card}>

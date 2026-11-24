@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useOffline } from '@/context/OfflineContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useTour } from '@/context/TourContext';
+import { TAB_BAR_HEIGHT } from '@/lib/screenStyles';
 
 export default function AppLayout() {
   const { loading, user, logout } = useAuth();
@@ -38,7 +39,7 @@ export default function AppLayout() {
           backgroundColor: colors.surface,
           borderTopColor: colors.line,
           paddingBottom: Platform.OS === 'web' ? 16 : 12,
-          minHeight: 56,
+          minHeight: TAB_BAR_HEIGHT,
         },
         headerLeft: () => (
           <Text

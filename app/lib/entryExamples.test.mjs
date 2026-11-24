@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { entryExample } from './entryExamples.ts';
+import { entryExample, fieldPlaceholder } from './entryExamples.ts';
 
 describe('exemplos de entrada', () => {
   it('cada tipo tem padrão simples com exemplo', () => {
@@ -24,7 +24,14 @@ describe('exemplos de entrada', () => {
     assert.equal(lembrete.showWhen, true);
     const livre = entryExample('custom');
     assert.match(livre.hint, /Sem vídeo/);
-    assert.equal(livre.numberPlaceholder, 'ex.: 11,8');
-    assert.doesNotMatch(livre.numberPlaceholder, /^200$/);
+    assert.equal(livre.numberPlaceholder, 'ex.: 1');
+    assert.doesNotMatch(livre.numberPlaceholder, /11,8/);
+    assert.equal(fieldPlaceholder({ id: 'peso', name: 'Peso', kind: 'number' }, 'pet'), 'ex.: 11,8');
+    assert.equal(fieldPlaceholder({ id: 'distancia', name: 'Distância', kind: 'number' }, 'corridas'), 'ex.: 5,2');
+    assert.equal(fieldPlaceholder({ id: 'duracao', name: 'Duração', kind: 'number' }, 'corridas'), 'ex.: 32');
+    assert.notEqual(
+      fieldPlaceholder({ id: 'distancia', name: 'Distância', kind: 'number' }, 'corridas'),
+      fieldPlaceholder({ id: 'peso', name: 'Peso', kind: 'number' }, 'pet'),
+    );
   });
 });

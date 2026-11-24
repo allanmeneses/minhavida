@@ -174,7 +174,7 @@ export default function SettingsScreen() {
       <Feedback message={ok} tone="ok" />
 
       <Text style={styles.section}>Aparência</Text>
-      <Text style={styles.lead}>
+      <Text testID="theme-status" style={styles.lead}>
         Agora: {displayLabel(resolved, THEME_LABEL)}. Preferência: {displayLabel(preference, THEME_LABEL)}.
       </Text>
       <Text style={styles.lead}>Contraste: {highContrast ? 'alto' : 'normal'}.</Text>

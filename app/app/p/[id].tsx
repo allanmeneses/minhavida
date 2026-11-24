@@ -34,7 +34,7 @@ export default function PublicProfileScreen() {
   }, [userId]);
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
+    <ScrollView contentContainerStyle={styles.centeredPage}>
       <Text style={styles.kicker}>Círculos</Text>
       <Text style={styles.title}>Perfil público</Text>
       <Text style={styles.lead}>Quem visita vê nome, foto e descrição. Telefone, e-mail e diário ficam fora.</Text>

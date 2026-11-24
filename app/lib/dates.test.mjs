@@ -18,5 +18,6 @@ describe('datas amigáveis', () => {
     assert.doesNotMatch(datePlaceholder(), /AAAA-MM-DD/);
     assert.equal(monthTitle(2026, 11), 'Novembro de 2026');
     assert.match(formatPersonDateTime('2026-03-10T15:30:00.000Z'), /\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/);
+    assert.doesNotMatch(formatPersonDateTime('2026-03-10T15:30:45.000Z'), /\d{2}:\d{2}:\d{2}/);
   });
 });

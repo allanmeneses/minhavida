@@ -26,9 +26,8 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
         var membroAuth = await AuthHelper.RegisterAsync(membro, name: "Membro");
         membro.WithToken(membroAuth.Token);
 
-        var created = await dono.PostAsJsonAsync("/api/circles", new { name = "Família", visibility = "private" });
-        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-        var circle = await created.Content.ReadFromJsonAsync<SummaryDto>(Json);
+        var mine = await dono.GetFromJsonAsync<List<SummaryDto>>("/api/circles", Json);
+        var circle = mine!.Single(x => x.Name == "Família");
 
         var invite = await dono.PostAsJsonAsync($"/api/circles/{circle!.Id}/invites", new { email = membroAuth.Email, role = "editor" });
         Assert.Equal(HttpStatusCode.OK, invite.StatusCode);
@@ -296,6 +295,36 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
         Assert.Equal(2, await db.Circles.CountAsync(x => x.OwnerUserId == auth.UserId && x.IsStarter));
         var user = await db.Users.SingleAsync(x => x.Id == auth.UserId);
         Assert.Equal(3, user.OwnedCircleCount);
+    }
+
+    [Fact]
+    public async Task Cadastro_NaoDuplicaFamiliaENomeRepetidoFalhaMesmoSobreposto()
+    {
+        var client = _factory.CreateClient();
+        var auth = await AuthHelper.RegisterAsync(client);
+        client.WithToken(auth.Token);
+        var mine = await client.GetFromJsonAsync<List<SummaryDto>>("/api/circles", Json);
+        Assert.Equal(1, mine!.Count(x => x.Name == "Família"));
+        Assert.Equal(1, mine.Count(x => x.Name == "Eu"));
+
+        var again = await client.PostAsJsonAsync("/api/circles", new { name = "família", visibility = "private" });
+        Assert.Equal(HttpStatusCode.BadRequest, again.StatusCode);
+        Assert.Contains("Já existe um círculo com este nome.", await again.Content.ReadAsStringAsync());
+
+        var a = _factory.CreateClient();
+        a.WithToken(auth.Token);
+        var b = _factory.CreateClient();
+        b.WithToken(auth.Token);
+        var responses = await Task.WhenAll(
+            a.PostAsJsonAsync("/api/circles", new { name = "Clube do prédio" }),
+            b.PostAsJsonAsync("/api/circles", new { name = "clube do prédio" }));
+        var codes = responses.Select(x => x.StatusCode).ToArray();
+        Assert.Contains(HttpStatusCode.Created, codes);
+        Assert.Contains(HttpStatusCode.BadRequest, codes);
+
+        var after = await client.GetFromJsonAsync<List<SummaryDto>>("/api/circles", Json);
+        Assert.Equal(1, after!.Count(x => string.Equals(x.Name, "Clube do prédio", StringComparison.OrdinalIgnoreCase)));
+        Assert.Equal(1, after.Count(x => x.Name == "Família"));
     }
 
     private sealed record SummaryDto(Guid Id, string? Name);

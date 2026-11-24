@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -10,6 +11,7 @@ type Props = {
   keyboardType?: KeyboardTypeOptions;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   autoComplete?: 'email' | 'password' | 'name' | 'tel' | 'off';
+  multiline?: boolean;
 };
 
 export function TextField({
@@ -21,8 +23,10 @@ export function TextField({
   keyboardType,
   autoCapitalize = 'none',
   autoComplete,
+  multiline = false,
 }: Props) {
   const { colors } = useTheme();
+  const [grownHeight, setGrownHeight] = useState(88);
   return (
     <View style={styles.wrap}>
       <Text style={[styles.label, { color: colors.ink }]}>{label}</Text>
@@ -36,9 +40,22 @@ export function TextField({
         autoCapitalize={autoCapitalize}
         autoComplete={autoComplete}
         autoCorrect={false}
+        multiline={multiline}
+        textAlignVertical={multiline ? 'top' : 'center'}
         accessibilityLabel={label}
+        onContentSizeChange={
+          multiline
+            ? (event) => {
+                const next = Math.ceil(event.nativeEvent.contentSize.height);
+                setGrownHeight((current) => Math.max(88, next, current));
+              }
+            : undefined
+        }
         style={[
           styles.input,
+          multiline ? styles.multiline : null,
+          multiline ? { height: grownHeight } : null,
+          multiline && Platform.OS === 'web' ? ({ fieldSizing: 'content' } as object) : null,
           {
             borderColor: colors.line,
             backgroundColor: colors.white,
@@ -64,5 +81,9 @@ const styles = StyleSheet.create({
     borderRadius: Platform.OS === 'web' ? 8 : 14,
     paddingHorizontal: 14,
     fontSize: Platform.OS === 'web' ? 14 : 16,
+  },
+  multiline: {
+    minHeight: 88,
+    paddingVertical: 10,
   },
 });

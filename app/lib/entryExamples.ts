@@ -65,8 +65,51 @@ export function entryExample(kind: string | undefined): EntryExample {
         showWhere: false,
         whenPlaceholder: examplePlaceholder('24/11/2026'),
         wherePlaceholder: '',
-        numberPlaceholder: examplePlaceholder('11,8'),
+        numberPlaceholder: examplePlaceholder('1'),
         bodyPlaceholder: examplePlaceholder('Opcional'),
       };
+  }
+}
+
+export function fieldPlaceholder(
+  field: { id: string; name: string; kind: string },
+  typeSlug?: string,
+): string {
+  const blob = `${field.id} ${field.name}`.toLocaleLowerCase('pt-BR');
+  if (field.kind === 'number') {
+    if (blob.includes('peso')) {
+      return examplePlaceholder('11,8');
+    }
+    if (blob.includes('dist')) {
+      return examplePlaceholder('5,2');
+    }
+    if (blob.includes('dura')) {
+      return examplePlaceholder('32');
+    }
+    return entryExample(kindFromFieldSlug(typeSlug)).numberPlaceholder;
+  }
+  const example = entryExample(kindFromFieldSlug(typeSlug));
+  if (field.id === 'title') {
+    return example.titlePlaceholder;
+  }
+  if (field.kind === 'place') {
+    return example.wherePlaceholder;
+  }
+  return example.bodyPlaceholder;
+}
+
+function kindFromFieldSlug(slug: string | undefined): string {
+  switch (slug) {
+    case 'vacinas':
+      return 'vaccine';
+    case 'diario':
+      return 'diary';
+    case 'documento':
+      return 'document';
+    case 'lembretes':
+    case 'remedio':
+      return 'reminder';
+    default:
+      return 'custom';
   }
 }
