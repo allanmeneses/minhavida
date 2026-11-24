@@ -13,7 +13,7 @@ describe('tour', () => {
     assert.match(blob, /perfil solo/);
     assert.match(blob, /Painel do dia/);
     assert.match(blob, /Círculos/);
-    assert.match(blob, /Offline/);
+    assert.match(blob, /Sem rede/);
     assert.match(blob, /backup/);
     assert.match(blob, /calendário/);
     assert.match(blob, /recordações/);

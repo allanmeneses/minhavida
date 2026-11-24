@@ -11,6 +11,7 @@ import {
   TARGET_KIND_LABEL,
   displayLabel,
 } from '@/lib/labels';
+import { formatPersonDateTime } from '@/lib/dates';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function AdminScreen() {
@@ -123,7 +124,7 @@ export default function AdminScreen() {
             {displayLabel(item.targetKind, TARGET_KIND_LABEL)} · {item.targetId}
           </Text>
           <Text style={styles.lead}>
-            {item.reporterEmail} · {new Date(item.createdAt).toLocaleString('pt-BR')}
+            {item.reporterEmail} · {formatPersonDateTime(item.createdAt)}
           </Text>
           {item.targetKind === 'profile' || item.targetKind === 'circle' ? (
             <>

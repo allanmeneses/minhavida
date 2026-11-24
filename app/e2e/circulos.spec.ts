@@ -140,6 +140,7 @@ test('entrada guarda número e o log do círculo mostra data', async ({ page }) 
   await page.getByRole('button', { name: 'Perfil' }).click();
   await page.getByText('Diário', { exact: true }).click();
   await page.getByLabel('Título', { exact: true }).fill('Corrida');
+  await page.getByRole('button', { name: 'Mais detalhes' }).click();
   await page.getByLabel('Número').fill('200');
   await page.getByRole('button', { name: 'Guardar entrada' }).click();
   await expect(page.getByText('Número: 200')).toBeVisible();
@@ -467,10 +468,13 @@ test('permissão da lista: só ver e depois marcar feito', async ({ browser }) =
 });
 
 test('modo escuro troca a paleta na hora', async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
   await signUp(page, '-tema');
   await page.getByRole('button', { name: 'Ajustes' }).first().click();
   await page.getByRole('button', { name: 'Escuro' }).click();
   await expect(page.getByText('Agora: escuro')).toBeVisible();
+  expect(pageErrors.filter((item) => item.includes('setColorScheme') || item.includes('is not a function'))).toEqual([]);
   await page.screenshot({ path: `${artifacts}/tema-escuro.png`, fullPage: true });
 });
 
@@ -600,7 +604,7 @@ test('offline le o cache, enfileira item e 403 descarta com aviso', async ({ bro
   await expect(memberPage.getByRole('button', { name: 'Marcar Leite' })).toBeVisible({ timeout: 15_000 });
 
   await memberPage.context().setOffline(true);
-  await expect(memberPage.getByLabel('Offline')).toBeVisible();
+  await expect(memberPage.getByLabel('Sem rede')).toBeVisible();
   await memberPage.getByRole('button', { name: 'Marcar Leite' }).click();
   await expect(memberPage.getByText(/feito por/)).toBeVisible();
 
@@ -626,13 +630,13 @@ test('offline adiciona item na fila e sobe ao voltar', async ({ page }) => {
   await page.getByRole('button', { name: 'Adicionar item' }).click();
   await expect(page.getByText('Arroz', { exact: true })).toBeVisible();
   await page.context().setOffline(true);
-  await expect(page.getByLabel('Offline')).toBeVisible();
+  await expect(page.getByLabel('Sem rede')).toBeVisible();
   await page.getByLabel('Item', { exact: true }).fill('Feijao');
   await page.getByRole('button', { name: 'Adicionar item' }).click();
   await expect(page.getByText('Feijao', { exact: true })).toBeVisible();
   await page.context().setOffline(false);
   await page.getByRole('button', { name: 'Sincronizar fila' }).click();
-  await expect(page.getByLabel('Online')).toBeVisible();
+  await expect(page.getByLabel('Com rede')).toBeVisible();
   await page.reload();
   await page.getByRole('button', { name: 'Perfil' }).click();
   await page.getByRole('button', { name: 'Listas' }).click();
@@ -671,13 +675,16 @@ test('calendário mostra lembrete e baixa ics', async ({ page }) => {
   await page.getByRole('button', { name: 'Calendário' }).first().click();
   await expect(page.getByText('Tomei o remédio').first()).toBeVisible({ timeout: 15_000 });
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Baixar .ics' }).click();
+  await page.getByRole('button', { name: 'Baixar arquivo de calendário' }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/circulos-lembretes\.ics/);
   await expect(page.getByText(/somente leitura/)).toBeVisible();
   await expect(page.getByText(/nunca grava/)).toBeVisible();
   await expect(page.getByText(/Nesta tela web não há eventos do aparelho/)).toBeVisible();
-  await expect(page.getByText(/Assinatura: \/api\/calendar\/feed\//)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Assinar no seu calendário' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Copiar endereço' })).toBeVisible();
+  await expect(page.getByText(/\/api\/calendar\/feed/)).toHaveCount(0);
+  await expect(page.getByTestId('month-grid')).toBeVisible();
 });
 
 test('modelos prontos copiam lista em português', async ({ page }) => {
@@ -767,9 +774,11 @@ test('página de status pública', async ({ page }) => {
   expect(health.ok()).toBeTruthy();
   await page.goto(`${apiUrl}/status`);
   await expect(page.getByRole('heading', { name: 'Status do Círculos' })).toBeVisible();
-  await expect(page.getByText('OpenTelemetry')).toBeVisible();
+  await expect(page.getByText('Telemetria')).toBeVisible();
   await expect(page.getByText('Banco')).toBeVisible();
-  await expect(page.getByText('GET /health')).toBeVisible();
+  await expect(page.getByText('Checagem pública do serviço')).toBeVisible();
+  await expect(page.getByText('GET /health')).toHaveCount(0);
+  await expect(page.getByText(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/)).toBeVisible();
 });
 
 test('recap de uso no perfil só mostra fluxo usado', async ({ page }) => {
@@ -904,8 +913,11 @@ test('assinatura simulada e webhook', async ({ page }) => {
   await signUp(page, '-plano');
   await page.goto('/pricing');
   await expect(page.getByText('Preços aprovados pelo Allan em 22/11/2026')).toBeVisible();
-  await page.getByRole('button', { name: 'Assinar mensal (sandbox)' }).click();
-  await expect(page.getByText('Assinatura simulada no sandbox')).toBeVisible();
+  await page.getByRole('button', { name: 'Assinar mensal', exact: true }).click();
+  await expect(page.getByText('Assinatura ativa.')).toBeVisible();
+  await expect(page.getByText('Ambiente de desenvolvimento. Sem cobrança real.')).toBeVisible();
+  await expect(page.getByText(/sandbox/i)).toHaveCount(0);
+  await expect(page.getByText('Simulated')).toHaveCount(0);
   const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
   const token = await page.evaluate(() => localStorage.getItem('circulos.token'));
   const planRes = await page.request.get(`${apiUrl}/api/plan`, {
@@ -930,7 +942,8 @@ test('assinatura simulada e webhook', async ({ page }) => {
   expect(webhook.ok()).toBeTruthy();
   await page.getByRole('button', { name: 'Voltar' }).click();
   await page.getByRole('button', { name: 'Ajustes' }).first().click();
-  await expect(page.getByText('Status: Ativa. Em dia. Ambiente de teste. Assinatura ativa.')).toBeVisible();
+  await expect(page.getByText('Status: Ativa. Em dia. Assinatura ativa.')).toBeVisible();
+  await expect(page.getByText('Cobrança em ambiente de desenvolvimento.')).toBeVisible();
 });
 
 test('aceitar posse oferecida no círculo sem dono', async ({ browser }) => {
@@ -1120,7 +1133,7 @@ test('permissão de pet e grupo', async ({ browser }) => {
   await expect(owner.getByRole('button', { name: 'Círculo: Casa pet' })).toBeVisible();
   await owner.getByRole('button', { name: 'Criar perfil' }).click();
   await expect(owner.getByText('Luna', { exact: true })).toBeVisible();
-  await owner.getByPlaceholder('uuid da pessoa').fill(memberUser.id);
+  await owner.getByPlaceholder('código da pessoa').fill(memberUser.id);
   await owner.getByRole('button', { name: 'Permissão: visualizar' }).click();
   await expect(owner.getByRole('button', { name: 'Permissão: editar' })).toBeVisible();
   await owner.getByRole('button', { name: 'Conceder editar em Luna' }).click();
@@ -1150,6 +1163,7 @@ test('tags opcionais na entrada e busca', async ({ page }) => {
   await page.getByRole('button', { name: 'Perfil' }).click();
   await page.getByText('Diário', { exact: true }).click();
   await page.getByLabel('Título', { exact: true }).fill('Treino 5k');
+  await page.getByRole('button', { name: 'Mais detalhes' }).click();
   await page.getByLabel('Tags (opcional)').fill('corrida, manhã');
   await page.getByRole('button', { name: 'Guardar entrada' }).click();
   await expect(page.getByText('Tags: corrida, manhã')).toBeVisible();
@@ -1524,6 +1538,8 @@ test('tipo por frase, galeria, captura livre, voz, calendario, lembrete, share e
   await page.getByLabel('Descrever um tipo').fill('quero anotar as vacinas do meu filho, com data, posto e lote');
   await page.getByRole('button', { name: 'Sugerir tipo' }).click();
   await expect(page.getByText('Sugestão: Vacinas')).toBeVisible();
+  await expect(page.getByText('Campos sugeridos')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Campo ativo: Quando/ })).toBeVisible();
   await page.getByRole('button', { name: 'Usar esta sugestão' }).click();
   await expect(page.getByRole('button', { name: 'Guardar entrada' })).toBeVisible();
   await page.getByRole('button', { name: 'Perfil' }).click();
@@ -1603,4 +1619,193 @@ test('documentos pessoais tem rotulo de baixar e excluir', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Baixar nota.txt' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Excluir nota.txt' })).toBeVisible();
 });
+
+test('arquivo em pt-BR, captura rápida, corrida, calendário e gráfico', async ({ page }) => {
+  test.setTimeout(120_000);
+  await signUp(page, '-ui-flex');
+  await expect(page.getByText('Choose File')).toHaveCount(0);
+  await expect(page.getByText('No file chosen')).toHaveCount(0);
+  await expect(page.getByText('Nenhum arquivo escolhido')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Escolher arquivo' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByLabel('Descrever um tipo').fill('corri 5 km em 30 minutos no parque');
+  await page.getByRole('button', { name: 'Sugerir tipo' }).click();
+  await expect(page.getByText('Sugestão: Corridas')).toBeVisible();
+  await expect(page.getByRole('button', { name: /Campo ativo: Distância/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Campo ativo: Duração/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Usar esta sugestão' }).click();
+  await expect(page.getByRole('button', { name: 'Guardar entrada' })).toBeVisible();
+  await expect(page.getByLabel('Título', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Número')).toHaveCount(0);
+  await expect(page.getByLabel('Tags (opcional)')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Mais detalhes' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByText('Vacinas', { exact: true }).first().click();
+  await expect(page.getByLabel('Título', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Quando')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Abrir calendário' })).toBeVisible();
+  await expect(page.getByText('AAAA-MM-DD')).toHaveCount(0);
+  await expect(page.getByText('mm/dd/yyyy')).toHaveCount(0);
+  await expect(page.getByLabel('Onde')).toBeVisible();
+  await expect(page.getByLabel('Número')).toHaveCount(0);
+  await expect(page.getByLabel('Texto')).toHaveCount(0);
+  await expect(page.getByLabel('Tags (opcional)')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Mais detalhes' }).click();
+  await expect(page.getByLabel('Tags (opcional)')).toBeVisible();
+  await page.getByRole('button', { name: 'Menos detalhes' }).click();
+  await expect(page.getByLabel('Número')).toHaveCount(0);
+  await expect(page.getByLabel('Tags (opcional)')).toHaveCount(0);
+  await page.getByLabel('Título', { exact: true }).fill('Gripe gráfico');
+  await page.getByLabel('Quando').fill('2026-11-10');
+  await page.getByLabel('Onde').fill('UBS Centro');
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await expect(page.getByLabel('Título', { exact: true })).toHaveValue('');
+  await page.getByRole('button', { name: 'Calendário deste tipo' }).click();
+  await expect(page.getByTestId('month-grid')).toBeVisible();
+  await expect(page.getByText('Gripe gráfico').first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByText('Pet', { exact: true }).first().click();
+  await page.getByLabel('Título', { exact: true }).fill('Consulta Luna');
+  await page.getByLabel('Peso').fill('12');
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await expect(page.getByLabel('Título', { exact: true })).toHaveValue('');
+  await expect(page.getByTestId('number-chart')).toBeVisible();
+  await expect(page.getByText('Ainda não há números neste tipo.')).toHaveCount(0);
+  await expect(page.getByTestId('chart-bar').first()).toBeVisible();
+});
+
+test('falar mostra gravação, transcreve com falso e cancela', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.assign(window, { circulosTestRecorder: true });
+  });
+  await signUp(page, '-voz-ui');
+  await page.getByRole('button', { name: 'Falar' }).click();
+  await expect(page.getByTestId('voice-recording')).toBeVisible();
+  await expect(page.getByText(/Gravando/)).toBeVisible();
+  await expect(page.getByTestId('voice-pulse')).toBeVisible();
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+  await expect(page.getByTestId('voice-recording')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Falar' }).click();
+  await expect(page.getByTestId('voice-recording')).toBeVisible();
+  await page.getByRole('button', { name: 'Parar' }).click();
+  await expect(page.getByText(/Sugerimos|Transcrevendo/)).toBeVisible();
+  await expect(page.getByText(/Sugerimos/)).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/Transcrição:/)).toBeVisible();
+});
+
+test('404 não sobrepõe o conteúdo e a barra lateral não corta Preços', async ({ page }) => {
+  await signUp(page, '-layout');
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const precos = page.getByRole('button', { name: 'Preços' });
+  const sair = page.getByRole('button', { name: 'Sair' });
+  const hoje = page.getByRole('button', { name: 'Hoje' });
+  await expect(precos).toBeVisible();
+  await expect(sair).toBeVisible();
+  const precosBox = await precos.boundingBox();
+  const sairBox = await sair.boundingBox();
+  expect(precosBox).toBeTruthy();
+  expect(sairBox).toBeTruthy();
+  expect(precosBox!.y + precosBox!.height).toBeLessThanOrEqual(sairBox!.y + 2);
+
+  await page.getByRole('button', { name: 'Busca' }).first().click();
+  await page.mouse.wheel(0, 2400);
+  const hojeDepois = await hoje.boundingBox();
+  const sairDepois = await sair.boundingBox();
+  expect(hojeDepois).toBeTruthy();
+  expect(sairDepois).toBeTruthy();
+  expect(hojeDepois!.y).toBeGreaterThanOrEqual(0);
+  expect(hojeDepois!.y + hojeDepois!.height).toBeLessThanOrEqual(sairDepois!.y + 2);
+
+  await page.goto('/xyz-nao-existe');
+  const titulo = page.getByText('Página não encontrada');
+  const corpo = page.getByText('Esta tela não existe.');
+  await expect(titulo).toBeVisible();
+  await expect(corpo).toBeVisible();
+  const tituloBox = await titulo.boundingBox();
+  const corpoBox = await corpo.boundingBox();
+  expect(tituloBox).toBeTruthy();
+  expect(corpoBox).toBeTruthy();
+  expect(tituloBox!.y + tituloBox!.height).toBeLessThanOrEqual(corpoBox!.y + 2);
+});
+
+test('telas da rodada 17 em desktop e mobile', async ({ page }) => {
+  test.setTimeout(180_000);
+  const dir = '/opt/cursor/artifacts/rodada17';
+  await mkdir(dir, { recursive: true });
+  await page.addInitScript(() => {
+    Object.assign(window, { circulosTestRecorder: true });
+  });
+  await signUp(page, '-shots');
+
+  async function shoot(name: string): Promise<void> {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.screenshot({ path: `${dir}/${name}-desktop.png`, fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.screenshot({ path: `${dir}/${name}-mobile.png`, fullPage: true });
+    await page.setViewportSize({ width: 1280, height: 800 });
+  }
+
+  await shoot('hoje');
+  await page.getByRole('button', { name: 'Falar' }).click();
+  await expect(page.getByTestId('voice-recording')).toBeVisible();
+  await shoot('falar');
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByLabel('Descrever um tipo').fill('corri 5 km em 30 minutos no parque');
+  await page.getByRole('button', { name: 'Sugerir tipo' }).click();
+  await expect(page.getByText('Sugestão: Corridas')).toBeVisible();
+  await shoot('sugestao-tipo');
+
+  await page.getByText('Vacinas', { exact: true }).first().click();
+  await expect(page.getByRole('button', { name: 'Guardar entrada' })).toBeVisible();
+  await expect(page.getByLabel('Quando')).toBeVisible();
+  await shoot('tipo-vacinas');
+  await page.getByLabel('Título', { exact: true }).fill('Gripe');
+  await page.getByLabel('Quando').fill('2026-11-10');
+  await page.getByLabel('Onde').fill('UBS Centro');
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await expect(page.getByLabel('Título', { exact: true })).toHaveValue('');
+  await page.getByRole('button', { name: 'Calendário deste tipo' }).click();
+  await expect(page.getByTestId('month-grid')).toBeVisible();
+  await shoot('tipo-calendario');
+
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByText('Pet', { exact: true }).first().click();
+  await page.getByLabel('Título', { exact: true }).fill('Consulta');
+  await page.getByLabel('Peso').fill('12');
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await expect(page.getByLabel('Título', { exact: true })).toHaveValue('');
+  await expect(page.getByTestId('number-chart')).toBeVisible();
+  await expect(page.getByText('Ainda não há números neste tipo.')).toHaveCount(0);
+  await expect(page.getByTestId('chart-bar').first()).toBeVisible();
+  await shoot('tipo-grafico');
+
+  await page.getByRole('button', { name: 'Calendário', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Assinar no seu calendário' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Copiar endereço' })).toBeVisible();
+  await shoot('calendario');
+
+  await page.getByRole('button', { name: 'Preços' }).click();
+  await expect(page.getByText('Preços aprovados pelo Allan')).toBeVisible();
+  await shoot('precos');
+  await page.getByRole('button', { name: 'Voltar' }).click();
+
+  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await page.getByRole('button', { name: 'Escuro' }).click();
+  await expect(page.getByText('Agora: escuro')).toBeVisible();
+  await shoot('ajustes-escuro');
+
+  await page.getByRole('button', { name: 'Busca' }).first().click();
+  await shoot('busca');
+  await page.getByRole('button', { name: 'Lembretes' }).first().click();
+  await shoot('lembretes');
+  await page.goto('/xyz-nao-existe');
+  await expect(page.getByText('Página não encontrada')).toBeVisible();
+  await shoot('404');
+});
+
 

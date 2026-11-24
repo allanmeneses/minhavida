@@ -21,6 +21,24 @@ const webCss = `
 html, body, #root {
   height: 100%;
 }
+html {
+  color-scheme: light dark;
+}
+input[type='file'] {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+  position: absolute;
+  left: -10000px;
+  opacity: 0;
+  white-space: nowrap;
+}
+input[type='file']::-webkit-file-upload-button,
+input[type='file']::file-selector-button {
+  display: none;
+}
 html, body, #root, p, span, div, h1, h2, h3, button, label, a {
   overflow-wrap: break-word;
   word-break: normal;

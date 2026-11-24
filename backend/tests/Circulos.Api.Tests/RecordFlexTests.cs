@@ -306,6 +306,58 @@ public sealed class RecordFlexTests : IClassFixture<ApiFactory>
 
 public sealed class RecordSuggesterUnitTests
 {
+    public static TheoryData<string, string, string[]> FrasesPtBr() => new()
+    {
+        { "corri 5 km em 30 minutos no parque", "Corridas", new[] { "distancia", "duracao", "where" } },
+        { "gastei R$ 45 no almoço", "Gastos", new[] { "valor" } },
+        { "terminei o livro O Alienista de Machado de Assis", "Livro", new[] { "autor" } },
+        { "quero anotar as vacinas do meu filho, com data, posto e lote", "Vacinas", new[] { "when", "where", "lote" } },
+        { "o Luna foi no veterinário, pesou 12 kg", "Pet", new[] { "peso", "where" } },
+        { "troquei o óleo do carro aos 12 mil km", "Carro", new[] { "km" } },
+        { "tomei o remédio de 500 mg às 8", "Remédio", new[] { "dose" } },
+        { "viagem para o Rio, hotel no Centro, voo às 10", "Viagens", new[] { "where" } },
+        { "assisti Interestelar no cinema", "Filmes", new[] { "where" } },
+    };
+
+    [Theory]
+    [MemberData(nameof(FrasesPtBr))]
+    public void Suggester_FrasesPtBr_NomeECamposDaFrase(string sentence, string expectedName, string[] fieldIds)
+    {
+        var suggester = new RuleBasedRecordSuggester();
+        var suggestion = suggester.SuggestType(sentence, [], RecordGallery.Seeds());
+        Assert.Equal(expectedName, suggestion.Name);
+        foreach (var id in fieldIds)
+        {
+            Assert.Contains(suggestion.Fields, field => field.Id == id);
+        }
+    }
+
+    [Fact]
+    public void Suggester_CorridaComKm_NaoViraCarro()
+    {
+        var suggester = new RuleBasedRecordSuggester();
+        var fill = suggester.SuggestRecord("corri 5 km em 30 minutos no parque", [], RecordGallery.Seeds());
+        Assert.Equal("Corridas", fill.Type.Name);
+        Assert.Null(fill.Type.GalleryTypeId);
+        Assert.Equal("5", fill.Fields["distancia"]);
+        Assert.Equal("30", fill.Fields["duracao"]);
+        Assert.Contains("parque", fill.Fields["where"] ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(fill.Type.Fields, field => field.Id == "km" && fill.Type.Name == "Carro");
+    }
+
+    [Fact]
+    public void Suggester_SoMapeiaGaleriaComConfiancaAlta()
+    {
+        var suggester = new RuleBasedRecordSuggester();
+        var gallery = RecordGallery.Seeds();
+        var kmSo = suggester.SuggestType("andei 3 km hoje", [], gallery);
+        Assert.NotEqual("Carro", kmSo.Name);
+        Assert.Null(kmSo.GalleryTypeId);
+        var carro = suggester.SuggestType("revisão do carro com troca de óleo", [], gallery);
+        Assert.Equal("Carro", carro.Name);
+        Assert.Equal(RecordGallery.CarroId, carro.GalleryTypeId);
+    }
+
     [Fact]
     public async Task FakeTranscriber_LeTextoUtf8_ECaiNoPadrao()
     {

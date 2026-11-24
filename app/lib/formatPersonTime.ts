@@ -1,3 +1,5 @@
+import { formatPersonDateTime } from './dates.ts';
+
 export function formatPersonTime(iso: string): string {
-  return new Date(iso).toLocaleString('pt-BR');
+  return formatPersonDateTime(iso);
 }

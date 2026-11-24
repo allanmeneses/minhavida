@@ -159,7 +159,10 @@ public sealed class Rodada13Tests : IClassFixture<ApiFactory>
     {
         var client = _factory.CreateClient();
         var html = await (await client.GetAsync("/status")).Content.ReadAsStringAsync();
-        Assert.Contains("GET /health", html, StringComparison.Ordinal);
+        Assert.Contains("Checagem pública do serviço", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("GET /health", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("OpenTelemetry", html, StringComparison.Ordinal);
+        Assert.Matches(@"\d{2}/\d{2}/\d{4} \d{2}:\d{2}", html);
     }
 
     private static async Task InviteAsync(HttpClient owner, HttpClient member, string email, Guid circleId, string role)

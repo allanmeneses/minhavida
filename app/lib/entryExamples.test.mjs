@@ -10,6 +10,8 @@ describe('exemplos de entrada', () => {
     assert.equal(vacina.showWhen, true);
     assert.equal(vacina.showWhere, true);
     assert.equal(vacina.wherePlaceholder, 'UBS Centro');
+    assert.doesNotMatch(vacina.whenPlaceholder, /AAAA-MM-DD/);
+    assert.match(vacina.whenPlaceholder, /24\/11\/2026/);
 
     const diario = entryExample('diary');
     assert.match(diario.hint, /parágrafo do dia/);

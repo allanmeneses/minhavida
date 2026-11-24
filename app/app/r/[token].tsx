@@ -25,7 +25,7 @@ export default function PublicRecapScreen() {
       .then(setRecap)
       .catch((err) => {
         setRecap(null);
-        setError(err instanceof ApiError ? err.message : 'Recap não encontrado.');
+        setError(err instanceof ApiError ? err.message : 'Resumo não encontrado.');
       });
   }, [shareToken]);
 

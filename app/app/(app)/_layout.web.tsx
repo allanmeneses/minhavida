@@ -80,9 +80,9 @@ export default function AppWebLayout() {
           <BrandMark compact />
           <Text
             accessibilityRole="text"
-            accessibilityLabel={online ? 'Online' : 'Offline'}
+            accessibilityLabel={online ? 'Com rede' : 'Sem rede'}
             style={[styles.topStatus, { color: colors.muted }]}>
-            {online ? 'Online' : 'Offline'}
+            {online ? 'Com rede' : 'Sem rede'}
           </Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Sair" onPress={() => void logout()} style={styles.topLogout}>
             <Text style={[styles.logoutText, { color: colors.primary }]}>Sair</Text>
@@ -133,16 +133,18 @@ export default function AppWebLayout() {
   return (
     <View style={[styles.shell, { backgroundColor: colors.bg }]}>
       <View style={[styles.sidebar, { backgroundColor: colors.surface, borderRightColor: colors.line }]}>
-        <BrandMark compact />
-        <Text
-          accessibilityRole="text"
-          accessibilityLabel={online ? 'Online' : 'Offline'}
-          style={[styles.userEmail, { color: colors.muted, fontWeight: '700' }]}>
-          {online ? 'Online' : 'Offline'}
-        </Text>
-        <Text style={[styles.userName, { color: colors.ink }]}>{user.name}</Text>
-        <Text style={[styles.userEmail, { color: colors.muted }]}>{user.email}</Text>
-        <ScrollView style={styles.nav} contentContainerStyle={styles.navInner}>
+        <View style={styles.sidebarTop}>
+          <BrandMark compact />
+          <Text
+            accessibilityRole="text"
+            accessibilityLabel={online ? 'Com rede' : 'Sem rede'}
+            style={[styles.userEmail, { color: colors.muted, fontWeight: '700' }]}>
+            {online ? 'Com rede' : 'Sem rede'}
+          </Text>
+          <Text style={[styles.userName, { color: colors.ink }]}>{user.name}</Text>
+          <Text style={[styles.userEmail, { color: colors.muted }]}>{user.email}</Text>
+        </View>
+        <ScrollView style={styles.nav} contentContainerStyle={styles.navInner} nestedScrollEnabled>
           {[...PRIMARY_NAV, ...moreItems].map((item) => (
             <NavItem
               key={item.href}
@@ -200,7 +202,9 @@ const styles = StyleSheet.create({
   shell: {
     flex: 1,
     flexDirection: 'row',
-    minHeight: '100%' as unknown as number,
+    height: '100vh' as unknown as number,
+    maxHeight: '100vh' as unknown as number,
+    overflow: 'hidden',
   },
   column: {
     flex: 1,
@@ -211,6 +215,14 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     padding: 24,
     height: '100%' as unknown as number,
+    maxHeight: '100vh' as unknown as number,
+    position: 'sticky' as unknown as 'relative',
+    top: 0,
+    flexShrink: 0,
+    overflow: 'hidden',
+  },
+  sidebarTop: {
+    flexShrink: 0,
   },
   topBar: {
     flexDirection: 'row',
@@ -230,7 +242,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   userName: {
-    marginTop: 28,
+    marginTop: 16,
     fontWeight: '700',
     fontSize: 16,
   },
@@ -239,7 +251,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   nav: {
-    marginTop: 28,
+    marginTop: 16,
     flex: 1,
     minHeight: 0,
   },
@@ -257,6 +269,8 @@ const styles = StyleSheet.create({
   },
   logout: {
     paddingVertical: 10,
+    flexShrink: 0,
+    marginTop: 8,
   },
   logoutText: {
     fontWeight: '700',
@@ -264,7 +278,10 @@ const styles = StyleSheet.create({
   main: {
     flex: 1,
     minWidth: 0,
+    minHeight: 0,
+    height: '100%' as unknown as number,
     padding: 32,
+    overflow: 'auto' as unknown as 'visible',
   },
   mainNarrow: {
     flex: 1,

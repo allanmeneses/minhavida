@@ -42,8 +42,8 @@ export default function PrivacyScreen() {
       <Text style={styles.lead}>
         Documentos e fotos ficam cifrados em AES-256-GCM no servidor, com chave do app, não escolhida
         pela pessoa. Foto de entrada e de perfil é comprimida no padrão usado pelo app e substitui o
-        original. Download só autenticado. O token JWT fica no aparelho (armazenamento seguro no nativo,
-        localStorage na web). Se o app encerrar, não há exportação do material cifrado em formato que
+        original. Baixar só autenticado. O token de sessão fica no aparelho (armazenamento seguro no nativo,
+        memória local na web). Se o app encerrar, não há exportação do material cifrado em formato que
         você mesmo abra (escolha de propósito).
       </Text>
       <Text style={styles.section}>5. Seus direitos</Text>

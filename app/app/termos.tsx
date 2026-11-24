@@ -21,13 +21,13 @@ export default function TermsScreen() {
       <Text style={styles.lead}>
         O Círculos é um hub da vida pessoal. Você cria uma conta com e-mail e senha, guarda um perfil solo,
         documentos, fotos, áreas de vida, círculos, lembretes e atalhos. O produto funciona no aplicativo
-        (Expo) e no navegador. Não há loja de pagamentos ligada nesta versão: o plano gratuito tem limites
-        (3 círculos, 5 atalhos e 100 MB). O plano pago usa Mercado Pago em sandbox, com preços em reais
-        configuráveis. Sem secret, a cobrança fica desligada.
+        (aplicativo) e no navegador. Não há loja de pagamentos ligada nesta versão: o plano gratuito tem limites
+        (3 círculos, 5 atalhos e 100 MB). O plano pago usa Mercado Pago em ambiente de teste, com preços em reais
+        configuráveis. Sem chave de produção, a cobrança fica desligada.
       </Text>
       <Text style={styles.section}>2. Cadastro e acesso</Text>
       <Text style={styles.lead}>
-        O cadastro é livre com e-mail, senha e nome. A autenticação usa JWT. Recuperação de senha é por
+        O cadastro é livre com e-mail, senha e nome. A autenticação usa sessão renovada. Recuperação de senha é por
         e-mail. Não há segundo fator nesta versão. Você é responsável por manter a senha em segredo. Para
         excluir a conta, o app pede a senha e confirma por e-mail.
       </Text>

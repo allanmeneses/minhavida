@@ -100,10 +100,10 @@ export default function LivingScreen() {
         disabledHint="Informe o nome do perfil para criar."
       />
       <TextField
-        label="Pessoa (id) para permissão"
+        label="Código da pessoa para permissão"
         value={grantUserId}
         onChangeText={setGrantUserId}
-        placeholder="uuid da pessoa"
+        placeholder="código da pessoa"
       />
       <Button
         label={`Permissão: ${grantAccess === 'edit' ? 'editar' : 'visualizar'}`}

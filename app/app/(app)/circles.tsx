@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
+import { DateField } from '@/components/ui/DateField';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -120,11 +121,10 @@ export default function CirclesScreen() {
         <TextField label="E-mail de quem vai se surpreender" value={surpriseEmail} onChangeText={setSurpriseEmail} />
       ) : null}
       {kind !== 'lasting' ? (
-        <TextField
+        <DateField
           label="Data de fim"
           value={endsAt}
           onChangeText={setEndsAt}
-          placeholder="AAAA-MM-DD"
         />
       ) : null}
       <Button

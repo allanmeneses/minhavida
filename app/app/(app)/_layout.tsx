@@ -36,9 +36,9 @@ export default function AppLayout() {
         headerLeft: () => (
           <Text
             accessibilityRole="text"
-            accessibilityLabel={online ? 'Online' : 'Offline'}
+            accessibilityLabel={online ? 'Com rede' : 'Sem rede'}
             style={{ marginLeft: 12, color: colors.muted, fontWeight: '700' }}>
-            {online ? 'Online' : 'Offline'}
+            {online ? 'Com rede' : 'Sem rede'}
           </Text>
         ),
         headerRight: () => (

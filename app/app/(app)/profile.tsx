@@ -5,12 +5,14 @@ import { useRouter, type Href } from 'expo-router';
 import { ProfileForm } from '@/components/ProfileForm';
 import { ProfilePhoto } from '@/components/ProfilePhoto';
 import { Button } from '@/components/ui/Button';
+import { FieldChips } from '@/components/ui/FieldChips';
 import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, uploadNativeFile, type LifeArea, type Profile } from '@/lib/api';
 import { AREA_KIND_LABEL, displayLabel } from '@/lib/labels';
+import { enabledFields, fieldsToDraft, type SuggestedFieldDraft } from '@/lib/suggestFields';
 import { type RecordTypeItem } from '@/lib/records';
 
 export default function ProfileScreen() {
@@ -27,7 +29,8 @@ export default function ProfileScreen() {
   const [gallery, setGallery] = useState<RecordTypeItem[]>([]);
   const [sentence, setSentence] = useState('');
   const [suggestedName, setSuggestedName] = useState<string | null>(null);
-  const [suggestedFields, setSuggestedFields] = useState<{ id: string; name: string; kind: string; required: boolean; order: number }[]>([]);
+  const [suggestedDraft, setSuggestedDraft] = useState<SuggestedFieldDraft[]>([]);
+  const [extraFieldName, setExtraFieldName] = useState('');
 
   const loadAreas = useCallback(async () => {
     if (!token) {
@@ -219,13 +222,20 @@ export default function ProfileScreen() {
               { method: 'POST', token, body: JSON.stringify({ sentence: sentence.trim() }) },
             ).then((payload) => {
               setSuggestedName(payload.name);
-              setSuggestedFields(payload.fields ?? []);
+              setSuggestedDraft(fieldsToDraft(payload.fields ?? []));
+              setExtraFieldName('');
             });
           }}
         />
         {suggestedName ? (
           <>
             <Text style={[styles.lead, { color: colors.muted }]}>Sugestão: {suggestedName}</Text>
+            <FieldChips
+              fields={suggestedDraft}
+              extraName={extraFieldName}
+              onChange={setSuggestedDraft}
+              onExtraName={setExtraFieldName}
+            />
             <Button
               label="Usar esta sugestão"
               onPress={() => {
@@ -235,10 +245,11 @@ export default function ProfileScreen() {
                 void api<RecordTypeItem>('/api/record-types', {
                   method: 'POST',
                   token,
-                  body: JSON.stringify({ name: suggestedName, fields: suggestedFields }),
+                  body: JSON.stringify({ name: suggestedName, fields: enabledFields(suggestedDraft) }),
                 }).then((created) => {
                   setSentence('');
                   setSuggestedName(null);
+                  setSuggestedDraft([]);
                   router.push(`/(app)/type/${created.id}` as Href);
                 });
               }}

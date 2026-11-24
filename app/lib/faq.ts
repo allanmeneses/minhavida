@@ -32,7 +32,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: 'Como entra na conta?',
     answer:
-      'E-mail e senha, com JWT. O acesso dura pouco e o app renova a sessão em silêncio. No sair, o refresh é revogado. Segundo fator por aplicativo autenticador é opcional.',
+      'E-mail e senha. O acesso dura pouco e o app renova a sessão em silêncio. No sair, a renovação da sessão é revogada. Segundo fator por aplicativo autenticador é opcional.',
   },
   {
     question: 'Como faço backup?',
@@ -45,9 +45,9 @@ export const FAQ_ITEMS: FaqItem[] = [
       '100 MB no plano gratuito e 1 GB no pago. O app avisa quando chega a 90% e mostra um gráfico de uso, sem separar por tipo.',
   },
   {
-    question: 'O recap e o perfil público mostram o que?',
+    question: 'O resumo e o perfil público mostram o que?',
     answer:
-      'O recap do perfil só lista o que você já usou. No círculo, a retrospectiva é a história sua, não os dados dos outros. O perfil nasce privado; se virar público, quem visita vê nome, foto e descrição. Telefone, e-mail e diário ficam fora.',
+      'O resumo do perfil só lista o que você já usou. No círculo, a retrospectiva é a história sua, não os dados dos outros. O perfil nasce privado; se virar público, quem visita vê nome, foto e descrição. Telefone, e-mail e diário ficam fora.',
   },
   {
     question: 'Onde ficam as memórias e o calendário?',

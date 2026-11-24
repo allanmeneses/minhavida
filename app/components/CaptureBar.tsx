@@ -1,9 +1,12 @@
-import { Platform, Text, View } from 'react-native';
-import { useState } from 'react';
+import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { DateField } from '@/components/ui/DateField';
 import { Feedback } from '@/components/ui/Feedback';
+import { FilePicker } from '@/components/ui/FilePicker';
 import { TextField } from '@/components/ui/TextField';
 import { useOffline } from '@/context/OfflineContext';
+import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, uploadNativeFile } from '@/lib/api';
 import {
   acceptPayload,
@@ -15,7 +18,8 @@ import {
   type HomeRecordType,
   type RecordSuggestion,
 } from '@/lib/records';
-import { canUseMediaRecorder, clipFromFile, recordNative, recordWithMediaRecorder } from '@/lib/voice';
+import { clipFromFile, startNativeRecording, startWebRecording, type LiveRecording } from '@/lib/voice';
+import { recordingLabel, transcribingLabel, type VoiceUiState } from '@/lib/voiceUi';
 
 type Props = {
   token: string;
@@ -26,12 +30,39 @@ type Props = {
 
 export function CaptureBar({ token, types, onOpenType, onSaved }: Props) {
   const { online, enqueueRecord } = useOffline();
+  const { colors } = useTheme();
   const [text, setText] = useState('');
   const [suggestion, setSuggestion] = useState<RecordSuggestion | null>(null);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [voiceState, setVoiceState] = useState<VoiceUiState>('idle');
+  const [elapsed, setElapsed] = useState(0);
+  const [audioName, setAudioName] = useState<string | null>(null);
+  const recordingRef = useRef<LiveRecording | null>(null);
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (voiceState !== 'recording') {
+      pulse.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 0.35, duration: 450, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 450, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    const timer = setInterval(() => {
+      setElapsed(recordingRef.current?.elapsedSeconds() ?? 0);
+    }, 250);
+    return () => {
+      loop.stop();
+      clearInterval(timer);
+    };
+  }, [pulse, voiceState]);
 
   async function suggestFrom(value: string, transcript?: string | null) {
     setError(null);
@@ -67,6 +98,7 @@ export function CaptureBar({ token, types, onOpenType, onSaved }: Props) {
       setError(voiceNeedsNetwork());
       return;
     }
+    setVoiceState('transcribing');
     setBusy(true);
     setError(null);
     try {
@@ -92,20 +124,37 @@ export function CaptureBar({ token, types, onOpenType, onSaved }: Props) {
       setError(err instanceof ApiError ? err.message : transcriptionUnavailable());
     } finally {
       setBusy(false);
+      setVoiceState('idle');
     }
   }
 
   async function speak() {
     setError(null);
+    setNotice(null);
     if (!online) {
       setError(voiceNeedsNetwork());
       return;
     }
     try {
-      const clip =
-        Platform.OS === 'web' || canUseMediaRecorder()
-          ? await recordWithMediaRecorder(2)
-          : await recordNative();
+      const session = Platform.OS === 'web' || typeof MediaRecorder !== 'undefined' ? await startWebRecording() : await startNativeRecording();
+      recordingRef.current = session;
+      setElapsed(0);
+      setVoiceState('recording');
+    } catch (err) {
+      setVoiceState('idle');
+      setError(err instanceof Error ? err.message : transcriptionUnavailable());
+    }
+  }
+
+  async function stopRecording() {
+    const session = recordingRef.current;
+    recordingRef.current = null;
+    if (!session) {
+      setVoiceState('idle');
+      return;
+    }
+    try {
+      const clip = await session.stop();
       if (clip.blob) {
         const file = new File([clip.blob], clip.fileName, { type: clip.mimeType });
         await transcribeClip(file);
@@ -113,8 +162,16 @@ export function CaptureBar({ token, types, onOpenType, onSaved }: Props) {
       }
       await transcribeClip({ uri: clip.uri, name: clip.fileName, mimeType: clip.mimeType });
     } catch (err) {
+      setVoiceState('idle');
       setError(err instanceof Error ? err.message : transcriptionUnavailable());
     }
+  }
+
+  function cancelRecording() {
+    recordingRef.current?.cancel();
+    recordingRef.current = null;
+    setVoiceState('idle');
+    setElapsed(0);
   }
 
   async function accept() {
@@ -162,16 +219,33 @@ export function CaptureBar({ token, types, onOpenType, onSaved }: Props) {
   return (
     <View>
       <TextField label="Escrever" value={text} onChangeText={setText} placeholder="O que aconteceu hoje" />
-      <Button label="Sugerir" onPress={() => void write()} disabled={!text.trim() || busy} />
-      <Button label="Falar" variant="ghost" onPress={() => void speak()} disabled={busy} />
+      <Button label="Sugerir" onPress={() => void write()} disabled={!text.trim() || busy || voiceState !== 'idle'} />
+      <Button label="Falar" variant="ghost" onPress={() => void speak()} disabled={busy || voiceState !== 'idle'} />
+      {voiceState === 'recording' ? (
+        <View testID="voice-recording" style={[styles.recordBox, { borderColor: colors.line, backgroundColor: colors.surface }]}>
+          <Animated.View
+            testID="voice-pulse"
+            style={[styles.pulse, { backgroundColor: colors.danger, opacity: pulse }]}
+          />
+          <Text style={[styles.recordLabel, { color: colors.ink }]}>{recordingLabel(elapsed)}</Text>
+          <Button label="Parar" onPress={() => void stopRecording()} />
+          <Button label="Cancelar" variant="ghost" onPress={cancelRecording} />
+        </View>
+      ) : null}
+      {voiceState === 'transcribing' ? (
+        <Text testID="voice-transcribing" style={[styles.recordLabel, { color: colors.ink }]}>
+          {transcribingLabel()}
+        </Text>
+      ) : null}
       {Platform.OS === 'web' ? (
-        <input
-          data-testid="voice-file"
-          aria-label="Enviar áudio de teste"
-          type="file"
+        <FilePicker
+          label="Enviar áudio"
+          testID="voice-file"
+          accessibilityLabel="Enviar áudio de teste"
           accept="audio/*,text/plain,.webm,.wav,.mp3,.m4a,.ogg,.txt"
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0];
+          valueName={audioName}
+          onFile={(file) => {
+            setAudioName(file?.name ?? null);
             if (file) {
               void transcribeClip(clipFromFile(file).blob as File);
             }
@@ -184,14 +258,23 @@ export function CaptureBar({ token, types, onOpenType, onSaved }: Props) {
         <View>
           <Text>{suggestion.summary}</Text>
           {suggestion.transcript ? <Text>Transcrição: {suggestion.transcript}</Text> : null}
-          {suggestion.type.fields.slice(0, 8).map((field) => (
-            <TextField
-              key={field.id}
-              label={field.name}
-              value={draft[field.id] ?? ''}
-              onChangeText={(value) => setDraft((current) => ({ ...current, [field.id]: value }))}
-            />
-          ))}
+          {suggestion.type.fields.slice(0, 8).map((field) =>
+            field.kind === 'date' ? (
+              <DateField
+                key={field.id}
+                label={field.name}
+                value={draft[field.id] ?? ''}
+                onChangeText={(value) => setDraft((current) => ({ ...current, [field.id]: value }))}
+              />
+            ) : (
+              <TextField
+                key={field.id}
+                label={field.name}
+                value={draft[field.id] ?? ''}
+                onChangeText={(value) => setDraft((current) => ({ ...current, [field.id]: value }))}
+              />
+            ),
+          )}
           <Button label="Aceitar" onPress={() => void accept()} disabled={busy} />
           <Button label="Recusar" variant="ghost" onPress={reject} />
         </View>
@@ -204,3 +287,21 @@ export function CaptureBar({ token, types, onOpenType, onSaved }: Props) {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  recordBox: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 8,
+    alignItems: 'flex-start',
+  },
+  pulse: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  recordLabel: {
+    fontWeight: '700',
+  },
+});

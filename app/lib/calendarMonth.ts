@@ -20,6 +20,23 @@ export function shiftMonth(year: number, month: number, delta: number): { year: 
   return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1 };
 }
 
+export function buildRecordMonth(
+  year: number,
+  month: number,
+  records: { id: string; title: string; occurredOn: string }[],
+): DayCell[] {
+  return buildMonth(
+    year,
+    month,
+    records.map((item) => ({
+      reminderId: item.id,
+      title: item.title,
+      at: item.occurredOn,
+      paused: false,
+    })),
+  );
+}
+
 export function buildMonth(year: number, month: number, events: CalendarEventLike[]): DayCell[] {
   const first = new Date(Date.UTC(year, month - 1, 1));
   const startWeekday = first.getUTCDay();
