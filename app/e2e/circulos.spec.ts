@@ -29,15 +29,25 @@ async function signUp(page: Page, suffix = ''): Promise<string> {
   return email;
 }
 
-async function openTypes(page: Page): Promise<void> {
-  const tipos = page.getByRole('button', { name: 'Tipos', exact: true });
-  if ((await tipos.count()) === 0 || !(await tipos.first().isVisible())) {
-    const mais = page.getByRole('button', { name: 'Mais' });
-    if (await mais.isVisible()) {
-      await mais.click();
-    }
+const WEB_NARROW = 768;
+
+async function waitForAppChrome(page: Page): Promise<void> {
+  const width = page.viewportSize()?.width ?? 1280;
+  if (width < WEB_NARROW) {
+    await expect(page.getByRole('button', { name: 'Mais', exact: true })).toBeVisible();
+    return;
   }
-  await page.getByRole('button', { name: 'Tipos', exact: true }).first().click();
+  await expect(page.getByRole('button', { name: 'Tipos', exact: true })).toBeVisible();
+}
+
+async function openTypes(page: Page): Promise<void> {
+  const width = page.viewportSize()?.width ?? 1280;
+  const tipos = page.getByRole('button', { name: 'Tipos', exact: true }).first();
+  if (width < WEB_NARROW && !(await tipos.isVisible())) {
+    await page.getByRole('button', { name: 'Mais', exact: true }).click();
+  }
+  await expect(tipos).toBeVisible();
+  await tipos.click();
   await expect(page.getByText('Meus tipos')).toBeVisible();
 }
 
@@ -1765,6 +1775,16 @@ test('404 não sobrepõe o conteúdo e a barra lateral não corta Preços', asyn
   expect(tituloBox!.y + tituloBox!.height).toBeLessThanOrEqual(corpoBox!.y + 2);
 });
 
+test('Tipos abre no desktop depois de passar pelo viewport mobile', async ({ page }) => {
+  await signUp(page, '-vp');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForAppChrome(page);
+  await expect(page.getByRole('button', { name: 'Mais', exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openTypes(page);
+  await expect(page.getByRole('button', { name: 'Mais', exact: true })).toHaveCount(0);
+});
+
 test('telas da rodada 18 em desktop e mobile', async ({ page }) => {
   test.setTimeout(180_000);
   const dir = '/opt/cursor/artifacts/rodada18';
@@ -1777,12 +1797,18 @@ test('telas da rodada 18 em desktop e mobile', async ({ page }) => {
   async function shoot(name: string, inApp = true): Promise<void> {
     await page.setViewportSize({ width: 1280, height: 800 });
     if (inApp) {
-      await expect(page.getByRole('button', { name: 'Tipos', exact: true })).toBeVisible();
+      await waitForAppChrome(page);
     }
     await page.screenshot({ path: `${dir}/${name}-desktop.png`, fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
+    if (inApp) {
+      await waitForAppChrome(page);
+    }
     await page.screenshot({ path: `${dir}/${name}-mobile.png`, fullPage: true });
     await page.setViewportSize({ width: 1280, height: 800 });
+    if (inApp) {
+      await waitForAppChrome(page);
+    }
   }
 
   await expect(page.getByRole('button', { name: 'Novo tipo' })).toBeVisible();
@@ -1843,6 +1869,7 @@ test('telas da rodada 18 em desktop e mobile', async ({ page }) => {
   await expect(page.getByText('Preços aprovados pelo Allan')).toBeVisible();
   await shoot('precos', false);
   await page.getByRole('button', { name: 'Voltar' }).click();
+  await waitForAppChrome(page);
 
   await page.getByRole('button', { name: 'Ajustes' }).first().click();
   await page.getByRole('button', { name: 'Escuro' }).click();
