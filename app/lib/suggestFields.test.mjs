@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { addField, enabledFields, fieldsToDraft, renameField, toggleField } from './suggestFields.ts';
+import { addField, enabledFields, fieldKindLabel, fieldsToDraft, renameField, toggleField } from './suggestFields.ts';
 
 describe('chips de campos sugeridos', () => {
   const fields = [
@@ -26,5 +26,14 @@ describe('chips de campos sugeridos', () => {
     const again = (current) => toggleField(current, 'title');
     assert.notEqual(otherFn, again);
     assert.equal(again(added).find((item) => item.id === 'title')?.name, 'Nome da corrida');
+  });
+
+  it('rotula o tipo do campo em pt-BR sem Nome de', () => {
+    assert.equal(fieldKindLabel({ id: 'title', kind: 'text' }), 'texto');
+    assert.equal(fieldKindLabel({ id: 'distancia', kind: 'number' }), 'número km');
+    assert.equal(fieldKindLabel({ id: 'duracao', kind: 'number' }), 'número min');
+    assert.equal(fieldKindLabel({ id: 'when', kind: 'date' }), 'data');
+    assert.equal(fieldKindLabel({ id: 'where', kind: 'place' }), 'lugar');
+    assert.equal(fieldKindLabel({ id: 'done', kind: 'bool' }), 'sim/não');
   });
 });

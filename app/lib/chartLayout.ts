@@ -1,8 +1,14 @@
+import { isoToDisplayDate } from './dates.ts';
+
+export const MAX_BAR_WIDTH = 40;
+export const SINGLE_POINT_HINT = 'registre mais para ver a evolução';
+
 export type ChartPoint = { occurredOn: string | null; numberValue: number };
 
 export type ChartBar = {
   label: string;
   value: number;
+  valueLabel: string;
   height: number;
   x: number;
   width: number;
@@ -20,12 +26,14 @@ export function chartBars(points: ChartPoint[], width = 320, height = 140): Char
   }
 
   const max = Math.max(...points.map((point) => Math.abs(point.numberValue)), 1);
-  const gap = 6;
-  const barWidth = Math.max(8, (width - gap * (points.length + 1)) / points.length);
+  const gap = 12;
+  const raw = (width - gap * (points.length + 1)) / points.length;
+  const barWidth = Math.min(MAX_BAR_WIDTH, Math.max(8, raw));
   return points.map((point, index) => ({
-    label: point.occurredOn ? point.occurredOn.slice(8, 10) : String(index + 1),
+    label: point.occurredOn ? isoToDisplayDate(String(point.occurredOn)) : String(index + 1),
     value: point.numberValue,
-    height: Math.max(4, (Math.abs(point.numberValue) / max) * (height - 24)),
+    valueLabel: String(point.numberValue),
+    height: Math.max(8, (Math.abs(point.numberValue) / max) * (height - 36)),
     x: gap + index * (barWidth + gap),
     width: barWidth,
   }));

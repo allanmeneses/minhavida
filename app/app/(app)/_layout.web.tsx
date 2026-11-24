@@ -24,12 +24,16 @@ const PRIMARY_NAV: NavEntry[] = [
   {
     label: 'Perfil',
     href: '/(app)/profile',
-    match: (path) =>
-      path.includes('profile') || path.includes('/type/') || (path.includes('life') && !path.includes('living')),
+    match: (path) => path.includes('profile'),
   },
 ];
 
 const MORE_NAV: NavEntry[] = [
+  {
+    label: 'Tipos',
+    href: '/(app)/types',
+    match: (path) => path.includes('/types') || path.includes('/type/') || (path.includes('life') && !path.includes('living')),
+  },
   { label: 'Busca', href: '/(app)/search', match: (path) => path.includes('search') },
   { label: 'Documentos', href: '/(app)/documents', match: (path) => path.includes('documents') },
   { label: 'Lembretes', href: '/(app)/reminders', match: (path) => path.includes('reminders') },
@@ -213,7 +217,9 @@ const styles = StyleSheet.create({
   sidebar: {
     width: 260,
     borderRightWidth: 1,
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
     height: '100%' as unknown as number,
     maxHeight: '100vh' as unknown as number,
     position: 'sticky' as unknown as 'relative',
@@ -242,7 +248,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   userName: {
-    marginTop: 16,
+    marginTop: 10,
     fontWeight: '700',
     fontSize: 16,
   },
@@ -251,16 +257,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   nav: {
-    marginTop: 16,
+    marginTop: 10,
     flex: 1,
     minHeight: 0,
   },
   navInner: {
-    gap: 6,
-    paddingBottom: 12,
+    gap: 2,
+    paddingBottom: 4,
   },
   navItem: {
-    paddingVertical: 10,
+    paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
   },
@@ -268,9 +274,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   logout: {
-    paddingVertical: 10,
+    paddingVertical: 8,
     flexShrink: 0,
-    marginTop: 8,
+    marginTop: 4,
   },
   logoutText: {
     fontWeight: '700',
@@ -286,9 +292,11 @@ const styles = StyleSheet.create({
   mainNarrow: {
     flex: 1,
     minWidth: 0,
+    minHeight: 0,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
+    overflow: 'auto' as unknown as 'visible',
   },
   tabBar: {
     flexDirection: 'row',

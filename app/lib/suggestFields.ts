@@ -64,6 +64,42 @@ export function addField(draft: SuggestedFieldDraft[], name: string, kind = 'tex
   ];
 }
 
+export function fieldKindLabel(field: { id: string; kind: string }): string {
+  const kind = field.kind.toLowerCase();
+  const id = field.id.toLowerCase();
+  if (kind === 'date') {
+    return 'data';
+  }
+  if (kind === 'place') {
+    return 'lugar';
+  }
+  if (kind === 'bool') {
+    return 'sim/não';
+  }
+  if (kind === 'photo') {
+    return 'foto';
+  }
+  if (kind === 'file') {
+    return 'arquivo';
+  }
+  if (kind === 'number') {
+    if (id === 'distancia' || id === 'km' || id.includes('km')) {
+      return 'número km';
+    }
+    if (id === 'duracao' || id.includes('minuto')) {
+      return 'número min';
+    }
+    if (id === 'peso' || id.includes('kg')) {
+      return 'número kg';
+    }
+    if (id.includes('preco') || id.includes('valor') || id.includes('reais')) {
+      return 'número R$';
+    }
+    return 'número';
+  }
+  return 'texto';
+}
+
 export function slugifyField(value: string): string {
   const normalized = value
     .trim()

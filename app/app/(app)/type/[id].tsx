@@ -5,6 +5,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { MonthGrid } from '@/components/MonthGrid';
 import { NumberChart } from '@/components/NumberChart';
 import { Button } from '@/components/ui/Button';
+import { CircleShareChips } from '@/components/ui/CircleShareChips';
 import { DateField } from '@/components/ui/DateField';
 import { Feedback } from '@/components/ui/Feedback';
 import { FilePicker } from '@/components/ui/FilePicker';
@@ -198,29 +199,7 @@ export default function RecordTypeScreen() {
           onPress={() => setShowDetails((value) => !value)}
         />
       ) : null}
-      {circles.length > 0 ? (
-        <View>
-          <Text style={styles.lead}>Mostrar a mesma entrada em círculos, sem duplicar.</Text>
-          {circles.map((circle) => (
-            <Button
-              key={circle.id}
-              label={
-                selectedCircleIds.includes(circle.id)
-                  ? `No círculo: ${circle.name ?? 'círculo'}`
-                  : `Fora do círculo: ${circle.name ?? 'círculo'}`
-              }
-              variant="ghost"
-              onPress={() =>
-                setSelectedCircleIds((current) =>
-                  current.includes(circle.id)
-                    ? current.filter((item) => item !== circle.id)
-                    : [...current, circle.id],
-                )
-              }
-            />
-          ))}
-        </View>
-      ) : null}
+      <CircleShareChips circles={circles} selectedIds={selectedCircleIds} onChange={setSelectedCircleIds} />
       {showDetails && Platform.OS === 'web' ? (
         <FilePicker
           label="Foto da entrada"

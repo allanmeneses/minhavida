@@ -25,10 +25,11 @@ type Props = {
   token: string;
   types: HomeRecordType[];
   onOpenType: (id: string) => void;
+  onNewType: () => void;
   onSaved: () => Promise<void> | void;
 };
 
-export function CaptureBar({ token, types, onOpenType, onSaved }: Props) {
+export function CaptureBar({ token, types, onOpenType, onNewType, onSaved }: Props) {
   const { online, enqueueRecord } = useOffline();
   const { colors } = useTheme();
   const [text, setText] = useState('');
@@ -227,7 +228,9 @@ export function CaptureBar({ token, types, onOpenType, onSaved }: Props) {
             testID="voice-pulse"
             style={[styles.pulse, { backgroundColor: colors.danger, opacity: pulse }]}
           />
-          <Text style={[styles.recordLabel, { color: colors.ink }]}>{recordingLabel(elapsed)}</Text>
+          <Text testID="voice-timer" style={[styles.recordLabel, { color: colors.ink }]}>
+            {recordingLabel(elapsed)}
+          </Text>
           <Button label="Parar" onPress={() => void stopRecording()} />
           <Button label="Cancelar" variant="ghost" onPress={cancelRecording} />
         </View>
@@ -279,10 +282,11 @@ export function CaptureBar({ token, types, onOpenType, onSaved }: Props) {
           <Button label="Recusar" variant="ghost" onPress={reject} />
         </View>
       ) : null}
-      <View>
+      <View style={{ gap: 8 }}>
         {chips.map((item) => (
           <Button key={item.id} label={item.name} variant="ghost" onPress={() => onOpenType(item.id)} />
         ))}
+        <Button label="Novo tipo" variant="ghost" onPress={onNewType} />
       </View>
     </View>
   );

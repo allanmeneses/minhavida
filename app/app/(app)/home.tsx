@@ -321,6 +321,7 @@ export default function HomeScreen() {
             token={token}
             types={recordTypes}
             onOpenType={(typeId) => router.push(`/(app)/type/${typeId}` as Href)}
+            onNewType={() => router.push('/(app)/types' as Href)}
             onSaved={() => load()}
           />
         </View>

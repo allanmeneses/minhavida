@@ -1,19 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter, type Href } from 'expo-router';
 import { ProfileForm } from '@/components/ProfileForm';
 import { ProfilePhoto } from '@/components/ProfilePhoto';
 import { Button } from '@/components/ui/Button';
-import { FieldChips } from '@/components/ui/FieldChips';
-import { Feedback } from '@/components/ui/Feedback';
-import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { api, ApiError, uploadNativeFile, type LifeArea, type Profile } from '@/lib/api';
-import { AREA_KIND_LABEL, displayLabel } from '@/lib/labels';
-import { enabledFields, fieldsToDraft, type SuggestedFieldDraft } from '@/lib/suggestFields';
-import { type RecordTypeItem } from '@/lib/records';
+import { api, ApiError, uploadNativeFile, type Profile } from '@/lib/api';
 
 export default function ProfileScreen() {
   const { token, user, profile, setProfile, bumpPhoto, photoRevision } = useAuth();
@@ -23,29 +17,6 @@ export default function ProfileScreen() {
   const [ok, setOk] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
-  const [areas, setAreas] = useState<LifeArea[]>([]);
-  const [newArea, setNewArea] = useState('');
-  const [types, setTypes] = useState<RecordTypeItem[]>([]);
-  const [gallery, setGallery] = useState<RecordTypeItem[]>([]);
-  const [sentence, setSentence] = useState('');
-  const [suggestedName, setSuggestedName] = useState<string | null>(null);
-  const [suggestedDraft, setSuggestedDraft] = useState<SuggestedFieldDraft[]>([]);
-  const [extraFieldName, setExtraFieldName] = useState('');
-
-  const loadAreas = useCallback(async () => {
-    if (!token) {
-      return;
-    }
-    setAreas(await api<LifeArea[]>('/api/life-areas', { token }));
-    setTypes(await api<RecordTypeItem[]>('/api/record-types', { token }));
-    setGallery(await api<RecordTypeItem[]>('/api/record-types/gallery', { token }));
-  }, [token]);
-
-  useEffect(() => {
-    void loadAreas().catch((err) => {
-      setError(err instanceof ApiError ? err.message : 'Não foi possível abrir as áreas.');
-    });
-  }, [loadAreas]);
 
   async function save(values: {
     displayName: string;
@@ -158,23 +129,13 @@ export default function ProfileScreen() {
     }
   }
 
-  async function createArea() {
-    if (!token || !newArea.trim()) {
-      return;
-    }
-    await api('/api/life-areas', { method: 'POST', token, body: JSON.stringify({ name: newArea.trim() }) });
-    setNewArea('');
-    await loadAreas();
-  }
-
   return (
     <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
       <View style={[styles.card, { backgroundColor: Platform.OS === 'web' ? colors.surface : 'transparent', borderColor: colors.line }]}>
         <Text style={[styles.kicker, { color: colors.primary }]}>Perfil solo</Text>
         <Text style={[styles.title, { color: colors.ink }]}>Sua vida, no seu ritmo</Text>
         <Text style={[styles.lead, { color: colors.muted }]}>
-          O perfil nasce privado. Você descreve o que quer guardar, copia um exemplo ou deixa o app sugerir. Nada
-          entra sozinho.
+          O perfil nasce privado. Nome, foto e como te chamam ficam aqui. Tipos de registro ficam em Tipos.
         </Text>
 
         <View style={styles.photoRow}>
@@ -202,116 +163,6 @@ export default function ProfileScreen() {
           onSave={(values) => void save(values)}
         />
 
-        <Text style={[styles.section, { color: colors.ink }]}>Seus tipos</Text>
-        <TextField
-          label="Descrever um tipo"
-          value={sentence}
-          onChangeText={setSentence}
-          placeholder="quero anotar as vacinas do meu filho, com data, posto e lote"
-        />
-        <Button
-          label="Sugerir tipo"
-          variant="ghost"
-          disabled={!sentence.trim()}
-          onPress={() => {
-            if (!token || !sentence.trim()) {
-              return;
-            }
-            void api<{ name: string; fields: { id: string; name: string; kind: string; required: boolean; order: number }[] }>(
-              '/api/record-types/suggest',
-              { method: 'POST', token, body: JSON.stringify({ sentence: sentence.trim() }) },
-            ).then((payload) => {
-              setSuggestedName(payload.name);
-              setSuggestedDraft(fieldsToDraft(payload.fields ?? []));
-              setExtraFieldName('');
-            });
-          }}
-        />
-        {suggestedName ? (
-          <>
-            <Text style={[styles.lead, { color: colors.muted }]}>Sugestão: {suggestedName}</Text>
-            <FieldChips
-              fields={suggestedDraft}
-              extraName={extraFieldName}
-              onChange={setSuggestedDraft}
-              onExtraName={setExtraFieldName}
-            />
-            <Button
-              label="Usar esta sugestão"
-              onPress={() => {
-                if (!token || !suggestedName) {
-                  return;
-                }
-                void api<RecordTypeItem>('/api/record-types', {
-                  method: 'POST',
-                  token,
-                  body: JSON.stringify({ name: suggestedName, fields: enabledFields(suggestedDraft) }),
-                }).then((created) => {
-                  setSentence('');
-                  setSuggestedName(null);
-                  setSuggestedDraft([]);
-                  router.push(`/(app)/type/${created.id}` as Href);
-                });
-              }}
-            />
-          </>
-        ) : null}
-        {types.map((item) => (
-          <Pressable
-            key={item.id}
-            accessibilityRole="button"
-            accessibilityLabel={item.name}
-            onPress={() => router.push(`/(app)/type/${item.id}` as Href)}
-            style={[styles.area, { borderBottomColor: colors.line }]}>
-            <Text style={[styles.areaName, { color: colors.ink }]}>{item.name}</Text>
-          </Pressable>
-        ))}
-        <Text style={[styles.section, { color: colors.ink }]}>Exemplos</Text>
-        {gallery
-          .filter((item) => !types.some((owned) => owned.name === item.name || owned.originTemplateId === item.id))
-          .map((item) => (
-            <Pressable
-              key={item.id}
-              accessibilityRole="button"
-              accessibilityLabel={item.name}
-              onPress={() => {
-                if (!token) {
-                  return;
-                }
-                void api<RecordTypeItem>('/api/record-types/from-gallery', {
-                  method: 'POST',
-                  token,
-                  body: JSON.stringify({ templateId: item.id }),
-                }).then((copied) => router.push(`/(app)/type/${copied.id}` as Href));
-              }}
-              style={[styles.area, { borderBottomColor: colors.line }]}>
-              <Text style={[styles.areaName, { color: colors.ink }]}>{item.name}</Text>
-              <Text style={[styles.lead, { color: colors.muted }]}>{item.description}</Text>
-            </Pressable>
-          ))}
-        {areas.filter((area) => !types.some((item) => item.name === area.name)).length > 0 ? (
-          <Text style={[styles.section, { color: colors.ink }]}>Áreas antigas</Text>
-        ) : null}
-        {areas
-          .filter((area) => !types.some((item) => item.name === area.name))
-          .map((area) => (
-          <Pressable
-            key={area.id}
-            accessibilityRole="button"
-            accessibilityLabel={area.name}
-            onPress={() => router.push(`/(app)/life/${area.id}`)}
-            style={[styles.area, { borderBottomColor: colors.line }]}>
-            <Text style={[styles.areaName, { color: colors.ink }]}>{area.name}</Text>
-            {displayLabel(area.kind, AREA_KIND_LABEL) &&
-            displayLabel(area.kind, AREA_KIND_LABEL) !== area.name ? (
-              <Text style={[styles.lead, { color: colors.muted }]}>
-                Tipo: {displayLabel(area.kind, AREA_KIND_LABEL)}
-              </Text>
-            ) : null}
-          </Pressable>
-        ))}
-        <Feedback message={null} />
-        <AreaComposer value={newArea} onChange={setNewArea} onCreate={() => void createArea()} />
         {profile?.isPublic && user?.id ? (
           <Text style={[styles.lead, { color: colors.muted }]}>
             Link público: /p/{user.id}. Quem visita vê nome, foto e descrição.
@@ -323,34 +174,9 @@ export default function ProfileScreen() {
         )}
         <Button label="Resumo de uso" variant="ghost" onPress={() => router.push('/(app)/recap' as Href)} />
         <Button label="Listas" variant="ghost" onPress={() => router.push('/(app)/lists' as Href)} />
-        <Button label="Memórias" variant="ghost" onPress={() => router.push('/(app)/memories' as Href)} />
         <Button label="Pet e grupo" variant="ghost" onPress={() => router.push('/(app)/living' as Href)} />
-        <Button label="Modelos" variant="ghost" onPress={() => router.push('/(app)/templates' as Href)} />
       </View>
     </ScrollView>
-  );
-}
-
-function AreaComposer({
-  value,
-  onChange,
-  onCreate,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  onCreate: () => void;
-}) {
-  return (
-    <View style={{ gap: 8 }}>
-      <TextField label="Nova área" value={value} onChangeText={onChange} placeholder="Ex.: Corrida" />
-      <Button
-        label="Criar área"
-        variant="ghost"
-        onPress={onCreate}
-        disabled={!value.trim()}
-        disabledHint="Informe o nome da área para criar."
-      />
-    </View>
   );
 }
 
@@ -390,17 +216,5 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 8,
     maxWidth: 220,
-  },
-  section: {
-    marginTop: 12,
-    fontWeight: '800',
-    fontSize: 18,
-  },
-  area: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
-  areaName: {
-    fontWeight: '700',
   },
 });

@@ -29,6 +29,18 @@ async function signUp(page: Page, suffix = ''): Promise<string> {
   return email;
 }
 
+async function openTypes(page: Page): Promise<void> {
+  const tipos = page.getByRole('button', { name: 'Tipos', exact: true });
+  if ((await tipos.count()) === 0 || !(await tipos.first().isVisible())) {
+    const mais = page.getByRole('button', { name: 'Mais' });
+    if (await mais.isVisible()) {
+      await mais.click();
+    }
+  }
+  await page.getByRole('button', { name: 'Tipos', exact: true }).first().click();
+  await expect(page.getByText('Meus tipos')).toBeVisible();
+}
+
 async function cycleMemberAccess(page: Page, from: string, to: string): Promise<void> {
   const button = page.getByRole('button', { name: `Permissão dos membros: ${from}` });
   await expect(button).toBeVisible();
@@ -70,12 +82,14 @@ test('cadastro abre o painel do dia, o perfil solo e um círculo', async ({ page
   await signUp(page);
   await page.screenshot({ path: `${artifacts}/hoje.png`, fullPage: true });
 
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await expect(page.getByText('Vacinas', { exact: true })).toBeVisible();
   await expect(page.getByText('Diário', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Perfil' }).click();
   await page.getByLabel('Nome', { exact: true }).fill('Pessoa E2E editada');
   await page.screenshot({ path: `${artifacts}/perfil.png`, fullPage: true });
 
+  await openTypes(page);
   await page.getByText('Vacinas', { exact: true }).click();
   await page.getByLabel('Título', { exact: true }).fill('Hepatite B');
   await page.getByLabel('Quando').fill('2024-03-10');
@@ -137,7 +151,7 @@ test('esqueci a senha avisa que o email saiu', async ({ page }) => {
 
 test('entrada guarda número e o log do círculo mostra data', async ({ page }) => {
   await signUp(page, '-número');
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Diário', { exact: true }).click();
   await page.getByLabel('Título', { exact: true }).fill('Corrida');
   await page.getByRole('button', { name: 'Mais detalhes' }).click();
@@ -342,7 +356,7 @@ test('painel do dia atualiza sozinho', async ({ page }) => {
 
 test('busca unificada com histórico', async ({ page }) => {
   await signUp(page, '-busca');
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Diário', { exact: true }).click();
   await page.getByLabel('Título', { exact: true }).fill('Texto livre da medicação');
   await page.getByRole('button', { name: 'Guardar entrada' }).click();
@@ -786,7 +800,7 @@ test('recap de uso no perfil só mostra fluxo usado', async ({ page }) => {
   await page.getByRole('button', { name: 'Perfil' }).click();
   await page.getByRole('button', { name: 'Resumo de uso' }).click();
   await expect(page.getByText('Ainda não há uso para resumir.')).toBeVisible();
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Vacinas', { exact: true }).click();
   await page.getByLabel('Título', { exact: true }).fill('Hepatite B');
   await page.getByLabel('Quando').fill('2024-03-10');
@@ -883,7 +897,7 @@ test('contraste alto troca a paleta na hora', async ({ page }) => {
 
 test('diário mostra exemplo de preenchimento', async ({ page }) => {
   await signUp(page, '-exemplo');
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Diário', { exact: true }).click();
   await expect(page.getByText('Exemplo: um parágrafo do dia. Busca por palavra-chave. Sem versão.')).toBeVisible();
   await expect(page.getByPlaceholder('Corrida de manhã')).toBeVisible();
@@ -1160,7 +1174,7 @@ test('permissão de pet e grupo', async ({ browser }) => {
 
 test('tags opcionais na entrada e busca', async ({ page }) => {
   await signUp(page, '-tags');
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Diário', { exact: true }).click();
   await page.getByLabel('Título', { exact: true }).fill('Treino 5k');
   await page.getByRole('button', { name: 'Mais detalhes' }).click();
@@ -1177,11 +1191,11 @@ test('tags opcionais na entrada e busca', async ({ page }) => {
 
 test('a mesma entrada aparece em dois círculos sem duplicar', async ({ page }) => {
   await signUp(page, '-share-entry');
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Diário', { exact: true }).click();
   await page.getByLabel('Título', { exact: true }).fill('Corrida 200m');
-  await page.getByRole('button', { name: 'Fora do círculo: Eu' }).click();
-  await page.getByRole('button', { name: 'Fora do círculo: Família' }).click();
+  await page.getByRole('button', { name: 'Compartilhar com Eu', exact: true }).click();
+  await page.getByRole('button', { name: 'Compartilhar com Família', exact: true }).click();
   await page.getByRole('button', { name: 'Guardar entrada' }).click();
   await expect(page.getByText('Corrida 200m')).toBeVisible();
   await page.getByRole('button', { name: 'Círculos' }).click();
@@ -1420,7 +1434,7 @@ test('leitor de tela acha cadastro pelo papel de botao', async ({ page }) => {
 
 test('busca no diário por palavra-chave', async ({ page }) => {
   await signUp(page, '-diário-busca');
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Diário', { exact: true }).click();
   const word = `página-${Date.now()}`;
   await page.getByLabel('Título da página').fill(word);
@@ -1534,15 +1548,16 @@ test('ideias de presente: editor adiciona e viewer só ve', async ({ browser }) 
 test('tipo por frase, galeria, captura livre, voz, calendario, lembrete, share e migracao', async ({ page }) => {
   test.setTimeout(120_000);
   await signUp(page, '-flex');
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByLabel('Descrever um tipo').fill('quero anotar as vacinas do meu filho, com data, posto e lote');
   await page.getByRole('button', { name: 'Sugerir tipo' }).click();
-  await expect(page.getByText('Sugestão: Vacinas')).toBeVisible();
+  await expect(page.getByLabel('Nome do tipo')).toHaveValue('Vacinas');
   await expect(page.getByText('Campos sugeridos')).toBeVisible();
+  await expect(page.getByText('Nome de Título')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Campo ativo: Quando/ })).toBeVisible();
   await page.getByRole('button', { name: 'Usar esta sugestão' }).click();
   await expect(page.getByRole('button', { name: 'Guardar entrada' })).toBeVisible();
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Pet', { exact: true }).click();
   await expect(page.getByRole('button', { name: 'Guardar entrada' })).toBeVisible();
 
@@ -1561,7 +1576,7 @@ test('tipo por frase, galeria, captura livre, voz, calendario, lembrete, share e
   await expect(page.getByText(/Transcrição:/)).toBeVisible();
   await page.getByRole('button', { name: 'Recusar' }).click();
 
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Vacinas', { exact: true }).first().click();
   await page.getByLabel('Título', { exact: true }).fill('Gripe');
   await page.getByLabel('Quando').fill('2026-11-10');
@@ -1575,10 +1590,10 @@ test('tipo por frase, galeria, captura livre, voz, calendario, lembrete, share e
   await page.getByRole('button', { name: 'Lembretes' }).first().click();
   await expect(page.getByText('Gripe').first()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Diário', { exact: true }).first().click();
   await page.getByLabel('Título', { exact: true }).fill('Corrida 200m flex');
-  await page.getByRole('button', { name: 'Fora do círculo: Eu' }).click();
+  await page.getByRole('button', { name: 'Compartilhar com Eu', exact: true }).click();
   await page.getByRole('button', { name: 'Guardar entrada' }).click();
   await expect(page.getByText('Corrida 200m flex')).toBeVisible();
   await page.getByRole('button', { name: 'Círculos' }).click();
@@ -1599,7 +1614,7 @@ test('tipo por frase, galeria, captura livre, voz, calendario, lembrete, share e
     data: { title: 'Hepatite migrada', occurredOn: '2026-02-01', location: 'UBS Centro' },
   });
   expect(entry.ok()).toBeTruthy();
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Vacina antiga', { exact: true }).click();
   await expect(page.getByText('Hepatite migrada')).toBeVisible();
 });
@@ -1628,10 +1643,15 @@ test('arquivo em pt-BR, captura rápida, corrida, calendário e gráfico', async
   await expect(page.getByText('Nenhum arquivo escolhido')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Escolher arquivo' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await expect(page.getByRole('button', { name: 'Novo tipo' })).toBeVisible();
+  await page.getByRole('button', { name: 'Novo tipo' }).click();
+  await expect(page.getByText('Meus tipos')).toBeVisible();
   await page.getByLabel('Descrever um tipo').fill('corri 5 km em 30 minutos no parque');
   await page.getByRole('button', { name: 'Sugerir tipo' }).click();
-  await expect(page.getByText('Sugestão: Corridas')).toBeVisible();
+  await expect(page.getByLabel('Nome do tipo')).toHaveValue('Corridas');
+  await expect(page.getByText('número km')).toBeVisible();
+  await expect(page.getByText('Nome de Título')).toHaveCount(0);
+  await expect(page.getByText('Nome de Distância')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Campo ativo: Distância/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /Campo ativo: Duração/ })).toBeVisible();
   await page.getByRole('button', { name: 'Usar esta sugestão' }).click();
@@ -1641,7 +1661,7 @@ test('arquivo em pt-BR, captura rápida, corrida, calendário e gráfico', async
   await expect(page.getByLabel('Tags (opcional)')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Mais detalhes' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Vacinas', { exact: true }).first().click();
   await expect(page.getByLabel('Título', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Quando')).toBeVisible();
@@ -1666,15 +1686,21 @@ test('arquivo em pt-BR, captura rápida, corrida, calendário e gráfico', async
   await expect(page.getByTestId('month-grid')).toBeVisible();
   await expect(page.getByText('Gripe gráfico').first()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Pet', { exact: true }).first().click();
+  await expect(page.getByRole('button', { name: 'Compartilhar com Eu' })).toBeVisible();
+  await expect(page.getByText('Fora do círculo:')).toHaveCount(0);
   await page.getByLabel('Título', { exact: true }).fill('Consulta Luna');
+  await page.getByLabel('Quando').fill('2026-11-10');
   await page.getByLabel('Peso').fill('12');
   await page.getByRole('button', { name: 'Guardar entrada' }).click();
   await expect(page.getByLabel('Título', { exact: true })).toHaveValue('');
   await expect(page.getByTestId('number-chart')).toBeVisible();
   await expect(page.getByText('Ainda não há números neste tipo.')).toHaveCount(0);
   await expect(page.getByTestId('chart-bar').first()).toBeVisible();
+  await expect(page.getByText('registre mais para ver a evolução')).toBeVisible();
+  await expect(page.getByTestId('chart-single-value')).toContainText('12');
+  await expect(page.getByTestId('chart-single-value')).toContainText('10/11/2026');
 });
 
 test('falar mostra gravação, transcreve com falso e cancela', async ({ page }) => {
@@ -1684,7 +1710,9 @@ test('falar mostra gravação, transcreve com falso e cancela', async ({ page })
   await signUp(page, '-voz-ui');
   await page.getByRole('button', { name: 'Falar' }).click();
   await expect(page.getByTestId('voice-recording')).toBeVisible();
-  await expect(page.getByText(/Gravando/)).toBeVisible();
+  await expect(page.getByTestId('voice-timer')).toHaveCount(1);
+  await expect(page.getByTestId('voice-timer')).not.toHaveText('Gravando 00:00', { timeout: 4_000 });
+  await expect(page.getByTestId('voice-timer')).toHaveText(/Gravando \d{2}:\d{2}/);
   await expect(page.getByTestId('voice-pulse')).toBeVisible();
   await page.getByRole('button', { name: 'Cancelar' }).click();
   await expect(page.getByTestId('voice-recording')).toHaveCount(0);
@@ -1731,33 +1759,45 @@ test('404 não sobrepõe o conteúdo e a barra lateral não corta Preços', asyn
   expect(tituloBox!.y + tituloBox!.height).toBeLessThanOrEqual(corpoBox!.y + 2);
 });
 
-test('telas da rodada 17 em desktop e mobile', async ({ page }) => {
+test('telas da rodada 18 em desktop e mobile', async ({ page }) => {
   test.setTimeout(180_000);
-  const dir = '/opt/cursor/artifacts/rodada17';
+  const dir = '/opt/cursor/artifacts/rodada18';
   await mkdir(dir, { recursive: true });
   await page.addInitScript(() => {
     Object.assign(window, { circulosTestRecorder: true });
   });
   await signUp(page, '-shots');
 
-  async function shoot(name: string): Promise<void> {
+  async function shoot(name: string, inApp = true): Promise<void> {
     await page.setViewportSize({ width: 1280, height: 800 });
+    if (inApp) {
+      await expect(page.getByRole('button', { name: 'Tipos', exact: true })).toBeVisible();
+    }
     await page.screenshot({ path: `${dir}/${name}-desktop.png`, fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: `${dir}/${name}-mobile.png`, fullPage: true });
     await page.setViewportSize({ width: 1280, height: 800 });
   }
 
+  await expect(page.getByRole('button', { name: 'Novo tipo' })).toBeVisible();
   await shoot('hoje');
   await page.getByRole('button', { name: 'Falar' }).click();
-  await expect(page.getByTestId('voice-recording')).toBeVisible();
+  await expect(page.getByTestId('voice-timer')).not.toHaveText('Gravando 00:00', { timeout: 4_000 });
+  await expect(page.getByTestId('voice-timer')).toHaveText(/Gravando \d{2}:\d{2}/);
   await shoot('falar');
   await page.getByRole('button', { name: 'Cancelar' }).click();
 
   await page.getByRole('button', { name: 'Perfil' }).click();
+  await expect(page.getByText('Seus tipos')).toHaveCount(0);
+  await shoot('perfil');
+
+  await openTypes(page);
+  await shoot('tipos');
   await page.getByLabel('Descrever um tipo').fill('corri 5 km em 30 minutos no parque');
   await page.getByRole('button', { name: 'Sugerir tipo' }).click();
-  await expect(page.getByText('Sugestão: Corridas')).toBeVisible();
+  await expect(page.getByLabel('Nome do tipo')).toHaveValue('Corridas');
+  await expect(page.getByText('número km')).toBeVisible();
+  await expect(page.getByText('Nome de Distância')).toHaveCount(0);
   await shoot('sugestao-tipo');
 
   await page.getByText('Vacinas', { exact: true }).first().click();
@@ -1773,15 +1813,19 @@ test('telas da rodada 17 em desktop e mobile', async ({ page }) => {
   await expect(page.getByTestId('month-grid')).toBeVisible();
   await shoot('tipo-calendario');
 
-  await page.getByRole('button', { name: 'Perfil' }).click();
+  await openTypes(page);
   await page.getByText('Pet', { exact: true }).first().click();
+  await expect(page.getByRole('button', { name: 'Compartilhar com Eu' })).toBeVisible();
   await page.getByLabel('Título', { exact: true }).fill('Consulta');
+  await page.getByLabel('Quando').fill('2026-11-10');
   await page.getByLabel('Peso').fill('12');
   await page.getByRole('button', { name: 'Guardar entrada' }).click();
   await expect(page.getByLabel('Título', { exact: true })).toHaveValue('');
   await expect(page.getByTestId('number-chart')).toBeVisible();
-  await expect(page.getByText('Ainda não há números neste tipo.')).toHaveCount(0);
+  await expect(page.getByText('registre mais para ver a evolução')).toBeVisible();
   await expect(page.getByTestId('chart-bar').first()).toBeVisible();
+  await expect(page.getByTestId('chart-single-value')).toContainText('10/11/2026');
+  await page.getByTestId('number-chart').scrollIntoViewIfNeeded();
   await shoot('tipo-grafico');
 
   await page.getByRole('button', { name: 'Calendário', exact: true }).click();
@@ -1791,7 +1835,7 @@ test('telas da rodada 17 em desktop e mobile', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Preços' }).click();
   await expect(page.getByText('Preços aprovados pelo Allan')).toBeVisible();
-  await shoot('precos');
+  await shoot('precos', false);
   await page.getByRole('button', { name: 'Voltar' }).click();
 
   await page.getByRole('button', { name: 'Ajustes' }).first().click();
@@ -1805,7 +1849,7 @@ test('telas da rodada 17 em desktop e mobile', async ({ page }) => {
   await shoot('lembretes');
   await page.goto('/xyz-nao-existe');
   await expect(page.getByText('Página não encontrada')).toBeVisible();
-  await shoot('404');
+  await shoot('404', false);
 });
 
 
