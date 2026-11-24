@@ -44,18 +44,20 @@ export function TextField({
         textAlignVertical={multiline ? 'top' : 'center'}
         accessibilityLabel={label}
         onContentSizeChange={
-          multiline
+          multiline && Platform.OS !== 'web'
             ? (event) => {
                 const next = Math.ceil(event.nativeEvent.contentSize.height);
-                setGrownHeight((current) => Math.max(88, next, current));
+                setGrownHeight((current) => Math.max(88, next));
               }
             : undefined
         }
         style={[
           styles.input,
           multiline ? styles.multiline : null,
-          multiline ? { height: grownHeight } : null,
-          multiline && Platform.OS === 'web' ? ({ fieldSizing: 'content' } as object) : null,
+          multiline && Platform.OS !== 'web' ? { height: grownHeight } : null,
+          multiline && Platform.OS === 'web'
+            ? ({ fieldSizing: 'content', height: 'auto' } as object)
+            : null,
           {
             borderColor: colors.line,
             backgroundColor: colors.white,

@@ -19,6 +19,8 @@ describe('leitor de tela', () => {
     assert.match(field, /accessibilityLabel=\{label\}/);
     assert.match(field, /onContentSizeChange/);
     assert.match(field, /fieldSizing: 'content'/);
+    assert.match(field, /height: 'auto'/);
+    assert.match(field, /Platform.OS !== 'web' \? \{ height: grownHeight \}/);
     assert.match(search, /accessibilityLabel=\{`Buscar \$\{term\}`\}/);
     assert.match(search, /entry: 'entrada'/);
     assert.match(search, /searchTypeLabel\(hit\.type\)/);

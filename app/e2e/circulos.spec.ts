@@ -1827,14 +1827,17 @@ test('falar mostra gravação, transcreve com falso e cancela', async ({ page })
 test('sugestão deixa Aceitar visível no telefone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await signUp(page, '-aceitar-mob');
-  const emptyWriter = await page.getByLabel('Escrever').boundingBox();
+  const writer = page.getByLabel('Escrever');
+  const emptyWriter = await writer.boundingBox();
   expect(emptyWriter).toBeTruthy();
-  await page.getByLabel('Escrever').fill(
+  await writer.fill(
     'Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro\nSegunda linha da captura para o campo crescer no telefone.',
   );
-  const filledWriter = await page.getByLabel('Escrever').boundingBox();
+  await expect
+    .poll(async () => (await writer.boundingBox())?.height ?? 0)
+    .toBeGreaterThan(emptyWriter!.height);
+  const filledWriter = await writer.boundingBox();
   expect(filledWriter).toBeTruthy();
-  expect(filledWriter!.height).toBeGreaterThan(emptyWriter!.height);
   expect(filledWriter!.height).toBeGreaterThan(70);
   await page.getByRole('button', { name: 'Sugerir' }).click();
   await expect(page.getByText(/Sugerimos/)).toBeVisible();
