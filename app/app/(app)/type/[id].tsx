@@ -1,13 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform, ScrollView, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
+import { MonthGrid } from '@/components/MonthGrid';
+import { NumberChart } from '@/components/NumberChart';
 import { Button } from '@/components/ui/Button';
+import { DateField } from '@/components/ui/DateField';
 import { Feedback } from '@/components/ui/Feedback';
+import { FilePicker } from '@/components/ui/FilePicker';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary, type SearchHit } from '@/lib/api';
+import { buildRecordMonth, shiftMonth } from '@/lib/calendarMonth';
+import { isoToDisplayDate, monthTitle, tagsPlaceholder } from '@/lib/dates';
 import { entryExample } from '@/lib/entryExamples';
 import {
   extraFields,
@@ -15,6 +21,7 @@ import {
   quickFields,
   tagsFrom,
   type LifeRecordItem,
+  type RecordField,
   type RecordTypeItem,
 } from '@/lib/records';
 import { screenStyles } from '@/lib/screenStyles';
@@ -32,7 +39,7 @@ export default function RecordTypeScreen() {
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [numberValue, setNumberValue] = useState('');
   const [tags, setTags] = useState('');
-  const [showDetails, setShowDetails] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
   const [circles, setCircles] = useState<CircleSummary[]>([]);
   const [selectedCircleIds, setSelectedCircleIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +48,12 @@ export default function RecordTypeScreen() {
   const [diaryQuery, setDiaryQuery] = useState('');
   const [diaryHits, setDiaryHits] = useState<SearchHit[]>([]);
   const [calendar, setCalendar] = useState<CalendarItem[] | null>(null);
+  const now = new Date();
+  const [calYear, setCalYear] = useState(now.getUTCFullYear());
+  const [calMonth, setCalMonth] = useState(now.getUTCMonth() + 1);
   const [chart, setChart] = useState<ChartPoint[]>([]);
   const [newFieldName, setNewFieldName] = useState('');
+  const [photoName, setPhotoName] = useState<string | null>(null);
   const example = entryExample(kindFromSlug(type?.slug));
 
   const load = useCallback(async () => {
@@ -133,8 +144,17 @@ export default function RecordTypeScreen() {
     await load();
   }
 
-  const visibleFields = type ? (showDetails ? type.fields.filter((item) => item.kind !== 'photo' && item.kind !== 'file') : quickFields(type.fields)) : [];
-  const hasExtra = type ? extraFields(type.fields).length > 0 : false;
+  const quick = type ? quickFields(type.fields) : [];
+  const extra = type ? extraFields(type.fields).filter((item) => item.kind !== 'photo' && item.kind !== 'file') : [];
+  const visibleFields = showDetails
+    ? [...quick, ...extra.filter((field) => !quick.some((item) => item.id === field.id))]
+    : quick;
+  const hasMore = extra.length > 0 || Boolean(type && !quick.some((field) => field.kind === 'number')) || Boolean(type && !quick.some((field) => field.id === 'body'));
+
+  const calendarDays = useMemo(
+    () => buildRecordMonth(calYear, calMonth, calendar ?? []),
+    [calYear, calMonth, calendar],
+  );
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
@@ -142,48 +162,42 @@ export default function RecordTypeScreen() {
       <Text style={styles.lead}>{type?.description || example.hint}</Text>
       <Feedback message={error} />
       {visibleFields.map((field) => (
-        <TextField
+        <FieldInput
           key={field.id}
-          label={field.name}
+          field={field}
           value={draft[field.id] ?? ''}
-          onChangeText={(value) => setField(field.id, value)}
-          placeholder={
-            field.id === 'title'
-              ? example.titlePlaceholder
-              : field.kind === 'date'
-                ? example.whenPlaceholder
-                : field.kind === 'place'
-                  ? example.wherePlaceholder
-                  : undefined
-          }
+          example={example}
+          onChange={(value) => setField(field.id, value)}
         />
       ))}
-      {example.showWhen && !visibleFields.some((field) => field.kind === 'date') ? (
-        <TextField label="Quando" value={draft.when ?? ''} onChangeText={(value) => setField('when', value)} placeholder={example.whenPlaceholder} />
+      {showDetails && example.showWhen && !visibleFields.some((field) => field.kind === 'date') ? (
+        <DateField label="Quando" value={draft.when ?? ''} onChangeText={(value) => setField('when', value)} />
       ) : null}
-      {example.showWhere && !visibleFields.some((field) => field.kind === 'place') ? (
+      {showDetails && example.showWhere && !visibleFields.some((field) => field.kind === 'place') ? (
         <TextField label="Onde" value={draft.where ?? ''} onChangeText={(value) => setField('where', value)} placeholder={example.wherePlaceholder} />
       ) : null}
-      <TextField
-        label="Número"
-        value={numberValue}
-        onChangeText={setNumberValue}
-        placeholder={example.numberPlaceholder}
-        keyboardType="decimal-pad"
-      />
-      {!visibleFields.some((field) => field.id === 'body') ? (
+      {showDetails && !visibleFields.some((field) => field.kind === 'number') ? (
+        <TextField
+          label="Número"
+          value={numberValue}
+          onChangeText={setNumberValue}
+          placeholder={example.numberPlaceholder}
+          keyboardType="decimal-pad"
+        />
+      ) : null}
+      {showDetails && !visibleFields.some((field) => field.id === 'body') ? (
         <TextField label="Texto" value={draft.body ?? ''} onChangeText={(value) => setField('body', value)} placeholder={example.bodyPlaceholder} />
       ) : null}
-      <TextField label="Tags (opcional)" value={tags} onChangeText={setTags} placeholder="corrida, manhã" />
-      {hasExtra ? (
+      {showDetails ? (
+        <TextField label="Tags (opcional)" value={tags} onChangeText={setTags} placeholder={tagsPlaceholder()} />
+      ) : null}
+      {hasMore ? (
         <Button
           label={showDetails ? 'Menos detalhes' : 'Mais detalhes'}
           variant="ghost"
           onPress={() => setShowDetails((value) => !value)}
         />
-      ) : (
-        <Button label="Mais detalhes" variant="ghost" onPress={() => setShowDetails(true)} />
-      )}
+      ) : null}
       {circles.length > 0 ? (
         <View>
           <Text style={styles.lead}>Mostrar a mesma entrada em círculos, sem duplicar.</Text>
@@ -207,14 +221,16 @@ export default function RecordTypeScreen() {
           ))}
         </View>
       ) : null}
-      {Platform.OS === 'web' ? (
-        <View>
-          <Text nativeID="foto-registro-label" style={styles.lead}>
-            Foto da entrada
-          </Text>
-          <input aria-labelledby="foto-registro-label" aria-label="Foto da entrada" type="file" accept="image/*" />
-        </View>
-      ) : (
+      {showDetails && Platform.OS === 'web' ? (
+        <FilePicker
+          label="Foto da entrada"
+          accessibilityLabel="Foto da entrada"
+          accept="image/*"
+          valueName={photoName}
+          onFile={(file) => setPhotoName(file?.name ?? null)}
+        />
+      ) : null}
+      {showDetails && Platform.OS !== 'web' ? (
         <>
           <Button
             label="Galeria"
@@ -223,14 +239,18 @@ export default function RecordTypeScreen() {
           />
           <Button label="Câmera" variant="ghost" onPress={() => void ImagePicker.requestCameraPermissionsAsync()} />
         </>
-      )}
+      ) : null}
       <Button
         label="Guardar entrada"
         onPress={() => void addRecord()}
         disabled={!((draft.title ?? '').trim() || Object.values(draft).some((item) => item.trim()))}
       />
-      <TextField label="Novo campo" value={newFieldName} onChangeText={setNewFieldName} placeholder="Ex.: Lote" />
-      <Button label="Adicionar campo" variant="ghost" onPress={() => void addField()} disabled={!newFieldName.trim()} />
+      {showDetails ? (
+        <>
+          <TextField label="Novo campo" value={newFieldName} onChangeText={setNewFieldName} placeholder="Ex.: Lote" />
+          <Button label="Adicionar campo" variant="ghost" onPress={() => void addField()} disabled={!newFieldName.trim()} />
+        </>
+      ) : null}
       <Button
         label="Calendário deste tipo"
         variant="ghost"
@@ -238,30 +258,40 @@ export default function RecordTypeScreen() {
           if (!token || !id) {
             return;
           }
-          void api<CalendarItem[]>(`/api/record-types/${id}/calendar`, { token }).then(setCalendar);
+          void api<CalendarItem[]>(`/api/record-types/${id}/calendar`, { token }).then((items) => {
+            setCalendar(items);
+            const first = items[0]?.occurredOn;
+            if (first && /^\d{4}-\d{2}-\d{2}$/.test(first)) {
+              setCalYear(Number(first.slice(0, 4)));
+              setCalMonth(Number(first.slice(5, 7)));
+            }
+          });
         }}
       />
       {calendar ? (
-        <View style={styles.card}>
-          <Text style={styles.section}>Calendário</Text>
-          {calendar.length === 0 ? <Text style={styles.lead}>Nada neste período.</Text> : null}
-          {calendar.map((item) => (
-            <Text key={item.id} style={styles.item}>
-              {item.occurredOn}: {item.title}
-            </Text>
-          ))}
+        <View>
+          <Button
+            label="Mês anterior"
+            variant="ghost"
+            onPress={() => {
+              const next = shiftMonth(calYear, calMonth, -1);
+              setCalYear(next.year);
+              setCalMonth(next.month);
+            }}
+          />
+          <MonthGrid title={monthTitle(calYear, calMonth)} days={calendarDays} />
+          <Button
+            label="Próximo mês"
+            variant="ghost"
+            onPress={() => {
+              const next = shiftMonth(calYear, calMonth, 1);
+              setCalYear(next.year);
+              setCalMonth(next.month);
+            }}
+          />
         </View>
       ) : null}
-      {chart.length > 0 ? (
-        <View style={styles.card}>
-          <Text style={styles.section}>Gráfico</Text>
-          {chart.map((point, index) => (
-            <Text key={`${point.occurredOn}-${index}`} style={styles.lead}>
-              {point.occurredOn}: {point.numberValue}
-            </Text>
-          ))}
-        </View>
-      ) : null}
+      {type?.hasNumber ? <NumberChart title="Gráfico" points={chart} /> : null}
 
       {type?.slug === 'diario' ? (
         <View style={styles.card}>
@@ -328,7 +358,7 @@ export default function RecordTypeScreen() {
           {record.numberValue !== null && record.numberValue !== undefined ? (
             <Text style={styles.lead}>Número: {record.numberValue}</Text>
           ) : null}
-          {record.occurredOn ? <Text style={styles.lead}>{record.occurredOn}</Text> : null}
+          {record.occurredOn ? <Text style={styles.lead}>{isoToDisplayDate(record.occurredOn)}</Text> : null}
           {typeof record.fields?.where === 'string' ? <Text style={styles.lead}>{record.fields.where}</Text> : null}
           {record.body ? <Text style={styles.lead}>{record.body}</Text> : null}
           {tagsFrom(record.fields).length > 0 ? (
@@ -340,5 +370,38 @@ export default function RecordTypeScreen() {
         </View>
       ))}
     </ScrollView>
+  );
+}
+
+function FieldInput({
+  field,
+  value,
+  example,
+  onChange,
+}: {
+  field: RecordField;
+  value: string;
+  example: ReturnType<typeof entryExample>;
+  onChange: (value: string) => void;
+}) {
+  if (field.kind === 'date') {
+    return <DateField label={field.name} value={value} onChangeText={onChange} />;
+  }
+  return (
+    <TextField
+      label={field.name}
+      value={value}
+      onChangeText={onChange}
+      placeholder={
+        field.id === 'title'
+          ? example.titlePlaceholder
+          : field.kind === 'place'
+            ? example.wherePlaceholder
+            : field.kind === 'number'
+              ? example.numberPlaceholder
+              : undefined
+      }
+      keyboardType={field.kind === 'number' ? 'decimal-pad' : undefined}
+    />
   );
 }

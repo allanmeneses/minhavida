@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
+import { DateField } from '@/components/ui/DateField';
 import { TextField } from '@/components/ui/TextField';
 import { useTheme } from '@/context/ThemeContext';
 import { hydrateIfPristine } from '@/lib/formDraft';
@@ -57,11 +58,10 @@ export function ProfileForm({ initial, error, ok, busy, accountEmail, onSave }: 
         autoCapitalize="words"
         autoComplete="name"
       />
-      <TextField
+      <DateField
         label="Data de nascimento"
         value={shown.birthDate}
         onChangeText={(birthDate) => patch({ birthDate })}
-        placeholder="AAAA-MM-DD"
       />
       <TextField
         label="Telefone"

@@ -132,7 +132,7 @@ export default function SettingsScreen() {
       return;
     }
     await downloadNamedBlob('/api/export/me', 'circulos-perfil.zip', token);
-    setOk('Backup do perfil baixado.');
+    setOk('Cópia do perfil baixada.');
   }
 
   async function exportJson() {
@@ -192,8 +192,11 @@ export default function SettingsScreen() {
       </Text>
       <Text style={styles.lead}>
         Status: {displayLabel(plan?.subscriptionStatus ?? 'none', SUBSCRIPTION_STATUS_LABEL)}. {plan?.inGoodStanding ? 'Em dia.' : 'Inadimplente.'}{' '}
-        {plan?.sandbox ? 'Ambiente de teste.' : ''} {plan?.checkout}
+        {plan?.checkout}
       </Text>
+      {plan?.sandbox ? (
+        <Text style={[styles.lead, { fontSize: 12 }]}>Cobrança em ambiente de desenvolvimento.</Text>
+      ) : null}
       <Button label="Ver preços" variant="ghost" onPress={() => router.push('/pricing' as Href)} />
       {plan?.plan === 'paid' ? (
         <Button
@@ -232,7 +235,7 @@ export default function SettingsScreen() {
         ))}
       </View>
 
-      <Text style={styles.section}>Backup</Text>
+      <Text style={styles.section}>Cópia de segurança</Text>
       <Button label="Exportar meu perfil" onPress={() => void exportProfile()} />
       <Button label={t('export.json')} variant="ghost" onPress={() => void exportJson()} />
 

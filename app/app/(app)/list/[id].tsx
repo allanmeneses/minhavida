@@ -206,7 +206,7 @@ export default function ListDetailScreen() {
       <Text style={styles.lead}>
         {kindLabel}. {accessLabel}. Quem adicionou e quem marcou ficam no item.
       </Text>
-      <Text style={styles.lead}>{online ? 'Online' : 'Offline'}</Text>
+      <Text style={styles.lead}>{online ? 'Com rede' : 'Sem rede'}</Text>
       <Feedback message={error} />
       <Feedback message={warning} />
       {warning ? <Button label="Esconder aviso da fila" variant="ghost" onPress={clearWarning} /> : null}

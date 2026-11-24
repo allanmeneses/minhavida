@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, Text } from 'react-native';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
+import { DateField } from '@/components/ui/DateField';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type MemoryItem } from '@/lib/api';
+import { isoToDisplayDate } from '@/lib/dates';
 import { keepTypedDraft } from '@/lib/keepTypedDraft';
 import { screenStyles } from '@/lib/screenStyles';
 
@@ -74,7 +76,7 @@ export default function MemoriesScreen() {
       <Feedback message={error} />
       <TextField label="Título" value={title} onChangeText={setTitle} placeholder="Primeiro dia de escola" />
       <TextField label="Texto" value={body} onChangeText={setBody} />
-      <TextField label="Quando" value={occurredOn} onChangeText={setOccurredOn} placeholder="2018-02-05" />
+      <DateField label="Quando" value={occurredOn} onChangeText={setOccurredOn} />
       <Button label="Guardar memória" onPress={() => void create()} disabled={!title.trim()} />
       {items.map((item) => (
         <MemoryCard key={item.id} item={item} onSave={(next) => void saveSilent(next)} />
@@ -98,7 +100,7 @@ function MemoryCard({ item, onSave }: { item: MemoryItem; onSave: (item: MemoryI
   return (
     <>
       <Text style={styles.item}>{item.title}</Text>
-      <Text style={styles.lead}>{item.occurredOn ?? item.createdAt.slice(0, 10)}</Text>
+      <Text style={styles.lead}>{isoToDisplayDate(item.occurredOn ?? item.createdAt.slice(0, 10))}</Text>
       {item.hasPhoto ? <Text style={styles.lead}>Com foto</Text> : null}
       <TextField label={`Texto de ${item.title}`} value={body} onChangeText={setBody} />
       <Button

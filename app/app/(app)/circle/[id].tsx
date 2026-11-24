@@ -710,7 +710,7 @@ export default function CircleDetailScreen() {
               return;
             }
             void downloadNamedBlob(`/api/export/circles/${circleId}`, `circulos-${circleId}.zip`, token)
-              .then(() => setOk('Backup do círculo baixado.'))
+              .then(() => setOk('Cópia do círculo baixada.'))
               .catch((err) => setError(err instanceof ApiError ? err.message : 'Não foi possível exportar.'));
           }}
         />

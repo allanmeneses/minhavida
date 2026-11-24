@@ -9,11 +9,11 @@ describe('faq', () => {
     assert.match(blob, /perfil solo/);
     assert.match(blob, /círculos/);
     assert.match(blob, /sem internet/);
-    assert.match(blob, /refresh/);
+    assert.match(blob, /renovação da sessão/);
     assert.match(blob, /backup/);
     assert.match(blob, /calendário/);
     assert.match(blob, /memórias/);
-    assert.match(blob, /recap/);
+    assert.match(blob, /resumo/);
     assert.match(blob, /perfil nasce privado/);
     assert.match(blob, /Só por e-mail/);
     assert.match(blob, /29,90/);

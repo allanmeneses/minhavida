@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Linking, ScrollView, Text, View } from 'react-native';
+import { MonthGrid } from '@/components/MonthGrid';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, downloadNamedBlob, type CalendarMonth } from '@/lib/api';
+import { API_URL } from '@/lib/config';
+import { calendarFeedUrl, copyText } from '@/lib/copyText';
 import { buildMonth, shiftMonth } from '@/lib/calendarMonth';
+import { monthTitle } from '@/lib/dates';
 import { deviceCalendarPolicy, listDeviceEvents, type DeviceCalendarEvent } from '@/lib/deviceCalendar';
 import { screenStyles } from '@/lib/screenStyles';
 
@@ -18,6 +22,7 @@ export default function CalendarScreen() {
   const [month, setMonth] = useState(now.getUTCMonth() + 1);
   const [data, setData] = useState<CalendarMonth | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [deviceEvents, setDeviceEvents] = useState<DeviceCalendarEvent[]>([]);
 
   const from = `${year}-${String(month).padStart(2, '0')}-01`;
@@ -37,6 +42,7 @@ export default function CalendarScreen() {
   }, [load]);
 
   const days = useMemo(() => buildMonth(year, month, data?.events ?? []), [year, month, data]);
+  const feed = data?.feedUrl ? calendarFeedUrl(API_URL, data.feedUrl) : null;
 
   function move(delta: number) {
     const next = shiftMonth(year, month, delta);
@@ -48,8 +54,7 @@ export default function CalendarScreen() {
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Calendário</Text>
       <Text style={styles.lead}>
-        Lembretes do app neste mês. Exporta .ics para baixar ou assinar. Calendário do aparelho é somente leitura: o app
-        lê e nunca grava evento lá.
+        Lembretes do app neste mês. Exporte o arquivo ou assine no seu calendário. O calendário do aparelho é somente leitura: o app lê e nunca grava evento lá.
       </Text>
       {deviceCalendarPolicy.writes ? null : (
         <Text style={styles.lead}>
@@ -62,32 +67,28 @@ export default function CalendarScreen() {
         </Text>
       ))}
       <Feedback message={error} />
+      <Feedback message={notice} tone="ok" />
       <Button label="Mês anterior" variant="ghost" onPress={() => move(-1)} />
-      <Text style={styles.section}>
-        {String(month).padStart(2, '0')}/{year}
-      </Text>
-      <Button label="Proximo mês" variant="ghost" onPress={() => move(1)} />
-      {days
-        .filter((day) => day.inMonth)
-        .map((day) => (
-          <View key={day.date} style={styles.card}>
-            <Text style={styles.item}>{day.date}</Text>
-            {day.events.length === 0 ? <Text style={styles.lead}>Sem lembrete</Text> : null}
-            {day.events.map((event) => (
-              <Text key={event.id} style={styles.lead}>
-                {event.title}
-                {event.paused ? ' (pausado)' : ''}
-              </Text>
-            ))}
-          </View>
-        ))}
+      <MonthGrid title={monthTitle(year, month)} days={days} />
+      <Button label="Próximo mês" variant="ghost" onPress={() => move(1)} />
       {token ? (
         <>
           <Button
-            label="Baixar .ics"
+            label="Baixar arquivo de calendário"
             onPress={() => void downloadNamedBlob(`/api/calendar/ics?from=${from}&to=${to}`, 'circulos-lembretes.ics', token)}
           />
-          {data?.feedUrl ? <Text style={styles.lead}>Assinatura: {data.feedUrl}</Text> : null}
+          {feed ? (
+            <View>
+              <Button label="Assinar no seu calendário" onPress={() => void Linking.openURL(feed)} />
+              <Button
+                label="Copiar endereço"
+                variant="ghost"
+                onPress={() => {
+                  void copyText(feed).then((ok) => setNotice(ok ? 'Endereço copiado.' : 'Não foi possível copiar.'));
+                }}
+              />
+            </View>
+          ) : null}
         </>
       ) : null}
     </ScrollView>

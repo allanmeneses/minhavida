@@ -25,6 +25,7 @@ export default defineConfig({
   workers: 1,
   use: {
     baseURL: webUrl,
+    locale: 'pt-BR',
     screenshot: 'only-on-failure',
   },
   reporter: [['list']],

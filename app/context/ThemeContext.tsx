@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Appearance, useColorScheme } from 'react-native';
+import { useColorScheme } from 'react-native';
 import { paletteFor, type ColorPalette, type ThemePreference } from '@/constants/theme';
+import { applyColorScheme, applyDocumentColors } from '@/lib/colorScheme';
 import { readHighContrast, readThemePreference, writeHighContrast, writeThemePreference } from '@/lib/theme-storage';
 
 type ThemeContextValue = {
@@ -29,6 +30,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     : preference;
   const colors = paletteFor(resolved, highContrast);
 
+  useEffect(() => {
+    applyColorScheme(preference);
+    applyDocumentColors(colors.bg, colors.ink);
+  }, [preference, colors.bg, colors.ink]);
+
   const value = useMemo(
     () => ({
       preference,
@@ -38,7 +44,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setPreference: async (next: ThemePreference) => {
         setPreferenceState(next);
         await writeThemePreference(next);
-        Appearance.setColorScheme(next === 'system' ? 'unspecified' : next);
+        applyColorScheme(next);
       },
       setHighContrast: async (next: boolean) => {
         setHighContrastState(next);

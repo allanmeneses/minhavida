@@ -5,6 +5,8 @@ import { useLocalSearchParams } from 'expo-router';
 import { LazyPhoto } from '@/components/LazyPhoto';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
+import { DateField } from '@/components/ui/DateField';
+import { FilePicker } from '@/components/ui/FilePicker';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -21,6 +23,7 @@ import {
   type SearchHit,
 } from '@/lib/api';
 import { entryExample } from '@/lib/entryExamples';
+import { isoToDisplayDate, tagsPlaceholder } from '@/lib/dates';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function LifeAreaScreen() {
@@ -187,7 +190,7 @@ export default function LifeAreaScreen() {
       <Feedback message={error} />
       <TextField label="Título" value={title} onChangeText={setTitle} placeholder={example.titlePlaceholder} />
       {example.showWhen ? (
-        <TextField label="Quando" value={occurredOn} onChangeText={setOccurredOn} placeholder={example.whenPlaceholder} />
+        <DateField label="Quando" value={occurredOn} onChangeText={setOccurredOn} />
       ) : null}
       {example.showWhere ? (
         <TextField label="Onde" value={location} onChangeText={setLocation} placeholder={example.wherePlaceholder} />
@@ -204,7 +207,7 @@ export default function LifeAreaScreen() {
         label="Tags (opcional)"
         value={tags}
         onChangeText={setTags}
-        placeholder="corrida, manhã"
+        placeholder={tagsPlaceholder()}
       />
       {circles.length > 0 ? (
         <View>
@@ -230,18 +233,13 @@ export default function LifeAreaScreen() {
         </View>
       ) : null}
       {Platform.OS === 'web' ? (
-        <View>
-          <Text nativeID="foto-entrada-label" style={styles.lead}>
-            Foto da entrada
-          </Text>
-          <input
-            aria-labelledby="foto-entrada-label"
-            aria-label="Foto da entrada"
-            type="file"
-            accept="image/*"
-            onChange={(event) => setPhotoFile(event.currentTarget.files?.[0] ?? null)}
-          />
-        </View>
+        <FilePicker
+          label="Foto da entrada"
+          accessibilityLabel="Foto da entrada"
+          accept="image/*"
+          valueName={photoFile?.name ?? null}
+          onFile={(file) => setPhotoFile(file)}
+        />
       ) : (
         <>
           <Button label="Galeria" variant="ghost" onPress={() => void pickLibrary()} />
@@ -314,7 +312,7 @@ export default function LifeAreaScreen() {
           {entry.numberValue !== null && entry.numberValue !== undefined ? (
             <Text style={styles.lead}>Número: {entry.numberValue}</Text>
           ) : null}
-          {entry.occurredOn ? <Text style={styles.lead}>{entry.occurredOn}</Text> : null}
+          {entry.occurredOn ? <Text style={styles.lead}>{isoToDisplayDate(entry.occurredOn)}</Text> : null}
           {entry.location ? <Text style={styles.lead}>{entry.location}</Text> : null}
           {entry.body ? <Text style={styles.lead}>{entry.body}</Text> : null}
           {(entry.tags ?? []).length > 0 ? (

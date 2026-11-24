@@ -49,7 +49,7 @@ export default function PricingScreen() {
         body: JSON.stringify({ period, cardToken: 'fake-cartao-aprovado' }),
       });
       setPlan(next);
-      setOk(next.sandbox ? 'Assinatura simulada no sandbox. Sem cobrança real.' : 'Assinatura ativa.');
+      setOk('Assinatura ativa.');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Não foi possível assinar.');
     }
@@ -61,15 +61,18 @@ export default function PricingScreen() {
       <Text style={styles.title}>Preços</Text>
       <Text style={styles.lead}>
         Preços aprovados pelo Allan em 22/11/2026: R$ 29,90 mensal e R$ 299,00 anual. Valores em reais,
-        configuráveis. Gateway Mercado Pago, ambiente de teste por padrão, desligado em produção até ligar o secret.
+        configuráveis. Pagamento por Mercado Pago. Em desenvolvimento a cobrança real fica desligada.
       </Text>
       <Feedback message={error} />
       <Feedback message={ok} tone="ok" />
       {catalog ? (
         <>
           <Text style={styles.lead}>
-            Status dos preços: {displayLabel(catalog.status, CATALOG_STATUS_LABEL)}. Provedor: {catalog.provider}.
+            Status dos preços: {displayLabel(catalog.status, CATALOG_STATUS_LABEL)}.
           </Text>
+          {catalog.sandbox ? (
+            <Text style={[styles.lead, { fontSize: 12 }]}>Ambiente de desenvolvimento. Sem cobrança real.</Text>
+          ) : null}
           <Text style={styles.section}>{catalog.free.name}</Text>
           <Text style={styles.lead}>
             {reais(catalog.free.priceReais)} · {catalog.free.circleLimit} círculos · {catalog.free.shortcutLimit}{' '}
@@ -80,10 +83,10 @@ export default function PricingScreen() {
             {reais(catalog.paidMonthly.priceReais)} por mês · círculos ilimitados · {catalog.paidMonthly.shortcutLimit}{' '}
             atalhos · 1 GB
           </Text>
-          <Button label="Assinar mensal (sandbox)" onPress={() => void subscribe('monthly')} />
+          <Button label="Assinar mensal" onPress={() => void subscribe('monthly')} />
           <Text style={styles.section}>{catalog.paidYearly.name}</Text>
           <Text style={styles.lead}>{reais(catalog.paidYearly.priceReais)} por ano. Mesmos limites do mensal.</Text>
-          <Button label="Assinar anual (sandbox)" variant="ghost" onPress={() => void subscribe('yearly')} />
+          <Button label="Assinar anual" variant="ghost" onPress={() => void subscribe('yearly')} />
         </>
       ) : null}
       {plan ? (

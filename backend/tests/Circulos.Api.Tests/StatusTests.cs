@@ -33,7 +33,10 @@ public sealed class StatusTests : IClassFixture<ApiFactory>
         var html = await page.Content.ReadAsStringAsync();
         Assert.Contains("Status do Círculos", html);
         Assert.Contains("Banco", html);
-        Assert.Contains("OpenTelemetry", html);
+        Assert.Contains("Telemetria", html);
+        Assert.DoesNotContain("GET /health", html);
+        Assert.DoesNotContain("OpenTelemetry", html);
+        Assert.Matches(@"\d{2}/\d{2}/\d{4} \d{2}:\d{2}", html);
     }
 
     [Fact]

@@ -60,7 +60,9 @@ export const SUBSCRIPTION_STATUS_LABEL: Record<string, string> = {
 
 export const CATALOG_STATUS_LABEL: Record<string, string> = {
   approved: 'Aprovado',
+  aprovado: 'Aprovado',
   draft: 'Rascunho',
+  rascunho: 'Rascunho',
   sandbox: 'Ambiente de teste',
 };
 

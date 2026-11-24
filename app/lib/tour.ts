@@ -25,16 +25,16 @@ export const TOUR_SCREENS: TourScreen[] = [
     body: 'Compras, desejos ou materiais no perfil ou no círculo. Cada lista tem permissão: só ver, adicionar, marcar feito ou gerenciar.',
   },
   {
-    title: 'Offline',
-    body: 'Sem rede, o app lê o que já estava guardado. Adicionar item e marcar feito entram na fila e sobem quando você volta. O ícone mostra só se está online ou offline.',
+    title: 'Sem rede',
+    body: 'Sem rede, o app lê o que já estava guardado. Adicionar item e marcar feito entram na fila e sobem quando você volta. O ícone mostra se há rede.',
   },
   {
     title: 'Memórias e calendário',
-    body: 'O álbum do perfil e do círculo guarda recordações. Na surpresa, a revelação mostra mensagens e fotos, e cada um guarda a recordação no próprio perfil. Lembretes aparecem no calendário, com exportação .ics. O app lê o calendário do aparelho e nunca grava evento lá.',
+    body: 'O álbum do perfil e do círculo guarda recordações. Na surpresa, a revelação mostra mensagens e fotos, e cada um guarda a recordação no próprio perfil. Lembretes aparecem no calendário, com arquivo para assinar. O app lê o calendário do aparelho e nunca grava evento lá.',
   },
   {
     title: 'Conta e backup',
-    body: 'A sessão usa um acesso curto e um refresh. Segundo fator é opcional. Você exporta o que é seu, no perfil ou no círculo, se tiver permissão. O gráfico mostra o uso de armazenamento.',
+    body: 'A sessão usa um acesso curto e renovação silenciosa. Segundo fator é opcional. Você exporta o que é seu, no perfil ou no círculo, se tiver permissão. O gráfico mostra o uso de armazenamento.',
   },
 ];
 

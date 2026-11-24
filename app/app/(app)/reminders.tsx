@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
+import { DateField } from '@/components/ui/DateField';
 import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -127,7 +128,7 @@ export default function RemindersScreen() {
           <TextField label="A cada" value={interval} onChangeText={setInterval} placeholder="1" keyboardType="number-pad" />
           {frequency === 'weekly' ? (
             <TextField
-              label="Dias da semana (0=domingo)"
+              label="Dias da semana, domingo primeiro"
               value={daysOfWeek}
               onChangeText={setDaysOfWeek}
               placeholder="1,3"
@@ -151,7 +152,7 @@ export default function RemindersScreen() {
               ) : null}
             </>
           ) : null}
-          <TextField label="Termina em" value={until} onChangeText={setUntil} placeholder="AAAA-MM-DD" />
+          <DateField label="Termina em" value={until} onChangeText={setUntil} />
           <TextField label="Máximo de ocorrências" value={maxOccurrences} onChangeText={setMaxOccurrences} keyboardType="number-pad" />
         </>
       ) : null}
