@@ -46,6 +46,28 @@ describe('decisões de produto e contribuicao', () => {
     assert.match(appLayout, /animation:\s*'none'/);
   });
 
+  it('lembrete usa cíclico com acento', () => {
+    const reminders = readFileSync(join(appRoot, 'app/(app)/reminders.tsx'), 'utf8');
+    assert.match(reminders, /Círculo cíclico/);
+    assert.doesNotMatch(reminders, /Círculo ciclico/);
+    assert.match(reminders, /formatPersonTime\(item\.nextFireAt\)/);
+    const memories = readFileSync(join(appRoot, 'app/(app)/memories.tsx'), 'utf8');
+    assert.match(memories, /multiline/);
+    assert.doesNotMatch(memories, /Memorias/);
+  });
+
+  it('Preços fica em Ajustes, fora da sidebar autenticada', () => {
+    const layout = readFileSync(join(appRoot, 'app/(app)/_layout.web.tsx'), 'utf8');
+    const settings = readFileSync(join(appRoot, 'app/(app)/settings.tsx'), 'utf8');
+    const styles = readFileSync(join(appRoot, 'lib/screenStyles.ts'), 'utf8');
+    assert.doesNotMatch(layout, /label: 'Preços'/);
+    assert.match(settings, /Ver preços/);
+    assert.match(settings, /router\.push\('\/pricing'/);
+    assert.match(settings, /testID="theme-status"/);
+    assert.match(styles, /MOBILE_SCROLL_BOTTOM = TAB_BAR_HEIGHT \+ TAB_SAFE_GAP/);
+    assert.match(styles, /paddingBottom: MOBILE_SCROLL_BOTTOM/);
+  });
+
   it('não há SMS de lembrete no cliente', () => {
     const settings = readFileSync(join(appRoot, 'app/(app)/settings.tsx'), 'utf8');
     assert.match(settings, /Sem SMS/);

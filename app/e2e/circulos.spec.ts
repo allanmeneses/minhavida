@@ -3,6 +3,7 @@ import { createHmac } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { copyFile, mkdir } from 'node:fs/promises';
 import { totpCode } from '../lib/totp';
+import { reloadAppRoute, screenshotSteps } from './printCapture';
 
 const artifacts =
   process.env.E2E_ARTIFACTS ??
@@ -50,37 +51,7 @@ async function settleLayout(page: Page): Promise<void> {
 }
 
 async function screenshotFull(page: Page, path: string): Promise<void> {
-  await settleLayout(page);
-  await page.screenshot({ path, fullPage: true });
-  await page.evaluate(() => {
-    const scrollable: HTMLElement[] = [];
-    for (const node of Array.from(document.querySelectorAll('div'))) {
-      const style = window.getComputedStyle(node);
-      if (
-        (style.overflowY === 'auto' || style.overflowY === 'scroll' || style.overflow === 'auto')
-        && node.scrollHeight > node.clientHeight + 24
-      ) {
-        scrollable.push(node);
-      }
-    }
-    scrollable.sort((a, b) => b.scrollHeight - a.scrollHeight);
-    const target = scrollable[0];
-    if (target) {
-      target.scrollTop = target.scrollHeight;
-    }
-    window.scrollTo(0, document.documentElement.scrollHeight);
-  });
-  await settleLayout(page);
-  const lower = path.replace(/\.png$/, '-baixo.png');
-  await page.screenshot({ path: lower, fullPage: true });
-  await page.evaluate(() => {
-    for (const node of Array.from(document.querySelectorAll('div'))) {
-      if (node instanceof HTMLElement && node.scrollTop) {
-        node.scrollTop = 0;
-      }
-    }
-    window.scrollTo(0, 0);
-  });
+  await screenshotSteps(page, path);
 }
 
 async function openTypes(page: Page): Promise<void> {
@@ -156,9 +127,11 @@ test('cadastro abre o painel do dia, o perfil solo e um círculo', async ({ page
   await expect(page.getByText('Hepatite B')).toBeVisible();
 
   await page.getByRole('button', { name: 'Círculos' }).click();
+  await expect(page.getByRole('button', { name: 'Abrir Família' })).toHaveCount(1);
   await page.getByLabel('Nome', { exact: true }).fill('Família');
   await page.getByRole('button', { name: 'Criar círculo' }).click();
-  await expect(page.getByText('Família').first()).toBeVisible();
+  await expect(page.getByText('Já existe um círculo com este nome.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Abrir Família' })).toHaveCount(1);
   await page.screenshot({ path: `${artifacts}/círculo.png`, fullPage: true });
 });
 
@@ -192,8 +165,12 @@ test('lembrete de aniversário entra na lista', async ({ page }) => {
   await page.getByRole('button', { name: 'Geral' }).click();
   await page.getByLabel('Quem').fill('Ana');
   await page.getByLabel('Ideias de presente').fill('Livro, planta');
+  await expect(page.getByText('Círculo cíclico (opcional). O atalho marca que foi feito.')).toBeVisible();
+  await expect(page.getByText('Círculo ciclico')).toHaveCount(0);
   await page.getByRole('button', { name: 'Criar lembrete' }).click();
   await expect(page.getByText('Aniversário da Ana', { exact: true })).toBeVisible();
+  await expect(page.getByText(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/)).toBeVisible();
+  await expect(page.getByText(/\d{2}:\d{2}:\d{2}/)).toHaveCount(0);
   await page.screenshot({ path: `${artifacts}/lembrete.png`, fullPage: true });
 });
 
@@ -477,8 +454,17 @@ test('lista de compras no perfil', async ({ page }) => {
   await page.getByLabel('Quantidade').fill('2 kg');
   await page.getByRole('button', { name: 'Adicionar item' }).click();
   await expect(page.getByText('Arroz', { exact: true })).toBeVisible();
+  await page.getByLabel('Item', { exact: true }).fill('Leite integral');
+  await page.getByRole('button', { name: 'Adicionar item' }).click();
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByRole('button', { name: 'Listas' }).click();
+  await expect(page.getByText('0 de 2 feitos')).toBeVisible();
+  await page.getByRole('button', { name: 'Feira', exact: true }).click();
   await page.getByRole('button', { name: 'Marcar Arroz' }).click();
   await expect(page.getByText(/feito por/)).toBeVisible();
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByRole('button', { name: 'Listas' }).click();
+  await expect(page.getByText('1 de 2 feitos')).toBeVisible();
 });
 
 test('permissão da lista: só ver e depois marcar feito', async ({ browser }) => {
@@ -550,7 +536,7 @@ test('modo escuro troca a paleta na hora', async ({ page }) => {
   await signUp(page, '-tema');
   await page.getByRole('button', { name: 'Ajustes' }).first().click();
   await page.getByRole('button', { name: 'Escuro' }).click();
-  await expect(page.getByText('Agora: escuro')).toBeVisible();
+  await expect(page.getByTestId('theme-status')).toContainText('Agora: escuro');
   expect(pageErrors.filter((item) => item.includes('setColorScheme') || item.includes('is not a function'))).toEqual([]);
   await page.screenshot({ path: `${artifacts}/tema-escuro.png`, fullPage: true });
 });
@@ -854,6 +840,7 @@ test('página de status pública', async ({ page }) => {
   await expect(page.getByText('Telemetria')).toBeVisible();
   await expect(page.getByText('Banco')).toBeVisible();
   await expect(page.getByText('Checagem pública do serviço')).toBeVisible();
+  await expect(page.locator('body')).toHaveCSS('align-items', 'center');
   await expect(page.getByText('GET /health')).toHaveCount(0);
   await expect(page.getByText(/\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}/)).toBeVisible();
 });
@@ -862,7 +849,8 @@ test('recap de uso no perfil só mostra fluxo usado', async ({ page }) => {
   await signUp(page, '-recap');
   await page.getByRole('button', { name: 'Perfil' }).click();
   await page.getByRole('button', { name: 'Resumo de uso' }).click();
-  await expect(page.getByText('Ainda não há uso para resumir.')).toBeVisible();
+  await expect(page.getByText('Círculos · 2')).toBeVisible();
+  await expect(page.getByText('Ainda não há uso para resumir.')).toHaveCount(0);
   await openTypes(page);
   await page.getByText('Vacinas', { exact: true }).click();
   await page.getByLabel('Título', { exact: true }).fill('Hepatite B');
@@ -873,6 +861,7 @@ test('recap de uso no perfil só mostra fluxo usado', async ({ page }) => {
   await page.getByRole('button', { name: 'Perfil' }).click();
   await page.getByRole('button', { name: 'Resumo de uso' }).click();
   await expect(page.getByText('Vacinas · 1')).toBeVisible();
+  await expect(page.getByText('Círculos · 2')).toBeVisible();
   await expect(page.getByText('Diário', { exact: true })).toHaveCount(0);
   await page.context().setOffline(true);
   await page.getByRole('button', { name: 'Perfil' }).click();
@@ -1736,7 +1725,10 @@ test('arquivo em pt-BR, captura rápida, corrida, calendário e gráfico', async
   await expect(page.getByRole('button', { name: 'Novo tipo' })).toBeVisible();
   await page.getByRole('button', { name: 'Novo tipo' }).click();
   await expect(page.getByText('Meus tipos')).toBeVisible();
+  await expect(page.getByPlaceholder('ex.: vacinas do meu filho')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sugerir tipo' })).toBeDisabled();
   await page.getByLabel('Descrever um tipo').fill('corri 5 km em 30 minutos no parque');
+  await expect(page.getByRole('button', { name: 'Sugerir tipo' })).toBeEnabled();
   await page.getByRole('button', { name: 'Sugerir tipo' }).click();
   await expect(page.getByLabel('Nome do tipo')).toHaveValue('Corridas');
   await expect(page.getByText('número km')).toBeVisible();
@@ -1747,6 +1739,9 @@ test('arquivo em pt-BR, captura rápida, corrida, calendário e gráfico', async
   await page.getByRole('button', { name: 'Usar esta sugestão' }).click();
   await expect(page.getByRole('button', { name: 'Guardar entrada' })).toBeVisible();
   await expect(page.getByLabel('Título', { exact: true })).toBeVisible();
+  await expect(page.getByPlaceholder('ex.: 5,2')).toBeVisible();
+  await expect(page.getByPlaceholder('ex.: 32')).toBeVisible();
+  await expect(page.getByPlaceholder('ex.: 11,8')).toHaveCount(0);
   await expect(page.getByLabel('Número')).toHaveCount(0);
   await expect(page.getByLabel('Tags (opcional)')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Mais detalhes' })).toBeVisible();
@@ -1781,6 +1776,7 @@ test('arquivo em pt-BR, captura rápida, corrida, calendário e gráfico', async
 
   await openTypes(page);
   await page.getByText('Pet', { exact: true }).first().click();
+  await expect(page.getByTestId('type-heading')).toHaveText('Pet');
   await expect(page.getByRole('button', { name: 'Compartilhar com Eu' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Compartilhar com Família' })).toHaveCount(1);
   await expect(page.getByText('Fora do círculo:')).toHaveCount(0);
@@ -1814,6 +1810,7 @@ test('falar mostra gravação, transcreve com falso e cancela', async ({ page })
   await page.getByRole('button', { name: 'Falar' }).click();
   await expect(page.getByTestId('voice-recording')).toBeVisible();
   await expect(page.getByTestId('voice-timer')).toHaveCount(1);
+  await expect(page.getByTestId('voice-timer')).toHaveText(/Gravando 00:0[01]/);
   await expect(page.getByTestId('voice-timer')).not.toHaveText('Gravando 00:00', { timeout: 4_000 });
   await expect(page.getByTestId('voice-timer')).toHaveText(/Gravando \d{2}:\d{2}/);
   await expect(page.getByTestId('voice-pulse')).toBeVisible();
@@ -1830,35 +1827,56 @@ test('falar mostra gravação, transcreve com falso e cancela', async ({ page })
 test('sugestão deixa Aceitar visível no telefone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await signUp(page, '-aceitar-mob');
-  await page.getByLabel('Escrever').fill('Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro');
+  const writer = page.getByLabel('Escrever');
+  const emptyWriter = await writer.boundingBox();
+  expect(emptyWriter).toBeTruthy();
+  await writer.fill(
+    [
+      'Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro',
+      'Segunda linha da captura para o campo crescer no telefone.',
+      'Terceira linha.',
+      'Quarta linha.',
+      'Quinta linha.',
+    ].join('\n'),
+  );
+  await expect
+    .poll(async () => (await writer.boundingBox())?.height ?? 0, { timeout: 8_000 })
+    .toBeGreaterThan(emptyWriter!.height);
+  const filledWriter = await writer.boundingBox();
+  expect(filledWriter).toBeTruthy();
+  expect(filledWriter!.height).toBeGreaterThan(70);
   await page.getByRole('button', { name: 'Sugerir' }).click();
   await expect(page.getByText(/Sugerimos/)).toBeVisible();
   const limit = (page.viewportSize()?.height ?? 844) - 72;
+  const ys: number[] = [];
   for (const name of ['Aceitar', 'Editar', 'Recusar']) {
     const box = await page.getByRole('button', { name }).boundingBox();
     expect(box, name).toBeTruthy();
     expect(box!.y, name).toBeGreaterThanOrEqual(0);
     expect(box!.y + box!.height, name).toBeLessThanOrEqual(limit + 8);
+    ys.push(Math.round(box!.y));
   }
+  expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(12);
   await expect(page.getByRole('button', { name: 'Hoje', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Círculos', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Perfil', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mais', exact: true })).toBeVisible();
 });
 
-test('404 não sobrepõe o conteúdo e a barra lateral não corta Preços', async ({ page }) => {
+test('404 não sobrepõe o conteúdo e a barra lateral não mostra Preços', async ({ page }) => {
   await signUp(page, '-layout');
   await page.setViewportSize({ width: 1280, height: 800 });
-  const precos = page.getByRole('button', { name: 'Preços' });
-  const sair = page.getByRole('button', { name: 'Sair' });
-  const hoje = page.getByRole('button', { name: 'Hoje' });
-  await expect(precos).toBeVisible();
+  const ajustes = page.getByRole('button', { name: 'Ajustes', exact: true }).first();
+  const sair = page.getByRole('button', { name: 'Sair' }).first();
+  const hoje = page.getByRole('button', { name: 'Hoje' }).first();
+  await expect(page.getByRole('button', { name: 'Preços' })).toHaveCount(0);
+  await expect(ajustes).toBeVisible();
   await expect(sair).toBeVisible();
-  const precosBox = await precos.boundingBox();
+  const ajustesBox = await ajustes.boundingBox();
   const sairBox = await sair.boundingBox();
-  expect(precosBox).toBeTruthy();
+  expect(ajustesBox).toBeTruthy();
   expect(sairBox).toBeTruthy();
-  expect(precosBox!.y + precosBox!.height).toBeLessThanOrEqual(sairBox!.y + 2);
+  expect(ajustesBox!.y + ajustesBox!.height).toBeLessThanOrEqual(sairBox!.y + 2);
 
   await page.getByRole('button', { name: 'Busca' }).first().click();
   await page.mouse.wheel(0, 2400);
@@ -1923,6 +1941,7 @@ test('telas da rodada 18 em desktop e mobile', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Novo tipo' })).toBeVisible();
   await shoot('hoje');
   await page.getByRole('button', { name: 'Falar' }).click();
+  await expect(page.getByTestId('voice-timer')).toHaveText(/Gravando 00:0[01]/);
   await expect(page.getByTestId('voice-timer')).not.toHaveText('Gravando 00:00', { timeout: 4_000 });
   await expect(page.getByTestId('voice-timer')).toHaveText(/Gravando \d{2}:\d{2}/);
   await shoot('falar');
@@ -1974,15 +1993,17 @@ test('telas da rodada 18 em desktop e mobile', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Copiar endereço' })).toBeVisible();
   await shoot('calendario');
 
-  await page.getByRole('button', { name: 'Preços' }).click();
+  await page.getByRole('button', { name: 'Ajustes', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Ver preços' }).click();
   await expect(page.getByText('Preços aprovados pelo Allan')).toBeVisible();
   await shoot('precos', false);
   await page.getByRole('button', { name: 'Voltar' }).click();
   await waitForAppChrome(page);
+  await page.goto('/(app)/settings');
+  await waitForAppChrome(page);
 
-  await page.getByRole('button', { name: 'Ajustes' }).first().click();
   await page.getByRole('button', { name: 'Escuro' }).click();
-  await expect(page.getByText('Agora: escuro')).toBeVisible();
+  await expect(page.getByTestId('theme-status')).toContainText('Agora: escuro');
   await shoot('ajustes-escuro');
 
   await page.getByRole('button', { name: 'Busca' }).first().click();
@@ -2055,6 +2076,8 @@ test('prints da rodada 19', async ({ page }) => {
   }
   await page.getByRole('button', { name: 'Concluir tour' }).click();
   await expect(page.getByText('O que pede atenção hoje')).toBeVisible({ timeout: 20_000 });
+  await reloadAppRoute(page);
+  await waitForAppChrome(page);
 
   await screenshotFull(page, `${dir}/depois-03-email-sidebar-desktop.png`);
   await page.getByLabel('Escrever').fill('Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro');

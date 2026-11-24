@@ -20,6 +20,7 @@ function envWith(extra: Record<string, string>): Record<string, string> {
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: ['prints.spec.ts', 'printCapture.ts'],
   timeout: 60_000,
   fullyParallel: false,
   workers: 1,

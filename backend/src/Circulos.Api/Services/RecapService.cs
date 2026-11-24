@@ -140,11 +140,10 @@ public sealed class RecapService(AppDbContext db)
     private Task<int> UsedCircleCountAsync(Guid userId, CancellationToken cancellationToken) =>
         db.CircleMembers.CountAsync(
             member => member.UserId == userId
-                && (!member.Circle.IsStarter
-                    || member.Circle.Posts.Any()
-                    || db.Memories.Any(memory => memory.CircleId == member.CircleId)
-                    || db.LifeEntryShares.Any(share => share.CircleId == member.CircleId)
-                    || db.RecordShares.Any(share => share.CircleId == member.CircleId)),
+                && member.Circle.Status != CircleStatus.Deleted
+                && !(member.Circle.IsSurprise
+                    && member.Circle.RevealedAt == null
+                    && member.Circle.SurpriseSubjectUserId == userId),
             cancellationToken);
 
     public string Serialize(CircleRecapResponse recap) => JsonSerializer.Serialize(recap, Json);

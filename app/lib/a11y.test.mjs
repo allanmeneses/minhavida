@@ -14,7 +14,12 @@ describe('leitor de tela', () => {
     const documents = readFileSync(join(root, '../app/(app)/documents.tsx'), 'utf8');
     assert.match(button, /accessibilityRole="button"/);
     assert.match(button, /accessibilityLabel=\{accessibilityLabel \?\? label\}/);
+    assert.match(button, /backgroundColor: variant === 'danger' \? colors.dangerSoft : colors.line/);
+    assert.doesNotMatch(button, /disabled: \{\s*opacity: 0\.5/);
     assert.match(field, /accessibilityLabel=\{label\}/);
+    assert.match(field, /multilineInputHeight/);
+    assert.doesNotMatch(field, /onContentSizeChange/);
+    assert.match(field, /height: inputHeight/);
     assert.match(search, /accessibilityLabel=\{`Buscar \$\{term\}`\}/);
     assert.match(search, /entry: 'entrada'/);
     assert.match(search, /searchTypeLabel\(hit\.type\)/);

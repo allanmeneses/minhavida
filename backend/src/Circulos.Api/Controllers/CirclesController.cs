@@ -96,6 +96,19 @@ public sealed class CirclesController(
             return BadRequest(new ErrorResponse("Data de fim só vale em círculo temporário ou diário."));
         }
 
+        var name = request.Name.Trim();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await UserRowLock.AcquireAsync(db, userId, cancellationToken);
+        var duplicate = await db.Circles.AnyAsync(
+            circle => circle.OwnerUserId == userId
+                && circle.Status != CircleStatus.Deleted
+                && circle.Name.ToLower() == name.ToLower(),
+            cancellationToken);
+        if (duplicate)
+        {
+            return BadRequest(new ErrorResponse("Já existe um círculo com este nome."));
+        }
+
         var quotaError = await quota.TryAddCircleAsync(userId, cancellationToken);
         if (quotaError is not null)
         {
@@ -126,7 +139,7 @@ public sealed class CirclesController(
             Id = Guid.NewGuid(),
             OwnerUserId = userId,
             SuccessorUserId = successorId,
-            Name = request.Name.Trim(),
+            Name = name,
             Description = request.Description?.Trim() ?? string.Empty,
             Visibility = EnumText.ParseVisibility(request.Visibility),
             Discoverable = request.Discoverable,
@@ -151,6 +164,7 @@ public sealed class CirclesController(
         });
         db.CircleLogs.Add(Log(circle.Id, userId, "created", "Círculo criado."));
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
         circle.Members = await db.CircleMembers.Where(x => x.CircleId == circle.Id).ToListAsync(cancellationToken);
         return Created($"/api/circles/{circle.Id}", ToSummary(circle, CircleRole.Owner, userId));
     }

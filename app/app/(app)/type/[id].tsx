@@ -15,7 +15,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary, type SearchHit } from '@/lib/api';
 import { buildRecordMonth, shiftMonth } from '@/lib/calendarMonth';
 import { isoToDisplayDate, monthTitle, tagsPlaceholder } from '@/lib/dates';
-import { entryExample } from '@/lib/entryExamples';
+import { entryExample, fieldPlaceholder } from '@/lib/entryExamples';
 import {
   extraFields,
   kindFromSlug,
@@ -159,7 +159,11 @@ export default function RecordTypeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
-      <Text style={styles.title}>{type?.name ?? 'Tipo'}</Text>
+      <View style={styles.stickyHeader}>
+        <Text accessibilityRole="header" testID="type-heading" style={styles.title}>
+          {type?.name ?? 'Tipo'}
+        </Text>
+      </View>
       <Text style={styles.lead}>{type?.description || example.hint}</Text>
       <Feedback message={error} />
       {visibleFields.map((field) => (
@@ -168,6 +172,7 @@ export default function RecordTypeScreen() {
           field={field}
           value={draft[field.id] ?? ''}
           example={example}
+          typeSlug={type?.slug}
           onChange={(value) => setField(field.id, value)}
         />
       ))}
@@ -356,11 +361,13 @@ function FieldInput({
   field,
   value,
   example,
+  typeSlug,
   onChange,
 }: {
   field: RecordField;
   value: string;
   example: ReturnType<typeof entryExample>;
+  typeSlug?: string;
   onChange: (value: string) => void;
 }) {
   if (field.kind === 'date') {
@@ -371,15 +378,7 @@ function FieldInput({
       label={field.name}
       value={value}
       onChangeText={onChange}
-      placeholder={
-        field.id === 'title'
-          ? example.titlePlaceholder
-          : field.kind === 'place'
-            ? example.wherePlaceholder
-            : field.kind === 'number'
-              ? example.numberPlaceholder
-              : undefined
-      }
+      placeholder={fieldPlaceholder(field, typeSlug) || (field.id === 'title' ? example.titlePlaceholder : undefined)}
       keyboardType={field.kind === 'number' ? 'decimal-pad' : undefined}
     />
   );

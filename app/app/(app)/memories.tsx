@@ -76,7 +76,7 @@ export default function MemoriesScreen() {
       <Text style={styles.lead}>Linha do tempo do seu perfil. Foto, texto e data. Edição é silenciosa.</Text>
       <Feedback message={error} />
       <TextField label="Título" value={title} onChangeText={setTitle} placeholder={examplePlaceholder('Primeiro dia de escola')} />
-      <TextField label="Texto" value={body} onChangeText={setBody} />
+      <TextField label="Texto" value={body} onChangeText={setBody} multiline />
       <DateField label="Quando" value={occurredOn} onChangeText={setOccurredOn} />
       <Button label="Guardar memória" onPress={() => void create()} disabled={!title.trim()} />
       {items.map((item) => (
@@ -103,7 +103,7 @@ function MemoryCard({ item, onSave }: { item: MemoryItem; onSave: (item: MemoryI
       <Text style={styles.item}>{item.title}</Text>
       <Text style={styles.lead}>{isoToDisplayDate(item.occurredOn ?? item.createdAt.slice(0, 10))}</Text>
       {item.hasPhoto ? <Text style={styles.lead}>Com foto</Text> : null}
-      <TextField label={`Texto de ${item.title}`} value={body} onChangeText={setBody} />
+      <TextField label={`Texto de ${item.title}`} value={body} onChangeText={setBody} multiline />
       <Button
         label={`Salvar ${item.title}`}
         variant="ghost"

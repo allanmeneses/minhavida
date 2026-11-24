@@ -119,7 +119,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         }
 
         var emptyRecap = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
-        Assert.DoesNotContain(emptyRecap.GetProperty("flows").EnumerateArray(), x => x.GetProperty("key").GetString() == "circles");
+        Assert.Contains(emptyRecap.GetProperty("flows").EnumerateArray(), x => x.GetProperty("key").GetString() == "circles" && x.GetProperty("count").GetInt32() == 2);
 
         var examples = await client.GetFromJsonAsync<List<JsonElement>>("/api/onboarding", Json);
         foreach (var example in examples!)
@@ -143,7 +143,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         Assert.Equal(2, home.GetProperty("activeCircleCount").GetInt32());
         Assert.Equal(0, home.GetProperty("onboarding").GetArrayLength());
         var afterDiscard = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
-        Assert.DoesNotContain(afterDiscard.GetProperty("flows").EnumerateArray(), x => x.GetProperty("key").GetString() == "circles");
+        Assert.Contains(afterDiscard.GetProperty("flows").EnumerateArray(), x => x.GetProperty("key").GetString() == "circles" && x.GetProperty("count").GetInt32() == 2);
 
         Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync("/api/circles", new { name = "Um" })).StatusCode);
         Assert.Equal(HttpStatusCode.Created, (await client.PostAsJsonAsync("/api/circles", new { name = "Dois" })).StatusCode);
@@ -163,7 +163,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         home = await client.GetFromJsonAsync<JsonElement>("/api/home", Json);
         Assert.Equal(5, home.GetProperty("activeCircleCount").GetInt32());
         var used = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
-        Assert.Contains(used.GetProperty("flows").EnumerateArray(), x => x.GetProperty("key").GetString() == "circles" && x.GetProperty("count").GetInt32() == 3);
+        Assert.Contains(used.GetProperty("flows").EnumerateArray(), x => x.GetProperty("key").GetString() == "circles" && x.GetProperty("count").GetInt32() == 5);
     }
 
     [Fact]

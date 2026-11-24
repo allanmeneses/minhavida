@@ -7,6 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import type { ColorPalette } from '@/constants/theme';
 import { api, ApiError, downloadDocument, uploadNativeFile, type DocumentItem } from '@/lib/api';
+import { MOBILE_SCROLL_BOTTOM } from '@/lib/screenStyles';
 
 export default function DocumentsScreen() {
   const { token } = useAuth();
@@ -211,7 +212,7 @@ function formatDate(value: string): string {
 
 const documentStyles = (colors: ColorPalette, stacked: boolean) => StyleSheet.create({
   page: {
-    paddingBottom: 120,
+    paddingBottom: MOBILE_SCROLL_BOTTOM,
     maxWidth: 920,
     width: '100%',
     alignSelf: 'center',

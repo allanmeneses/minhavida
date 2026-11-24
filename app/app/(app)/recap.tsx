@@ -29,7 +29,7 @@ export default function RecapScreen() {
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Resumo de uso</Text>
       <Text style={styles.lead}>
-        O resumo só mostra o que você já usou. Outros fluxos aparecem quando você passa a usá-los.
+        O resumo conta os círculos de Os seus. Os outros fluxos só aparecem quando você já os usou.
       </Text>
       <Feedback message={error} />
       {recap && recap.flows.length === 0 ? (

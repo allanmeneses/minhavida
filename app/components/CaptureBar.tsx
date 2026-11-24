@@ -60,7 +60,7 @@ export function CaptureBar({ token, types, onOpenType, onNewType, onSaved }: Pro
     loop.start();
     const timer = setInterval(() => {
       setElapsed(recordingRef.current?.elapsedSeconds() ?? 0);
-    }, 250);
+    }, 1000);
     return () => {
       loop.stop();
       clearInterval(timer);
@@ -235,6 +235,7 @@ export function CaptureBar({ token, types, onOpenType, onNewType, onSaved }: Pro
         value={text}
         onChangeText={setText}
         placeholder={examplePlaceholder('O que aconteceu hoje')}
+        multiline
       />
       <View style={styles.actions}>
         <View style={styles.action}>
@@ -344,20 +345,21 @@ const styles = StyleSheet.create({
   },
   action: {
     flexGrow: 1,
-    flexBasis: 140,
-    minWidth: 120,
+    flexBasis: 0,
+    minWidth: 0,
   },
   suggestion: {
     gap: 10,
   },
   suggestionActions: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    flexWrap: 'nowrap',
+    gap: 8,
     position: 'sticky' as unknown as 'relative',
     top: 0,
     zIndex: 3,
     paddingVertical: 8,
+    width: '100%',
   },
   chips: {
     gap: 8,

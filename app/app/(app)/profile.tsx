@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, uploadNativeFile, type Profile } from '@/lib/api';
+import { MOBILE_SCROLL_BOTTOM } from '@/lib/screenStyles';
 
 export default function ProfileScreen() {
   const { token, user, profile, setProfile, bumpPhoto, photoRevision } = useAuth();
@@ -182,7 +183,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   page: {
-    paddingBottom: 120,
+    paddingBottom: MOBILE_SCROLL_BOTTOM,
     maxWidth: 720,
     width: '100%',
     alignSelf: 'center',

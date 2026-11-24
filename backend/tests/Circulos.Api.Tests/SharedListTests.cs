@@ -41,6 +41,11 @@ public sealed class SharedListTests : IClassFixture<ApiFactory>
         var texts = detail.GetProperty("items").EnumerateArray().Select(x => x.GetProperty("text").GetString()).ToArray();
         Assert.Equal(new[] { "Feijao", "Arroz" }, texts);
 
+        var listedAfterAdd = await client.GetFromJsonAsync<JsonElement>("/api/lists", Json);
+        var feira = listedAfterAdd!.EnumerateArray().Single(x => x.GetProperty("name").GetString() == "Feira");
+        Assert.Equal(2, feira.GetProperty("itemCount").GetInt32());
+        Assert.Equal(1, feira.GetProperty("doneCount").GetInt32());
+
         Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/lists/{list.Id}/items/{b.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/lists/{list.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/lists/{list.Id}")).StatusCode);

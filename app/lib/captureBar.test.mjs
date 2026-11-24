@@ -21,6 +21,10 @@ describe('barra de captura', () => {
     assert.match(source, /gap: 12/);
     assert.match(source, /setAudioName\(null\)/);
     assert.match(source, /!suggestion && voiceState !== 'transcribing'/);
+    assert.match(source, /multiline/);
+    assert.match(source, /flexWrap: 'nowrap'/);
+    assert.match(source, /minWidth: 0/);
+    assert.match(source, /, 1000\)/);
     assert.ok(fields > 0);
   });
 });

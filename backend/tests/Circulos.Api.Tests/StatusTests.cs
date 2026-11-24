@@ -32,6 +32,8 @@ public sealed class StatusTests : IClassFixture<ApiFactory>
         Assert.Contains("text/html", page.Content.Headers.ContentType?.ToString());
         var html = await page.Content.ReadAsStringAsync();
         Assert.Contains("Status do Círculos", html);
+        Assert.Contains("align-items:center", html);
+        Assert.Contains("max-width:720px", html);
         Assert.Contains("Banco", html);
         Assert.Contains("Telemetria", html);
         Assert.DoesNotContain("GET /health", html);

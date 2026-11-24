@@ -41,7 +41,13 @@ export function Button({
             variant === 'danger' ? { backgroundColor: colors.dangerSoft } : undefined,
             state.pressed ? styles.pressed : undefined,
             hovered && !isDisabled ? styles.hovered : undefined,
-            isDisabled ? styles.disabled : undefined,
+            isDisabled
+              ? {
+                  opacity: 1,
+                  backgroundColor: variant === 'danger' ? colors.dangerSoft : colors.line,
+                  borderColor: colors.line,
+                }
+              : undefined,
           ];
           return stylesForState;
         }}>
@@ -54,6 +60,7 @@ export function Button({
               { color: colors.white },
               variant === 'ghost' && { color: colors.ink },
               variant === 'danger' && { color: colors.danger },
+              isDisabled ? { color: colors.muted } : undefined,
             ]}>
             {label}
           </Text>
@@ -79,9 +86,6 @@ const styles = StyleSheet.create({
   },
   hovered: {
     opacity: 0.92,
-  },
-  disabled: {
-    opacity: 0.5,
   },
   label: {
     fontWeight: '700',

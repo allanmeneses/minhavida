@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } fr
 import { BrandMark } from '@/components/BrandMark';
 import { LoadingScreen } from '@/components/LoadingScreen';
 import { TourGuide } from '@/components/TourGuide';
+import { TAB_BAR_HEIGHT } from '@/lib/screenStyles';
 import { useAuth } from '@/context/AuthContext';
 import { useOffline } from '@/context/OfflineContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -43,7 +44,6 @@ const MORE_NAV: NavEntry[] = [
   { label: 'FAQ', href: '/(app)/faq', match: (path) => path.includes('faq') },
   { label: 'Ajustes', href: '/(app)/settings', match: (path) => path.includes('settings') },
   { label: 'Painel interno', href: '/(app)/admin', match: (path) => path.includes('admin'), admin: true },
-  { label: 'Preços', href: '/pricing', match: (path) => path.includes('pricing') },
 ];
 
 export default function AppWebLayout() {
@@ -224,7 +224,9 @@ const styles = StyleSheet.create({
   },
   column: {
     flex: 1,
-    minHeight: '100%' as unknown as number,
+    height: '100vh' as unknown as number,
+    maxHeight: '100vh' as unknown as number,
+    overflow: 'hidden',
   },
   sidebar: {
     width: 260,
@@ -309,7 +311,7 @@ const styles = StyleSheet.create({
     minHeight: 0,
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 40,
+    paddingBottom: 16,
     overflow: 'auto' as unknown as 'visible',
   },
   tabBar: {
@@ -318,6 +320,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingTop: 8,
     paddingBottom: 16,
+    minHeight: TAB_BAR_HEIGHT,
+    flexShrink: 0,
     gap: 4,
     zIndex: 4,
   },
