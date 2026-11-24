@@ -17,10 +17,9 @@ describe('leitor de tela', () => {
     assert.match(button, /backgroundColor: variant === 'danger' \? colors.dangerSoft : colors.line/);
     assert.doesNotMatch(button, /disabled: \{\s*opacity: 0\.5/);
     assert.match(field, /accessibilityLabel=\{label\}/);
-    assert.match(field, /onContentSizeChange/);
-    assert.match(field, /fieldSizing: 'content'/);
-    assert.match(field, /height: 'auto'/);
-    assert.match(field, /Platform.OS !== 'web' \? \{ height: grownHeight \}/);
+    assert.match(field, /multilineInputHeight/);
+    assert.doesNotMatch(field, /onContentSizeChange/);
+    assert.match(field, /height: inputHeight/);
     assert.match(search, /accessibilityLabel=\{`Buscar \$\{term\}`\}/);
     assert.match(search, /entry: 'entrada'/);
     assert.match(search, /searchTypeLabel\(hit\.type\)/);

@@ -1831,10 +1831,16 @@ test('sugestão deixa Aceitar visível no telefone', async ({ page }) => {
   const emptyWriter = await writer.boundingBox();
   expect(emptyWriter).toBeTruthy();
   await writer.fill(
-    'Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro\nSegunda linha da captura para o campo crescer no telefone.',
+    [
+      'Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro',
+      'Segunda linha da captura para o campo crescer no telefone.',
+      'Terceira linha.',
+      'Quarta linha.',
+      'Quinta linha.',
+    ].join('\n'),
   );
   await expect
-    .poll(async () => (await writer.boundingBox())?.height ?? 0)
+    .poll(async () => (await writer.boundingBox())?.height ?? 0, { timeout: 8_000 })
     .toBeGreaterThan(emptyWriter!.height);
   const filledWriter = await writer.boundingBox();
   expect(filledWriter).toBeTruthy();

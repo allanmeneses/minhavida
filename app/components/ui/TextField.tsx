@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { Platform, StyleSheet, Text, TextInput, View, type KeyboardTypeOptions } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
+import { multilineInputHeight } from '@/lib/textFieldHeight';
 
 type Props = {
   label: string;
@@ -26,7 +26,9 @@ export function TextField({
   multiline = false,
 }: Props) {
   const { colors } = useTheme();
-  const [grownHeight, setGrownHeight] = useState(88);
+  const inputHeight = multiline
+    ? multilineInputHeight(value, { fontSize: Platform.OS === 'web' ? 14 : 16 })
+    : undefined;
   return (
     <View style={styles.wrap}>
       <Text style={[styles.label, { color: colors.ink }]}>{label}</Text>
@@ -43,21 +45,10 @@ export function TextField({
         multiline={multiline}
         textAlignVertical={multiline ? 'top' : 'center'}
         accessibilityLabel={label}
-        onContentSizeChange={
-          multiline && Platform.OS !== 'web'
-            ? (event) => {
-                const next = Math.ceil(event.nativeEvent.contentSize.height);
-                setGrownHeight((current) => Math.max(88, next));
-              }
-            : undefined
-        }
         style={[
           styles.input,
           multiline ? styles.multiline : null,
-          multiline && Platform.OS !== 'web' ? { height: grownHeight } : null,
-          multiline && Platform.OS === 'web'
-            ? ({ fieldSizing: 'content', height: 'auto' } as object)
-            : null,
+          inputHeight ? { height: inputHeight } : null,
           {
             borderColor: colors.line,
             backgroundColor: colors.white,
