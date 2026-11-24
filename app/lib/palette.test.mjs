@@ -16,5 +16,10 @@ describe('contraste alto', () => {
     assert.equal(highContrastDark.line, '#FFFFFF');
     assert.notEqual(highContrastLight.ink, lightColors.ink);
     assert.notEqual(highContrastDark.ink, darkColors.ink);
+    assert.ok(lightColors.placeholder);
+    assert.notEqual(lightColors.placeholder, lightColors.ink);
+    assert.notEqual(lightColors.placeholder, lightColors.muted);
+    assert.ok(darkColors.placeholder);
+    assert.notEqual(darkColors.placeholder, darkColors.ink);
   });
 });

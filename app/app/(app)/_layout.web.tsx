@@ -128,7 +128,12 @@ export default function AppWebLayout() {
               stacked
             />
           ))}
-          <NavItem label="Mais" active={moreOpen} onPress={() => setMoreOpen((open) => !open)} stacked />
+          <NavItem
+            label="Mais"
+            active={moreOpen || moreItems.some((item) => item.match(pathname))}
+            onPress={() => setMoreOpen((open) => !open)}
+            stacked
+          />
         </View>
       </View>
     );
@@ -146,7 +151,12 @@ export default function AppWebLayout() {
             {online ? 'Com rede' : 'Sem rede'}
           </Text>
           <Text style={[styles.userName, { color: colors.ink }]}>{user.name}</Text>
-          <Text style={[styles.userEmail, { color: colors.muted }]}>{user.email}</Text>
+          <Text
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={[styles.userEmail, { color: colors.muted }]}>
+            {user.email}
+          </Text>
         </View>
         <ScrollView style={styles.nav} contentContainerStyle={styles.navInner} nestedScrollEnabled>
           {[...PRIMARY_NAV, ...moreItems].map((item) => (
@@ -185,13 +195,15 @@ function NavItem({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
       onPress={onPress}
       style={[
         stacked ? styles.tabItem : styles.navItem,
         active && { backgroundColor: colors.primarySoft },
       ]}>
       <Text
-        numberOfLines={1}
+        numberOfLines={2}
+        ellipsizeMode="tail"
         style={[
           stacked ? styles.tabLabel : styles.navLabel,
           { color: active ? colors.primaryDark : colors.muted },
@@ -255,6 +267,8 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 13,
     marginTop: 4,
+    width: '100%',
+    overflow: 'hidden',
   },
   nav: {
     marginTop: 10,
@@ -295,32 +309,41 @@ const styles = StyleSheet.create({
     minHeight: 0,
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 8,
+    paddingBottom: 40,
     overflow: 'auto' as unknown as 'visible',
   },
   tabBar: {
     flexDirection: 'row',
     borderTopWidth: 1,
     paddingHorizontal: 4,
-    paddingVertical: 6,
+    paddingTop: 8,
+    paddingBottom: 16,
     gap: 4,
+    zIndex: 4,
   },
   tabItem: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 52,
+    minWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
     paddingHorizontal: 4,
+    paddingVertical: 8,
+    overflow: 'visible',
   },
   tabLabel: {
     fontWeight: '700',
     fontSize: 12,
+    lineHeight: 16,
+    textAlign: 'center',
+    width: '100%',
+    minHeight: 16,
   },
   moreBackdrop: {
     ...StyleSheet.absoluteFill,
     justifyContent: 'flex-end',
-    paddingBottom: 58,
+    paddingBottom: 80,
   },
   moreScrim: {
     ...StyleSheet.absoluteFill,

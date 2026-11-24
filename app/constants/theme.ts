@@ -3,6 +3,7 @@ export type ColorPalette = {
   surface: string;
   ink: string;
   muted: string;
+  placeholder: string;
   primary: string;
   primaryDark: string;
   primarySoft: string;
@@ -18,6 +19,7 @@ export const lightColors: ColorPalette = {
   surface: '#FFFBF7',
   ink: '#1F1A16',
   muted: '#6B625A',
+  placeholder: '#C8BFB6',
   primary: '#1F6F66',
   primaryDark: '#16564F',
   primarySoft: '#D7EBE8',
@@ -33,6 +35,7 @@ export const darkColors: ColorPalette = {
   surface: '#221E1B',
   ink: '#F4EFE8',
   muted: '#B6A99C',
+  placeholder: '#6B625A',
   primary: '#7BC4BA',
   primaryDark: '#D7EBE8',
   primarySoft: '#1F3D39',
@@ -60,6 +63,7 @@ export const highContrastLight: ColorPalette = {
   surface: '#FFFFFF',
   ink: '#000000',
   muted: '#111111',
+  placeholder: '#767676',
   primary: '#004D40',
   primaryDark: '#000000',
   primarySoft: '#D7EBE8',
@@ -75,6 +79,7 @@ export const highContrastDark: ColorPalette = {
   surface: '#000000',
   ink: '#FFFFFF',
   muted: '#F2F2F2',
+  placeholder: '#A0A0A0',
   primary: '#5CFFEA',
   primaryDark: '#FFFFFF',
   primarySoft: '#00332C',

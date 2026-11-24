@@ -9,6 +9,7 @@ import { useOffline } from '@/context/OfflineContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type SharedListDetail, type SharedListItem } from '@/lib/api';
 import { LIST_ACCESS, LIST_ACCESS_LABEL, LIST_KIND_LABEL, nextOf, type ListAccess, type ListKind } from '@/lib/listKinds';
+import { examplePlaceholder } from '@/lib/placeholders';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function ListDetailScreen() {
@@ -236,9 +237,9 @@ export default function ListDetailScreen() {
         : null}
       {detail?.canAdd ? (
         <>
-          <TextField label="Item" value={text} onChangeText={setText} placeholder="Arroz" />
-          <TextField label="Quantidade" value={quantity} onChangeText={setQuantity} placeholder="2 kg" />
-          <TextField label="Observação" value={note} onChangeText={setNote} placeholder="tipo 1" />
+          <TextField label="Item" value={text} onChangeText={setText} placeholder={examplePlaceholder('Arroz')} />
+          <TextField label="Quantidade" value={quantity} onChangeText={setQuantity} placeholder={examplePlaceholder('2 kg')} />
+          <TextField label="Observação" value={note} onChangeText={setNote} placeholder={examplePlaceholder('tipo 1')} />
           <Button label="Adicionar item" onPress={() => void add()} disabled={!text.trim()} />
         </>
       ) : (

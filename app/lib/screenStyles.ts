@@ -4,7 +4,7 @@ import type { ColorPalette } from '@/constants/theme';
 export function screenStyles(colors: ColorPalette, compact = false) {
   return StyleSheet.create({
     page: {
-      paddingBottom: compact ? 88 : 48,
+      paddingBottom: compact ? 128 : 120,
       paddingHorizontal: compact ? 4 : 0,
       maxWidth: 720,
       width: '100%',

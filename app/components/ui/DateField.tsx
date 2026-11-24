@@ -80,7 +80,7 @@ export function DateField({ label, value, onChangeText, placeholder = datePlaceh
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder={placeholder}
-          placeholderTextColor={colors.muted}
+          placeholderTextColor={colors.placeholder}
           autoCapitalize="none"
           autoCorrect={false}
           accessibilityLabel={label}

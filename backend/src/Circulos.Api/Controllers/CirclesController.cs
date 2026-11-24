@@ -209,7 +209,7 @@ public sealed class CirclesController(
             return Forbid();
         }
 
-        var token = TokenHash.NewToken();
+        var token = TokenHash.NewInviteCode();
         db.CircleInvites.Add(new CircleInvite
         {
             Id = Guid.NewGuid(),
@@ -247,7 +247,7 @@ public sealed class CirclesController(
             return Forbid();
         }
 
-        var token = TokenHash.NewToken();
+        var token = TokenHash.NewInviteCode();
         db.CircleInvites.Add(new CircleInvite
         {
             Id = Guid.NewGuid(),

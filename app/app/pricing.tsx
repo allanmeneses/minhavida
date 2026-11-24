@@ -6,7 +6,8 @@ import { Feedback } from '@/components/ui/Feedback';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type PlanCatalog, type PlanInfo } from '@/lib/api';
-import { CATALOG_STATUS_LABEL, SUBSCRIPTION_STATUS_LABEL, displayLabel } from '@/lib/labels';
+import { CATALOG_STATUS_LABEL, displayLabel } from '@/lib/labels';
+import { planStandingText } from '@/lib/planStatus';
 import { screenStyles } from '@/lib/screenStyles';
 
 function reais(value: number): string {
@@ -91,8 +92,7 @@ export default function PricingScreen() {
       ) : null}
       {plan ? (
         <Text style={styles.lead}>
-          Seu plano: {plan.plan === 'paid' ? 'pago' : 'gratuito'}. Status: {displayLabel(plan.subscriptionStatus, SUBSCRIPTION_STATUS_LABEL)}.{' '}
-          {plan.inGoodStanding ? 'Em dia.' : 'Inadimplente: extras bloqueados.'}
+          Seu plano: {plan.plan === 'paid' ? 'pago' : 'gratuito'}. {planStandingText(plan.plan, plan.subscriptionStatus, plan.inGoodStanding)}
         </Text>
       ) : null}
       <Button label="Voltar" variant="ghost" onPress={() => router.push(token ? '/(app)/home' : '/(auth)/login')} />

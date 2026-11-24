@@ -57,7 +57,7 @@ public sealed class RecapService(AppDbContext db)
             flows.Add(new RecapFlowDto(key, type.Name, type.Count));
         }
 
-        await AddIfUsed(flows, "documents", "Documentos", await db.Documents.CountAsync(x => x.UserId == userId, cancellationToken));
+        await AddIfUsed(flows, "documents", "Arquivos pessoais", await db.Documents.CountAsync(x => x.UserId == userId, cancellationToken));
         await AddIfUsed(flows, "reminders", "Lembretes", await db.Reminders.CountAsync(x => x.UserId == userId, cancellationToken));
         await AddIfUsed(flows, "shortcuts", "Atalhos", await db.Shortcuts.CountAsync(x => x.UserId == userId, cancellationToken));
         await AddIfUsed(flows, "lists", "Listas", await db.SharedLists.CountAsync(x => x.OwnerUserId == userId && x.CircleId == null, cancellationToken));

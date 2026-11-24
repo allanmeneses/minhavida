@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 
 namespace Circulos.Api.Tests;
@@ -193,6 +194,36 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
         visitante.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(visitante, _factory, name: "Visitante")).Token);
         var recap = await visitante.GetAsync($"/api/circles/{circle!.Id}/recap");
         Assert.Equal(HttpStatusCode.NotFound, recap.StatusCode);
+    }
+
+    [Fact]
+    public async Task Recap_ArquivoPessoalNaoDuplicaRotuloDocumento()
+    {
+        var client = _factory.CreateClient();
+        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        var gallery = await client.GetFromJsonAsync<List<JsonElement>>("/api/record-types/gallery", Json);
+        var documento = gallery!.Single(item => item.GetProperty("name").GetString() == "Documento");
+        var copied = await client.PostAsJsonAsync("/api/record-types/from-gallery", new { templateId = documento.GetProperty("id").GetGuid() });
+        copied.EnsureSuccessStatusCode();
+        var copy = await copied.Content.ReadFromJsonAsync<JsonElement>(Json);
+        (await client.PostAsJsonAsync("/api/records", new
+        {
+            typeId = copy.GetProperty("id").GetGuid(),
+            fields = new { title = "Carteira" },
+        })).EnsureSuccessStatusCode();
+
+        using var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(Encoding.UTF8.GetBytes("nota"));
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/plain");
+        form.Add(file, "file", "nota.txt");
+        (await client.PostAsync("/api/documents", form)).EnsureSuccessStatusCode();
+
+        var recap = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
+        var labels = recap.GetProperty("flows").EnumerateArray().Select(item => item.GetProperty("label").GetString()).ToList();
+        Assert.Contains("Documento", labels);
+        Assert.Contains("Arquivos pessoais", labels);
+        Assert.DoesNotContain("Documentos", labels);
+        Assert.Equal(1, labels.Count(item => item is not null && item.StartsWith("Documento", StringComparison.Ordinal)));
     }
 
     private sealed record AreaDto(Guid Id, string Kind);

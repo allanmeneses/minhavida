@@ -18,6 +18,7 @@ import {
   type HomeRecordType,
   type RecordSuggestion,
 } from '@/lib/records';
+import { examplePlaceholder } from '@/lib/placeholders';
 import { clipFromFile, startNativeRecording, startWebRecording, type LiveRecording } from '@/lib/voice';
 import { recordingLabel, transcribingLabel, type VoiceUiState } from '@/lib/voiceUi';
 
@@ -41,6 +42,7 @@ export function CaptureBar({ token, types, onOpenType, onNewType, onSaved }: Pro
   const [voiceState, setVoiceState] = useState<VoiceUiState>('idle');
   const [elapsed, setElapsed] = useState(0);
   const [audioName, setAudioName] = useState<string | null>(null);
+  const [editingSuggestion, setEditingSuggestion] = useState(false);
   const recordingRef = useRef<LiveRecording | null>(null);
   const pulse = useRef(new Animated.Value(1)).current;
 
@@ -78,6 +80,7 @@ export function CaptureBar({ token, types, onOpenType, onNewType, onSaved }: Pro
     }
     setSuggestion(next);
     setDraft(suggestionDraft(next));
+    setEditingSuggestion(false);
   }
 
   async function write() {
@@ -118,6 +121,8 @@ export function CaptureBar({ token, types, onOpenType, onNewType, onSaved }: Pro
       }
       setSuggestion(next);
       setDraft(suggestionDraft(next));
+      setEditingSuggestion(false);
+      setAudioName(null);
       if (next.transcript) {
         setText(next.transcript);
       }
@@ -193,6 +198,8 @@ export function CaptureBar({ token, types, onOpenType, onNewType, onSaved }: Pro
       enqueueRecord(payload);
       setNotice('Texto na fila. Sobe quando a rede voltar.');
       setSuggestion(null);
+      setEditingSuggestion(false);
+      setAudioName(null);
       setText('');
       return;
     }
@@ -200,6 +207,8 @@ export function CaptureBar({ token, types, onOpenType, onNewType, onSaved }: Pro
     try {
       await api('/api/records', { method: 'POST', token, body: JSON.stringify(payload) });
       setSuggestion(null);
+      setEditingSuggestion(false);
+      setAudioName(null);
       setText('');
       setNotice('Registro guardado.');
       await onSaved();
@@ -212,16 +221,29 @@ export function CaptureBar({ token, types, onOpenType, onNewType, onSaved }: Pro
 
   function reject() {
     setSuggestion(null);
+    setEditingSuggestion(false);
+    setAudioName(null);
     setNotice(rejectedNotice());
   }
 
   const chips = recentTypeChips(types);
 
   return (
-    <View>
-      <TextField label="Escrever" value={text} onChangeText={setText} placeholder="O que aconteceu hoje" />
-      <Button label="Sugerir" onPress={() => void write()} disabled={!text.trim() || busy || voiceState !== 'idle'} />
-      <Button label="Falar" variant="ghost" onPress={() => void speak()} disabled={busy || voiceState !== 'idle'} />
+    <View style={styles.wrap}>
+      <TextField
+        label="Escrever"
+        value={text}
+        onChangeText={setText}
+        placeholder={examplePlaceholder('O que aconteceu hoje')}
+      />
+      <View style={styles.actions}>
+        <View style={styles.action}>
+          <Button label="Sugerir" onPress={() => void write()} disabled={!text.trim() || busy || voiceState !== 'idle'} />
+        </View>
+        <View style={styles.action}>
+          <Button label="Falar" variant="ghost" onPress={() => void speak()} disabled={busy || voiceState !== 'idle'} />
+        </View>
+      </View>
       {voiceState === 'recording' ? (
         <View testID="voice-recording" style={[styles.recordBox, { borderColor: colors.line, backgroundColor: colors.surface }]}>
           <Animated.View
@@ -240,7 +262,7 @@ export function CaptureBar({ token, types, onOpenType, onNewType, onSaved }: Pro
           {transcribingLabel()}
         </Text>
       ) : null}
-      {Platform.OS === 'web' ? (
+      {Platform.OS === 'web' && !suggestion && voiceState !== 'transcribing' ? (
         <FilePicker
           label="Enviar áudio"
           testID="voice-file"
@@ -258,31 +280,50 @@ export function CaptureBar({ token, types, onOpenType, onNewType, onSaved }: Pro
       <Feedback message={error} />
       <Feedback message={notice} tone="ok" />
       {suggestion ? (
-        <View>
-          <Text>{suggestion.summary}</Text>
-          {suggestion.transcript ? <Text>Transcrição: {suggestion.transcript}</Text> : null}
-          {suggestion.type.fields.slice(0, 8).map((field) =>
-            field.kind === 'date' ? (
-              <DateField
-                key={field.id}
-                label={field.name}
-                value={draft[field.id] ?? ''}
-                onChangeText={(value) => setDraft((current) => ({ ...current, [field.id]: value }))}
+        <View testID="capture-suggestion" style={styles.suggestion}>
+          <Text style={{ color: colors.ink }}>{suggestion.summary}</Text>
+          {suggestion.transcript ? (
+            <Text style={{ color: colors.ink }}>Transcrição: {suggestion.transcript}</Text>
+          ) : null}
+          <View
+            testID="capture-suggestion-actions"
+            style={[styles.suggestionActions, { backgroundColor: colors.bg }]}>
+            <View style={styles.action}>
+              <Button label="Aceitar" onPress={() => void accept()} disabled={busy} />
+            </View>
+            <View style={styles.action}>
+              <Button
+                label="Editar"
+                variant="ghost"
+                onPress={() => setEditingSuggestion(true)}
               />
-            ) : (
-              <TextField
-                key={field.id}
-                label={field.name}
-                value={draft[field.id] ?? ''}
-                onChangeText={(value) => setDraft((current) => ({ ...current, [field.id]: value }))}
-              />
-            ),
-          )}
-          <Button label="Aceitar" onPress={() => void accept()} disabled={busy} />
-          <Button label="Recusar" variant="ghost" onPress={reject} />
+            </View>
+            <View style={styles.action}>
+              <Button label="Recusar" variant="ghost" onPress={reject} />
+            </View>
+          </View>
+          {editingSuggestion
+            ? suggestion.type.fields.slice(0, 8).map((field) =>
+                field.kind === 'date' ? (
+                  <DateField
+                    key={field.id}
+                    label={field.name}
+                    value={draft[field.id] ?? ''}
+                    onChangeText={(value) => setDraft((current) => ({ ...current, [field.id]: value }))}
+                  />
+                ) : (
+                  <TextField
+                    key={field.id}
+                    label={field.name}
+                    value={draft[field.id] ?? ''}
+                    onChangeText={(value) => setDraft((current) => ({ ...current, [field.id]: value }))}
+                  />
+                ),
+              )
+            : null}
         </View>
       ) : null}
-      <View style={{ gap: 8 }}>
+      <View style={styles.chips}>
         {chips.map((item) => (
           <Button key={item.id} label={item.name} variant="ghost" onPress={() => onOpenType(item.id)} />
         ))}
@@ -293,6 +334,34 @@ export function CaptureBar({ token, types, onOpenType, onNewType, onSaved }: Pro
 }
 
 const styles = StyleSheet.create({
+  wrap: {
+    gap: 12,
+  },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  action: {
+    flexGrow: 1,
+    flexBasis: 140,
+    minWidth: 120,
+  },
+  suggestion: {
+    gap: 10,
+  },
+  suggestionActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    position: 'sticky' as unknown as 'relative',
+    top: 0,
+    zIndex: 3,
+    paddingVertical: 8,
+  },
+  chips: {
+    gap: 8,
+  },
   recordBox: {
     borderWidth: 1,
     borderRadius: 12,

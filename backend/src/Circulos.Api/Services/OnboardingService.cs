@@ -8,7 +8,7 @@ public sealed class OnboardingService(AppDbContext db, TimeProvider clock)
 {
     public void Seed(User user, DateTime now)
     {
-        var eu = CreateCircle(user, "Eu", "Seu espaco pessoal, só você.", now);
+        var eu = CreateCircle(user, "Eu", "Seu espaço pessoal, só você.", now);
         var familia = CreateCircle(user, "Família", "Combine a rotina de quem mora junto.", now);
         db.Circles.Add(eu);
         db.Circles.Add(familia);

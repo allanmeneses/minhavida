@@ -15,5 +15,7 @@ describe('seletor de arquivo', () => {
     assert.doesNotMatch(source, /No file chosen/);
     assert.match(source, /clipPath/);
     assert.match(source, /opacity: 0/);
+    assert.match(source, /valueName === undefined \? picked : valueName/);
+    assert.match(source, /inputRef\.current\.value = ''/);
   });
 });

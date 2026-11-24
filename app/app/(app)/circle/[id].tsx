@@ -43,6 +43,7 @@ import {
   type ListAccess,
   type ListKind,
 } from '@/lib/listKinds';
+import { copyText } from '@/lib/copyText';
 import { reportTarget } from '@/lib/report';
 import { screenStyles } from '@/lib/screenStyles';
 
@@ -73,6 +74,7 @@ export default function CircleDetailScreen() {
   const [logFilter, setLogFilter] = useState('');
   const [filteredLog, setFilteredLog] = useState<CircleDetail['log'] | null>(null);
   const [shareText, setShareText] = useState<string | null>(null);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [giftIdeas, setGiftIdeas] = useState<GiftIdeaShare[]>([]);
   const [giftIdeaDraft, setGiftIdeaDraft] = useState('');
   const giftIdeaDirty = useRef(false);
@@ -170,6 +172,7 @@ export default function CircleDetailScreen() {
       token,
       body: JSON.stringify({ email: inviteEmail.trim(), role: 'viewer' }),
     });
+    setInviteCode(result.token);
     setOk(`Convite criado. Código: ${result.token}`);
     setInviteEmail('');
     await load();
@@ -183,6 +186,7 @@ export default function CircleDetailScreen() {
       `/api/circles/${circleId}/invite-link`,
       { method: 'POST', token },
     );
+    setInviteCode(result.token);
     setShareText(result.shareText);
     setOk('Texto pronto para colar no WhatsApp.');
   }
@@ -439,6 +443,25 @@ export default function CircleDetailScreen() {
             disabledHint="Informe o e-mail para enviar o convite."
           />
           {isAdmin ? <Button label="Criar link para WhatsApp" variant="ghost" onPress={() => void inviteLink()} /> : null}
+          {inviteCode ? (
+            <>
+              <Text testID="invite-code" style={styles.lead}>
+                Código do convite: {inviteCode}
+              </Text>
+              <Button
+                label="Copiar"
+                accessibilityLabel="Copiar código do convite"
+                variant="ghost"
+                onPress={() => {
+                  void copyText(inviteCode).then((copied) => {
+                    if (copied) {
+                      setOk(`Código copiado: ${inviteCode}`);
+                    }
+                  });
+                }}
+              />
+            </>
+          ) : null}
           {shareText ? (
             <Text testID="invite-share-text" style={styles.lead}>
               {shareText}

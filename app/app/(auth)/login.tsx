@@ -129,7 +129,7 @@ export default function LoginScreen() {
           <View style={styles.webBrand}>
             <BrandMark inverted />
             <Text style={styles.webLead}>
-              Um hub da sua vida pessoal. Perfil, documentos, círculos e lembretes no mesmo lugar,
+              A casa da sua vida pessoal. Perfil, documentos, círculos e lembretes no mesmo lugar,
               no celular e no navegador.
             </Text>
           </View>

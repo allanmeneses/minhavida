@@ -6,6 +6,7 @@ import { TextField } from '@/components/ui/TextField';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary, type LivingProfileItem } from '@/lib/api';
+import { examplePlaceholder } from '@/lib/placeholders';
 import { screenStyles } from '@/lib/screenStyles';
 
 const KINDS = ['person', 'pet', 'group'] as const;
@@ -69,8 +70,8 @@ export default function LivingScreen() {
         Perfil vivo de pessoa, pet ou grupo. Edita quem tem permissão de edição. Quem só visualiza só visualiza.
       </Text>
       <Feedback message={error} />
-      <TextField label="Nome" value={name} onChangeText={setName} placeholder="Luna" />
-      <TextField label="Contexto" value={context} onChangeText={setContext} placeholder="Nossa cachorra" />
+      <TextField label="Nome" value={name} onChangeText={setName} placeholder={examplePlaceholder('Luna')} />
+      <TextField label="Contexto" value={context} onChangeText={setContext} placeholder={examplePlaceholder('Nossa cachorra')} />
       <Button
         label={`Tipo: ${KIND_LABEL[kind]}`}
         variant="ghost"

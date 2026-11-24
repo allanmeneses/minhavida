@@ -9,6 +9,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type MemoryItem } from '@/lib/api';
 import { isoToDisplayDate } from '@/lib/dates';
 import { keepTypedDraft } from '@/lib/keepTypedDraft';
+import { examplePlaceholder } from '@/lib/placeholders';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function MemoriesScreen() {
@@ -72,9 +73,9 @@ export default function MemoriesScreen() {
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Text style={styles.title}>Memórias</Text>
-      <Text style={styles.lead}>Linha do tempo do seu perfil. Foto, texto e data. Edicao e silenciosa.</Text>
+      <Text style={styles.lead}>Linha do tempo do seu perfil. Foto, texto e data. Edição é silenciosa.</Text>
       <Feedback message={error} />
-      <TextField label="Título" value={title} onChangeText={setTitle} placeholder="Primeiro dia de escola" />
+      <TextField label="Título" value={title} onChangeText={setTitle} placeholder={examplePlaceholder('Primeiro dia de escola')} />
       <TextField label="Texto" value={body} onChangeText={setBody} />
       <DateField label="Quando" value={occurredOn} onChangeText={setOccurredOn} />
       <Button label="Guardar memória" onPress={() => void create()} disabled={!title.trim()} />

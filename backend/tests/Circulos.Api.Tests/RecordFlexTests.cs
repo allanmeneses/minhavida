@@ -296,6 +296,33 @@ public sealed class RecordFlexTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Grafico_PesoComPonto_GuardaOnzeEOito()
+    {
+        var client = _factory.CreateClient();
+        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        var copied = await client.PostAsJsonAsync("/api/record-types/from-gallery", new { templateId = RecordGallery.PetId });
+        copied.EnsureSuccessStatusCode();
+        var type = await copied.Content.ReadFromJsonAsync<JsonElement>(Json);
+        var typeId = type.GetProperty("id").GetGuid();
+        (await client.PostAsJsonAsync("/api/records", new
+        {
+            typeId,
+            fields = new { title = "Luna", when = "2026-01-10", peso = "11.8" },
+        })).EnsureSuccessStatusCode();
+        (await client.PostAsJsonAsync("/api/records", new
+        {
+            typeId,
+            fields = new { title = "Luna", when = "2026-02-10", peso = "12" },
+        })).EnsureSuccessStatusCode();
+        var chart = await client.GetFromJsonAsync<List<JsonElement>>($"/api/record-types/{typeId}/chart", Json);
+        var values = chart!.Select(item => item.GetProperty("numberValue").GetDecimal()).OrderBy(item => item).ToList();
+        Assert.Equal(2, values.Count);
+        Assert.Equal(11.8m, values[0]);
+        Assert.Equal(12m, values[1]);
+        Assert.DoesNotContain(118m, values);
+    }
+
+    [Fact]
     public async Task Schema_MaximoTresCamposNaCapturaRapida()
     {
         var schema = RecordGallery.SchemaForArea(LifeAreaKind.Vaccine);
@@ -368,5 +395,16 @@ public sealed class RecordSuggesterUnitTests
         await using var binary = new MemoryStream([1, 2, 3, 4, 5, 0, 9]);
         var fromBinary = await transcriber.TranscribeAsync(binary, "voz.webm", "audio/webm", CancellationToken.None);
         Assert.Equal(FakeTranscriber.DefaultText, fromBinary.Text);
+    }
+
+    [Fact]
+    public void ParseNumber_PontoEVirgula_NaoConfundeMilharComDecimal()
+    {
+        Assert.Equal(11.8m, RecordFields.ParseNumber("11.8"));
+        Assert.Equal(11.8m, RecordFields.ParseNumber("11,8"));
+        Assert.Equal(11.8m, RecordFields.ParseNumber("11,8 kg"));
+        Assert.Equal(118m, RecordFields.ParseNumber("118"));
+        Assert.Equal(1234.56m, RecordFields.ParseNumber("1.234,56"));
+        Assert.Equal(1234.56m, RecordFields.ParseNumber("1,234.56"));
     }
 }

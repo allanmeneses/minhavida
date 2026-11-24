@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
@@ -11,7 +11,9 @@ import { api, ApiError, downloadDocument, uploadNativeFile, type DocumentItem } 
 export default function DocumentsScreen() {
   const { token } = useAuth();
   const { colors } = useTheme();
-  const styles = documentStyles(colors);
+  const { width } = useWindowDimensions();
+  const stacked = Platform.OS !== 'web' || width < 768;
+  const styles = documentStyles(colors, stacked);
   const [items, setItems] = useState<DocumentItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -122,7 +124,7 @@ export default function DocumentsScreen() {
           <Text style={styles.kicker}>Área privada</Text>
           <Text style={styles.title}>Documentos pessoais</Text>
           <Text style={styles.lead}>
-            Envie arquivos só seus. Ninguém mais ve, baixa ou apaga. Não existe link público permanente.
+            Envie arquivos só seus. Ninguém mais vê, baixa ou apaga. Não existe link público permanente.
           </Text>
         </View>
         <Button label="Enviar arquivo" onPress={() => void upload()} loading={busy} />
@@ -139,7 +141,7 @@ export default function DocumentsScreen() {
       ) : null}
       {items && items.length > 0 ? (
         <View style={styles.list}>
-          {Platform.OS === 'web' ? (
+          {!stacked ? (
             <View style={styles.tableHead}>
               <Text style={[styles.cellName, styles.headText]}>Arquivo</Text>
               <Text style={[styles.cellMeta, styles.headText]}>Tamanho</Text>
@@ -150,14 +152,16 @@ export default function DocumentsScreen() {
           {items.map((item) => (
             <View key={item.id} style={styles.row}>
               <View style={styles.cellName}>
-                <Text style={styles.fileName}>{item.fileName}</Text>
-                {Platform.OS !== 'web' ? (
+                <Text style={styles.fileName} numberOfLines={2}>
+                  {item.fileName}
+                </Text>
+                {stacked ? (
                   <Text style={styles.muted}>
                     {formatSize(item.sizeBytes)} · {formatDate(item.createdAt)}
                   </Text>
                 ) : null}
               </View>
-              {Platform.OS === 'web' ? (
+              {!stacked ? (
                 <>
                   <Text style={styles.cellMeta}>{formatSize(item.sizeBytes)}</Text>
                   <Text style={styles.cellMeta}>{formatDate(item.createdAt)}</Text>
@@ -205,9 +209,9 @@ function formatDate(value: string): string {
   return date.toLocaleDateString('pt-BR');
 }
 
-const documentStyles = (colors: ColorPalette) => StyleSheet.create({
+const documentStyles = (colors: ColorPalette, stacked: boolean) => StyleSheet.create({
   page: {
-    paddingBottom: 48,
+    paddingBottom: 120,
     maxWidth: 920,
     width: '100%',
     alignSelf: 'center',
@@ -215,9 +219,9 @@ const documentStyles = (colors: ColorPalette) => StyleSheet.create({
   },
   header: {
     gap: 16,
-    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    flexDirection: stacked ? 'column' : 'row',
     justifyContent: 'space-between',
-    alignItems: Platform.OS === 'web' ? 'flex-end' : 'stretch',
+    alignItems: stacked ? 'stretch' : 'flex-end',
   },
   headerText: {
     flex: 1,
@@ -278,16 +282,17 @@ const documentStyles = (colors: ColorPalette) => StyleSheet.create({
     textTransform: 'uppercase',
   },
   row: {
-    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    flexDirection: stacked ? 'column' : 'row',
     paddingHorizontal: 16,
     paddingVertical: 14,
     gap: 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
-    alignItems: Platform.OS === 'web' ? 'center' : 'stretch',
+    alignItems: stacked ? 'stretch' : 'center',
   },
   cellName: {
-    flex: 2,
+    flex: stacked ? undefined : 2,
+    minWidth: 0,
   },
   cellMeta: {
     flex: 1,
@@ -297,11 +302,12 @@ const documentStyles = (colors: ColorPalette) => StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
     minWidth: 140,
-    justifyContent: Platform.OS === 'web' ? 'flex-end' : 'flex-start',
+    justifyContent: stacked ? 'flex-start' : 'flex-end',
   },
   fileName: {
     fontWeight: '700',
     color: colors.ink,
+    flexShrink: 1,
   },
   action: {
     color: colors.primary,

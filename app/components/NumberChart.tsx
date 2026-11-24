@@ -1,6 +1,14 @@
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
-import { chartBars, chartLine, MAX_BAR_WIDTH, SINGLE_POINT_HINT, type ChartPoint } from '@/lib/chartLayout';
+import {
+  chartBars,
+  chartLine,
+  chartScale,
+  formatChartNumber,
+  MAX_BAR_WIDTH,
+  SINGLE_POINT_HINT,
+  type ChartPoint,
+} from '@/lib/chartLayout';
 
 type Props = {
   title: string;
@@ -11,6 +19,7 @@ export function NumberChart({ title, points }: Props) {
   const { colors } = useTheme();
   const bars = chartBars(points, 320, points.length === 1 ? 72 : 140);
   const line = chartLine(points);
+  const scale = points.length > 0 ? chartScale(points) : null;
   const single = points.length === 1 ? points[0] : null;
   const singleDate = bars[0]?.label && bars[0].label.includes('/') ? bars[0].label : null;
 
@@ -20,7 +29,7 @@ export function NumberChart({ title, points }: Props) {
       {points.length === 0 ? <Text style={{ color: colors.muted }}>Ainda não há números neste tipo.</Text> : null}
       {single ? (
         <Text testID="chart-single-value" style={[styles.value, { color: colors.ink }]}>
-          {single.numberValue}
+          {formatChartNumber(single.numberValue)}
           {singleDate ? ` em ${singleDate}` : ''}
         </Text>
       ) : null}
@@ -31,6 +40,11 @@ export function NumberChart({ title, points }: Props) {
       ) : null}
       {Platform.OS === 'web' && points.length >= 2 && line.points ? (
         <View>
+          {scale ? (
+            <Text testID="chart-axis" style={[styles.barLabel, { color: colors.muted }]}>
+              Eixo {formatChartNumber(scale.min)} a {formatChartNumber(scale.max)}
+            </Text>
+          ) : null}
           <svg width={line.width} height={line.height} viewBox={`0 0 ${line.width} ${line.height}`} role="img" aria-label={title}>
             <polyline
               fill="none"

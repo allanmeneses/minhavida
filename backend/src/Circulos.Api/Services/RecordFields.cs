@@ -135,12 +135,22 @@ public static class RecordFields
         }
 
         var text = raw.Trim().Replace("R$", string.Empty, StringComparison.OrdinalIgnoreCase).Trim();
-        if (decimal.TryParse(text, NumberStyles.Number, Pt, out var pt))
+        var match = System.Text.RegularExpressions.Regex.Match(text, @"-?\d(?:[\d.,]*\d)?");
+        var token = match.Success ? match.Value : text;
+        var lastComma = token.LastIndexOf(',');
+        var lastDot = token.LastIndexOf('.');
+        if (lastComma >= 0 && lastDot >= 0)
         {
-            return pt;
+            token = lastComma > lastDot
+                ? token.Replace(".", string.Empty, StringComparison.Ordinal).Replace(',', '.')
+                : token.Replace(",", string.Empty, StringComparison.Ordinal);
+        }
+        else if (lastComma >= 0)
+        {
+            token = token.Replace(',', '.');
         }
 
-        return decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var invariant) ? invariant : null;
+        return decimal.TryParse(token, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) ? parsed : null;
     }
 
     public static JsonElement FromObject(object? value)

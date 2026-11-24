@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type SharedListSummary } from '@/lib/api';
 import { LIST_KIND_LABEL, LIST_KINDS, nextOf, type ListKind } from '@/lib/listKinds';
+import { examplePlaceholder } from '@/lib/placeholders';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function ListsScreen() {
@@ -50,7 +51,7 @@ export default function ListsScreen() {
       <Text style={styles.lead}>Privadas no seu perfil. Compras, desejos, materiais ou outra.</Text>
       <Button label="Modelos de lista" variant="ghost" onPress={() => router.push('/(app)/templates' as Href)} />
       <Feedback message={error} />
-      <TextField label="Nome da lista" value={name} onChangeText={setName} placeholder="Feira" />
+      <TextField label="Nome da lista" value={name} onChangeText={setName} placeholder={examplePlaceholder('Feira')} />
       <Button
         label={`Tipo: ${LIST_KIND_LABEL[kind]}`}
         variant="ghost"

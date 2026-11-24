@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
-import { shareChipLabel, toggleCircleShare } from '@/lib/circleShare';
+import { shareChipLabel, toggleCircleShare, uniqueShareCircles } from '@/lib/circleShare';
 
 export type ShareCircle = {
   id: string;
@@ -15,7 +15,8 @@ type Props = {
 
 export function CircleShareChips({ circles, selectedIds, onChange }: Props) {
   const { colors } = useTheme();
-  if (circles.length === 0) {
+  const visible = uniqueShareCircles(circles);
+  if (visible.length === 0) {
     return null;
   }
 
@@ -23,7 +24,7 @@ export function CircleShareChips({ circles, selectedIds, onChange }: Props) {
     <View style={styles.wrap}>
       <Text style={[styles.lead, { color: colors.muted }]}>Compartilhar com</Text>
       <View style={styles.row}>
-        {circles.map((circle) => {
+        {visible.map((circle) => {
           const name = circle.name?.trim() || 'círculo';
           const selected = selectedIds.includes(circle.id);
           return (

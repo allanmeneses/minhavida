@@ -16,6 +16,10 @@ describe('calendário do mês', () => {
     assert.equal(records.filter((day) => !day.inMonth).length % 7, records.filter((day) => !day.inMonth).length);
     assert.ok(records.length >= 30);
     assert.equal(records.find((day) => day.date === '2026-11-10')?.events[0]?.title, 'Gripe');
+    const march = buildRecordMonth(2024, 3, [{ id: 'v1', title: 'Hepatite B', occurredOn: '2024-03-10' }]);
+    assert.equal(march.filter((day) => day.inMonth).length, 31);
+    assert.ok(march.length >= 31);
+    assert.equal(march.find((day) => day.date === '2024-03-31')?.inMonth, true);
   });
 });
 
