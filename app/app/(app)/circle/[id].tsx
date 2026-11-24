@@ -451,14 +451,14 @@ export default function CircleDetailScreen() {
                 label="Publicar"
                 onPress={() => void publish()}
                 disabled={!post.trim()}
-                disabledHint="Escreva a entradá para publicar."
+                disabledHint="Escreva a entrada para publicar."
               />
             </>
           ) : null}
         </>
       ) : null}
 
-      {(detail?.sharedEntries ?? []).length > 0 ? (
+      {(detail?.sharedEntries ?? []).length + (detail?.sharedRecords ?? []).length > 0 ? (
         <>
           <Text style={styles.section}>Entradas compartilhadas</Text>
           {(detail?.sharedEntries ?? []).map((item) => (
@@ -468,6 +468,12 @@ export default function CircleDetailScreen() {
               {(item.tags ?? []).length > 0 ? (
                 <Text style={styles.lead}>Tags: {(item.tags ?? []).join(', ')}</Text>
               ) : null}
+            </View>
+          ))}
+          {(detail?.sharedRecords ?? []).map((item) => (
+            <View key={item.id} style={styles.card}>
+              <Text style={styles.item}>{item.title}</Text>
+              <Text style={styles.lead}>De {item.authorName}. A mesma entrada, sem duplicar.</Text>
             </View>
           ))}
         </>

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Circulos.Api.Domain;
 using Circulos.Api.Reminders;
 
@@ -318,7 +319,8 @@ public sealed record CircleDetailResponse(
     IReadOnlyList<CircleJoinRequestDto> JoinRequests,
     IReadOnlyList<SharedLifeEntryResponse> SharedEntries,
     DateTime? EndsAt = null,
-    OwnershipOfferNoticeResponse? OwnershipOffer = null);
+    OwnershipOfferNoticeResponse? OwnershipOffer = null,
+    IReadOnlyList<SharedRecordResponse>? SharedRecords = null);
 
 public sealed record CirclePostResponse(Guid Id, Guid? AuthorUserId, string Body, bool HasPhoto, DateTime CreatedAt);
 public sealed record CircleLogResponse(Guid Id, Guid? ActorUserId, string Action, string Detail, DateTime CreatedAt);
@@ -644,7 +646,8 @@ public sealed record DayPanelResponse(
     MonthlySurpriseResponse? MonthlySurprise,
     int RoutineStreakDays,
     IReadOnlyList<OnboardingExampleResponse> Onboarding,
-    IReadOnlyList<OwnershipOfferNoticeResponse> OwnershipOffers);
+    IReadOnlyList<OwnershipOfferNoticeResponse> OwnershipOffers,
+    IReadOnlyList<HomeRecordTypeResponse>? RecordTypes = null);
 
 public static class EnumText
 {
@@ -1044,3 +1047,144 @@ public sealed record PrivacyItemResponse(string What, string Who);
 public sealed record PrivacyOverviewResponse(IReadOnlyList<PrivacyItemResponse> Items);
 
 public sealed record JobQueuedResponse(Guid Id, string Kind, string Status);
+
+public sealed record RecordFieldDto(string Id, string Name, string Kind, bool Required, int Order, string[]? Options = null);
+
+public sealed record RecordTypeResponse(
+    Guid Id,
+    string Name,
+    string Description,
+    string Slug,
+    bool Gallery,
+    Guid? OriginTemplateId,
+    IReadOnlyList<RecordFieldDto> Fields,
+    IReadOnlyList<RecordFieldDto> QuickFields,
+    DateTime CreatedAt,
+    DateTime? LastUsedAt,
+    int RecordCount,
+    bool HasDate,
+    bool HasNumber);
+
+public sealed class CreateRecordTypeRequest
+{
+    [Required]
+    [MinLength(2)]
+    [MaxLength(80)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(500)]
+    public string? Description { get; set; }
+
+    public RecordFieldDto[]? Fields { get; set; }
+}
+
+public sealed class SentenceTypeRequest
+{
+    [Required]
+    [MinLength(3)]
+    [MaxLength(500)]
+    public string Sentence { get; set; } = string.Empty;
+}
+
+public sealed class CopyGalleryRequest
+{
+    [Required]
+    public Guid TemplateId { get; set; }
+}
+
+public sealed class SuggestRecordRequest
+{
+    [Required]
+    [MinLength(1)]
+    [MaxLength(4000)]
+    public string Text { get; set; } = string.Empty;
+}
+
+public sealed class CreateRecordRequest
+{
+    public Guid? TypeId { get; set; }
+
+    public Dictionary<string, JsonElement>? Fields { get; set; }
+    public Guid[]? CircleIds { get; set; }
+    public bool CreateTypeIfMissing { get; set; }
+    public CreateRecordTypeRequest? NewType { get; set; }
+}
+
+public sealed class AddRecordFieldRequest
+{
+    [Required]
+    [MinLength(1)]
+    [MaxLength(80)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(20)]
+    public string Kind { get; set; } = RecordFieldKind.Text;
+
+    public bool Required { get; set; }
+}
+
+public sealed class UpdateRecordRequest
+{
+    public Dictionary<string, JsonElement>? Fields { get; set; }
+    public Guid[]? CircleIds { get; set; }
+}
+
+public sealed class RecordRemindRequest
+{
+    [MaxLength(40)]
+    public string? FieldId { get; set; }
+}
+
+public sealed record LifeRecordResponse(
+    Guid Id,
+    Guid TypeId,
+    string TypeName,
+    string Title,
+    string? Body,
+    DateOnly? OccurredOn,
+    decimal? NumberValue,
+    IReadOnlyDictionary<string, JsonElement> Fields,
+    bool HasPhoto,
+    bool HasFile,
+    string? FileName,
+    Guid? ReminderId,
+    IReadOnlyList<Guid> CircleIds,
+    DateTime CreatedAt,
+    DateTime UpdatedAt);
+
+public sealed record RecordSuggestionResponse(
+    Guid? TypeId,
+    bool IsNewType,
+    RecordTypeSuggestionDto Type,
+    IReadOnlyDictionary<string, string?> Fields,
+    string Summary,
+    string? Transcript);
+
+public sealed record RecordTypeSuggestionDto(
+    string Name,
+    string Description,
+    string Slug,
+    Guid? GalleryTypeId,
+    Guid? ExistingTypeId,
+    IReadOnlyList<RecordFieldDto> Fields);
+
+public sealed record TranscriptionResponse(string Text, bool Available, string? Error);
+
+public sealed record HomeRecordTypeResponse(Guid Id, string Name, DateTime? LastUsedAt, int RecordCount);
+
+public sealed record RecordChartPoint(DateOnly? OccurredOn, decimal NumberValue);
+
+public sealed record RecordCalendarItem(Guid Id, string Title, DateOnly OccurredOn, decimal? NumberValue);
+
+public sealed record SharedRecordResponse(
+    Guid Id,
+    Guid TypeId,
+    string TypeName,
+    string Title,
+    string? Body,
+    DateOnly? OccurredOn,
+    decimal? NumberValue,
+    bool HasPhoto,
+    Guid AuthorUserId,
+    string AuthorName,
+    DateTime CreatedAt);

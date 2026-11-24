@@ -14,7 +14,8 @@
         "NSPhotoLibraryUsageDescription": "O Círculos usa sua galeria para fotos do perfil e das entradas.",
         "NSCameraUsageDescription": "O Círculos usa a câmera para fotos do perfil e das entradas.",
         "NSCalendarsUsageDescription": "O Círculos lê o calendário do aparelho só para mostrar compromissos, sem gravar nada lá.",
-        "NSCalendarsFullAccessUsageDescription": "O Círculos lê o calendário do aparelho só para mostrar compromissos, sem gravar nada lá."
+        "NSCalendarsFullAccessUsageDescription": "O Círculos lê o calendário do aparelho só para mostrar compromissos, sem gravar nada lá.",
+        "NSMicrophoneUsageDescription": "O Círculos usa o microfone para transcrever o que você fala."
       }
     },
     "android": {
@@ -56,6 +57,12 @@
         "expo-calendar",
         {
           "calendarPermission": "O Círculos lê o calendário do aparelho só para mostrar compromissos, sem gravar nada lá."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "O Círculos usa o microfone para transcrever o que você fala."
         }
       ]
     ],

@@ -32,4 +32,6 @@ public sealed class User
     public ICollection<LifeEntry> LifeEntries { get; set; } = new List<LifeEntry>();
     public ICollection<Reminder> Reminders { get; set; } = new List<Reminder>();
     public ICollection<Shortcut> Shortcuts { get; set; } = new List<Shortcut>();
+    public ICollection<RecordType> RecordTypes { get; set; } = new List<RecordType>();
+    public ICollection<LifeRecord> Records { get; set; } = new List<LifeRecord>();
 }

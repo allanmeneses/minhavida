@@ -13,6 +13,7 @@ import {
 describe('rotulos exibidos', () => {
   it('traduz status, papeis, tipos e ações para português', () => {
     assert.equal(displayLabel('active', CIRCLE_STATUS_LABEL), 'Ativo');
+    assert.equal(displayLabel('archived', CIRCLE_STATUS_LABEL), 'Arquivado');
     assert.equal(displayLabel('Active', CIRCLE_STATUS_LABEL), 'Ativo');
     assert.equal(displayLabel('editor', ROLE_LABEL), 'Editor');
     assert.equal(displayLabel('post', TARGET_KIND_LABEL), 'Publicação');

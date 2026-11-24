@@ -65,6 +65,7 @@ public class ApiFactory : WebApplicationFactory<Program>
         using var scope = Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.Migrate();
+        Circulos.Api.Services.RecordGallery.EnsureSeededAsync(db, CancellationToken.None).GetAwaiter().GetResult();
         base.ConfigureClient(client);
     }
 
@@ -142,7 +143,9 @@ internal sealed class OverlapSaveInterceptor : SaveChangesInterceptor
         var addedRefresh = eventData.Context?.ChangeTracker.Entries<RefreshToken>().Any(entry => entry.State == EntityState.Added) == true;
         var enablingTwoFactor = eventData.Context?.ChangeTracker.Entries<User>()
             .Any(entry => entry.State == EntityState.Modified && entry.Property(nameof(User.TwoFactorEnabled)).IsModified) == true;
-        if (addedUser || (addedRefresh && !addedUser) || enablingTwoFactor)
+        var reminding = eventData.Context?.ChangeTracker.Entries<LifeRecord>()
+            .Any(entry => entry.State == EntityState.Modified && entry.Property(nameof(LifeRecord.ReminderId)).IsModified) == true;
+        if (addedUser || (addedRefresh && !addedUser) || enablingTwoFactor || reminding)
         {
             await Task.Delay(80, cancellationToken);
         }

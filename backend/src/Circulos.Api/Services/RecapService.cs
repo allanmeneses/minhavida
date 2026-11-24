@@ -42,6 +42,21 @@ public sealed class RecapService(AppDbContext db)
             flows.Add(new RecapFlowDto(key, label, area.Count));
         }
 
+        var types = await db.RecordTypes.AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .Select(item => new { item.Id, item.Name, item.Slug, Count = item.Records.Count })
+            .ToListAsync(cancellationToken);
+        foreach (var type in types.Where(item => item.Count > 0))
+        {
+            var key = string.IsNullOrWhiteSpace(type.Slug) ? "type:" + type.Id : type.Slug;
+            if (flows.Any(item => item.Key == key || string.Equals(item.Label, type.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            flows.Add(new RecapFlowDto(key, type.Name, type.Count));
+        }
+
         await AddIfUsed(flows, "documents", "Documentos", await db.Documents.CountAsync(x => x.UserId == userId, cancellationToken));
         await AddIfUsed(flows, "reminders", "Lembretes", await db.Reminders.CountAsync(x => x.UserId == userId, cancellationToken));
         await AddIfUsed(flows, "shortcuts", "Atalhos", await db.Shortcuts.CountAsync(x => x.UserId == userId, cancellationToken));
@@ -97,11 +112,18 @@ public sealed class RecapService(AppDbContext db)
             .OrderBy(share => share.LifeEntry.CreatedAt)
             .Select(share => share.LifeEntry.Title)
             .ToListAsync(cancellationToken);
-        await AddIfUsed(flows, "shared-entries", "Minhas entradas compartilhadas", myShared.Count);
+        var myRecords = await db.RecordShares
+            .AsNoTracking()
+            .Where(share => share.CircleId == circleId && share.Record.UserId == userId)
+            .OrderBy(share => share.Record.CreatedAt)
+            .Select(share => share.Record.Title)
+            .ToListAsync(cancellationToken);
+        await AddIfUsed(flows, "shared-entries", "Minhas entradas compartilhadas", myShared.Count + myRecords.Count);
 
         var titles = myPosts
             .Concat(myMemories)
             .Concat(myShared)
+            .Concat(myRecords)
             .Where(text => !string.IsNullOrWhiteSpace(text))
             .ToList();
 
@@ -121,7 +143,8 @@ public sealed class RecapService(AppDbContext db)
                 && (!member.Circle.IsStarter
                     || member.Circle.Posts.Any()
                     || db.Memories.Any(memory => memory.CircleId == member.CircleId)
-                    || db.LifeEntryShares.Any(share => share.CircleId == member.CircleId)),
+                    || db.LifeEntryShares.Any(share => share.CircleId == member.CircleId)
+                    || db.RecordShares.Any(share => share.CircleId == member.CircleId)),
             cancellationToken);
 
     public string Serialize(CircleRecapResponse recap) => JsonSerializer.Serialize(recap, Json);

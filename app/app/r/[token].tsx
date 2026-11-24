@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleRecap } from '@/lib/api';
 import { CIRCLE_KIND_LABEL, type CircleKind } from '@/lib/circleKinds';
+import { CIRCLE_STATUS_LABEL, displayLabel } from '@/lib/labels';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function PublicRecapScreen() {
@@ -40,7 +41,7 @@ export default function PublicRecapScreen() {
         <>
           <Text style={styles.item}>{recap.displayName}</Text>
           <Text style={styles.lead}>
-            {recap.name} · {kindLabel} · {recap.status}
+            {recap.name} · {kindLabel} · {displayLabel(recap.status, CIRCLE_STATUS_LABEL)}
           </Text>
           {recap.flows.map((flow) => (
             <Text key={flow.key} style={styles.lead}>

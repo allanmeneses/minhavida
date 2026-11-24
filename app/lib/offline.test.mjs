@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  applyRecordSync,
   applySyncResult,
   discard,
   emptyCache,
   enqueue,
+  enqueueRecord,
   nextPending,
   readCache,
   writeCache,
@@ -20,6 +22,7 @@ describe('offline cache e fila', () => {
     cache = writeCache(cache, '/api/lists/abc', { name: 'Feira', items: [] });
     cache = writeCache(cache, '/api/recap/me', { flows: [{ key: 'vaccine', count: 1 }] });
     cache = writeCache(cache, '/api/circles', [{ name: 'Família' }]);
+    cache = writeCache(cache, '/api/record-types', [{ name: 'Vacinas' }]);
     assert.equal(readCache(cache, '/api/profile').displayName, 'Ana');
     assert.equal(readCache(cache, '/api/home').activeCircleCount, 2);
     assert.equal(readCache(cache, '/api/reminders')[0].title, 'Remédio');
@@ -27,6 +30,28 @@ describe('offline cache e fila', () => {
     assert.equal(readCache(cache, '/api/lists/abc').name, 'Feira');
     assert.equal(readCache(cache, '/api/recap/me').flows[0].key, 'vaccine');
     assert.equal(readCache(cache, '/api/circles')[0].name, 'Família');
+    assert.equal(readCache(cache, '/api/record-types')[0].name, 'Vacinas');
+  });
+
+  it('fila de texto do registro sobe depois; voz não entra na fila', () => {
+    const action = {
+      id: 'r1',
+      type: 'add-record',
+      payload: { fields: { title: 'Pão' }, createTypeIfMissing: true, newType: { name: 'Compra', fields: [] } },
+      createdAt: 1,
+    };
+    let queue = enqueueRecord([], action);
+    assert.equal(queue.length, 1);
+    const afterRerender = enqueueRecord(queue.slice(), {
+      id: 'r2',
+      type: 'add-record',
+      payload: { typeId: 't1', fields: { title: 'Outro' } },
+      createdAt: 2,
+    });
+    assert.equal(afterRerender.length, 2);
+    const flushed = applyRecordSync(afterRerender, action, 201, '');
+    assert.equal(flushed.queue.length, 1);
+    assert.equal(flushed.queue[0].id, 'r2');
   });
 
   it('403 descarta a ação e avisa; a fila não some num rerender da função', () => {

@@ -66,6 +66,34 @@ builder.Services.AddScoped<ReminderEmailService>();
 builder.Services.AddScoped<AccountDeletionService>();
 builder.Services.AddScoped<StatusPage>();
 builder.Services.AddScoped<RecapService>();
+TranscriptionConfig.Bind(builder.Services, builder.Configuration);
+builder.Services.AddScoped<RuleBasedRecordSuggester>();
+builder.Services.AddHttpClient("openai-suggest", client => client.Timeout = TimeSpan.FromSeconds(20));
+builder.Services.AddScoped<IRecordSuggester>(sp =>
+{
+    var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<TranscriptionOptions>>().Value;
+    var rules = sp.GetRequiredService<RuleBasedRecordSuggester>();
+    if (!options.HasKey)
+    {
+        return rules;
+    }
+
+    var http = sp.GetRequiredService<IHttpClientFactory>().CreateClient("openai-suggest");
+    return new OpenAiRecordSuggester(http, sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<TranscriptionOptions>>(), rules);
+});
+builder.Services.AddHttpClient<OpenAiTranscriber>(client => client.Timeout = TimeSpan.FromSeconds(30));
+builder.Services.AddSingleton<FakeTranscriber>();
+builder.Services.AddScoped<ITranscriber>(sp =>
+{
+    var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<TranscriptionOptions>>().Value;
+    if (options.UseOpenAi)
+    {
+        return sp.GetRequiredService<OpenAiTranscriber>();
+    }
+
+    return sp.GetRequiredService<FakeTranscriber>();
+});
+builder.Services.AddScoped<RecordMigrationService>();
 builder.Services.Configure<BillingOptions>(builder.Configuration.GetSection("Billing"));
 builder.Services.Configure<PlanPriceOptions>(builder.Configuration.GetSection("Plans"));
 builder.Services.Configure<MercadoPagoOptions>(builder.Configuration.GetSection("MercadoPago"));
@@ -167,6 +195,7 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
 
     await TemplateCatalog.EnsureSeededAsync(db, CancellationToken.None);
+    await RecordGallery.EnsureSeededAsync(db, CancellationToken.None);
 }
 
 app.UseCors();

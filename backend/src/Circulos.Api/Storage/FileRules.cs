@@ -30,6 +30,17 @@ public static class FileRules
         [".webp"] = ["image/webp"],
     };
 
+    private static readonly Dictionary<string, string[]> AudioTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".webm"] = ["audio/webm", "video/webm", "application/octet-stream"],
+        [".wav"] = ["audio/wav", "audio/wave", "audio/x-wav", "application/octet-stream"],
+        [".mp3"] = ["audio/mpeg", "audio/mp3", "application/octet-stream"],
+        [".m4a"] = ["audio/mp4", "audio/m4a", "audio/x-m4a", "application/octet-stream"],
+        [".ogg"] = ["audio/ogg", "application/ogg", "application/octet-stream"],
+        [".mp4"] = ["audio/mp4", "video/mp4", "application/octet-stream"],
+        [".txt"] = ["text/plain", "application/octet-stream"],
+    };
+
     public static string? ValidateDocument(string fileName, string? contentType, long size)
     {
         if (size <= 0)
@@ -48,6 +59,21 @@ public static class FileRules
         }
 
         return Validate(fileName, contentType, PhotoTypes, "A foto precisa ser JPG, PNG ou WebP.");
+    }
+
+    public static string? ValidateAudio(string fileName, string? contentType, long size)
+    {
+        if (size <= 0)
+        {
+            return "O áudio está vazio.";
+        }
+
+        if (size > 25L * 1024 * 1024)
+        {
+            return "O áudio precisa ter no máximo 25 MB.";
+        }
+
+        return Validate(fileName, contentType, AudioTypes, "Envie um áudio em webm, wav, mp3, m4a ou ogg.");
     }
 
     public static string CanonicalContentType(string fileName, string? contentType)

@@ -50,6 +50,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<DiaryPage> DiaryPages => Set<DiaryPage>();
     public DbSet<SupportMessage> SupportMessages => Set<SupportMessage>();
     public DbSet<ReminderEmailReceipt> ReminderEmailReceipts => Set<ReminderEmailReceipt>();
+    public DbSet<RecordType> RecordTypes => Set<RecordType>();
+    public DbSet<LifeRecord> LifeRecords => Set<LifeRecord>();
+    public DbSet<RecordShare> RecordShares => Set<RecordShare>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -753,6 +756,81 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasOne(x => x.User)
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        var jsonType = Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true ? "jsonb" : "TEXT";
+        modelBuilder.Entity<RecordType>(entity =>
+        {
+            entity.ToTable("record_types");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.UserId);
+            entity.HasIndex(x => x.OriginLifeAreaId).IsUnique().HasFilter("\"OriginLifeAreaId\" IS NOT NULL");
+            entity.Property(x => x.Name).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.Description).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.Slug).HasMaxLength(40).IsRequired();
+            entity.Property(x => x.SchemaJson).HasColumnType(jsonType).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.LastUsedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.User)
+                .WithMany(x => x.RecordTypes)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasMany(x => x.Records)
+                .WithOne(x => x.Type)
+                .HasForeignKey(x => x.TypeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LifeRecord>(entity =>
+        {
+            entity.ToTable("records");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.UserId);
+            entity.HasIndex(x => x.TypeId);
+            entity.HasIndex(x => x.OccurredOn);
+            entity.HasIndex(x => x.Title);
+            entity.HasIndex(x => x.OriginLifeEntryId).IsUnique().HasFilter("\"OriginLifeEntryId\" IS NOT NULL");
+            entity.HasIndex(x => x.OriginDiaryPageId).IsUnique().HasFilter("\"OriginDiaryPageId\" IS NOT NULL");
+            entity.HasIndex(x => x.OriginDocumentId).IsUnique().HasFilter("\"OriginDocumentId\" IS NOT NULL");
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Body).HasMaxLength(20000);
+            entity.Property(x => x.FieldsJson).HasColumnType(jsonType).IsRequired();
+            if (Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                entity.HasIndex(x => x.FieldsJson).HasMethod("gin");
+            }
+            entity.Property(x => x.PhotoStorageKey).HasMaxLength(260);
+            entity.Property(x => x.PhotoContentType).HasMaxLength(120);
+            entity.Property(x => x.FileStorageKey).HasMaxLength(260);
+            entity.Property(x => x.FileContentType).HasMaxLength(120);
+            entity.Property(x => x.FileName).HasMaxLength(255);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.Property(x => x.UpdatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.User)
+                .WithMany(x => x.Records)
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Reminder)
+                .WithMany()
+                .HasForeignKey(x => x.ReminderId)
+                .OnDelete(DeleteBehavior.SetNull);
+            entity.HasMany(x => x.Shares)
+                .WithOne(x => x.Record)
+                .HasForeignKey(x => x.RecordId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RecordShare>(entity =>
+        {
+            entity.ToTable("record_shares");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.RecordId, x.CircleId }).IsUnique();
+            entity.HasIndex(x => x.CircleId);
+            entity.Property(x => x.CreatedAt).HasColumnType("timestamp with time zone");
+            entity.HasOne(x => x.Circle)
+                .WithMany()
+                .HasForeignKey(x => x.CircleId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

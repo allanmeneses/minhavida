@@ -64,20 +64,69 @@ public sealed class OnboardingService(AppDbContext db, TimeProvider clock)
         example.ConfirmedAt = now;
         if (example.Kind == "diary")
         {
-            var diary = await db.LifeAreas.FirstAsync(
+            var diary = await db.LifeAreas.FirstOrDefaultAsync(
                 area => area.UserId == userId && area.Kind == LifeAreaKind.Diary,
                 cancellationToken);
-            db.LifeEntries.Add(new LifeEntry
+            if (diary is not null)
             {
-                Id = Guid.NewGuid(),
-                LifeAreaId = diary.Id,
-                UserId = userId,
-                Title = example.Title,
-                Body = example.Body,
-                OccurredOn = DateOnly.FromDateTime(now),
-                CreatedAt = now,
-                UpdatedAt = now,
-            });
+                db.LifeEntries.Add(new LifeEntry
+                {
+                    Id = Guid.NewGuid(),
+                    LifeAreaId = diary.Id,
+                    UserId = userId,
+                    Title = example.Title,
+                    Body = example.Body,
+                    OccurredOn = DateOnly.FromDateTime(now),
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+            }
+            else
+            {
+                await RecordGallery.EnsureSeededAsync(db, cancellationToken);
+                var type = await db.RecordTypes.FirstOrDefaultAsync(
+                    item => item.UserId == userId && item.Slug == "diario",
+                    cancellationToken);
+                if (type is null)
+                {
+                    var template = await db.RecordTypes.FirstAsync(item => item.Id == RecordGallery.DiarioId, cancellationToken);
+                    type = new RecordType
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = userId,
+                        Name = template.Name,
+                        Description = template.Description,
+                        Slug = template.Slug,
+                        SchemaJson = template.SchemaJson,
+                        OriginTemplateId = template.Id,
+                        CreatedAt = now,
+                        LastUsedAt = now,
+                    };
+                    db.RecordTypes.Add(type);
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+
+                var record = new LifeRecord
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    TypeId = type.Id,
+                    Title = example.Title,
+                    Body = example.Body,
+                    OccurredOn = DateOnly.FromDateTime(now),
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                };
+                RecordFields.ApplyIndexed(record, RecordSchema.Parse(type.SchemaJson), RecordFields.Parse(
+                    RecordFields.ToJson(new Dictionary<string, object?>
+                    {
+                        ["title"] = example.Title,
+                        ["body"] = example.Body,
+                        ["when"] = DateOnly.FromDateTime(now).ToString("yyyy-MM-dd"),
+                    })));
+                db.LifeRecords.Add(record);
+                type.LastUsedAt = now;
+            }
         }
         else if (example.Kind == "memory")
         {

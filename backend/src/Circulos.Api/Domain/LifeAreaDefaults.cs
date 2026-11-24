@@ -2,7 +2,9 @@ namespace Circulos.Api.Domain;
 
 public static class LifeAreaDefaults
 {
-    public static IReadOnlyList<LifeArea> ForUser(Guid userId, DateTime now) =>
+    public static IReadOnlyList<LifeArea> ForUser(Guid userId, DateTime now) => [];
+
+    public static IReadOnlyList<LifeArea> ForLegacyAccount(Guid userId, DateTime now) =>
     [
         New(userId, "Vacinas", LifeAreaKind.Vaccine, 0, now),
         New(userId, "Lembretes", LifeAreaKind.Reminder, 1, now),

@@ -53,6 +53,32 @@ public sealed class SearchController(AppDbContext db, TimeProvider clock) : Cont
                 hits.Add(new SearchHit(kind, entry.Id, entry.Title, entry.Body));
             }
 
+            var records = await db.LifeRecords.AsNoTracking()
+                .Include(item => item.Type)
+                .Where(item => item.UserId == userId)
+                .OrderByDescending(item => item.UpdatedAt)
+                .Take(80)
+                .ToListAsync(cancellationToken);
+            foreach (var record in records)
+            {
+                var blob = $"{record.Title} {record.Body} {record.FieldsJson}";
+                if (!blob.Contains(term, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var kind = string.Equals(record.Type.Slug, "diario", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(record.Type.Name, "Diário", StringComparison.OrdinalIgnoreCase)
+                    ? "diary"
+                    : "entry";
+                if (filter is { Length: > 0 } && filter != kind)
+                {
+                    continue;
+                }
+
+                hits.Add(new SearchHit(kind, record.Id, record.Title, record.Body ?? record.Type.Name));
+            }
+
             if (filter is null or "" or "diary")
             {
                 var pages = await db.DiaryPages.AsNoTracking()

@@ -93,6 +93,12 @@ public sealed class HomeController(
         var monthly = await MonthlySurpriseAsync(user, today, cancellationToken);
         var onboardingItems = await OnboardingItemsAsync(userId, cancellationToken);
         var offers = await ownershipOffers.OpenForUserAsync(userId, cancellationToken);
+        var recordTypes = await db.RecordTypes.AsNoTracking()
+            .Where(item => item.UserId == userId)
+            .OrderByDescending(item => item.LastUsedAt)
+            .ThenBy(item => item.Name)
+            .Select(item => new HomeRecordTypeResponse(item.Id, item.Name, item.LastUsedAt, item.Records.Count))
+            .ToListAsync(cancellationToken);
         return Ok(new DayPanelResponse(
             overdue.OrderBy(x => x.At).ToList(),
             dueToday.OrderBy(x => x.At).ToList(),
@@ -112,7 +118,8 @@ public sealed class HomeController(
                 offer.CircleId,
                 offer.Circle.Name,
                 offer.OfferedAt,
-                offer.ExpiresAt)).ToList()));
+                offer.ExpiresAt)).ToList(),
+            recordTypes));
     }
 
     [HttpGet("plan")]

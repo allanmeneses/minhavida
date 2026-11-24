@@ -24,7 +24,8 @@ const PRIMARY_NAV: NavEntry[] = [
   {
     label: 'Perfil',
     href: '/(app)/profile',
-    match: (path) => path.includes('profile') || (path.includes('life') && !path.includes('living')),
+    match: (path) =>
+      path.includes('profile') || path.includes('/type/') || (path.includes('life') && !path.includes('living')),
   },
 ];
 

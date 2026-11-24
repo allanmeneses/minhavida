@@ -18,6 +18,7 @@ export type ReadCache = {
   listsSolo?: unknown;
   recapMe?: unknown;
   circles?: unknown;
+  recordTypes?: unknown;
   listById: Record<string, unknown>;
 };
 
@@ -43,6 +44,9 @@ export function writeCache(cache: ReadCache, path: string, value: unknown): Read
   }
   if (path === '/api/circles') {
     return { ...cache, circles: value };
+  }
+  if (path === '/api/record-types' || path.startsWith('/api/record-types?')) {
+    return { ...cache, recordTypes: value };
   }
   const list = path.match(/^\/api\/lists\/([^/?]+)$/);
   if (list) {
@@ -70,6 +74,9 @@ export function readCache<T>(cache: ReadCache, path: string): T | undefined {
   if (path === '/api/circles') {
     return cache.circles as T | undefined;
   }
+  if (path === '/api/record-types' || path.startsWith('/api/record-types?')) {
+    return cache.recordTypes as T | undefined;
+  }
   const list = path.match(/^\/api\/lists\/([^/?]+)$/);
   if (list) {
     return cache.listById[list[1]] as T | undefined;
@@ -87,6 +94,39 @@ export function discard(queue: ListQueueAction[], id: string): ListQueueAction[]
 
 export function nextPending(queue: ListQueueAction[]): ListQueueAction | undefined {
   return queue[0];
+}
+
+export type RecordQueueAction = {
+  id: string;
+  type: 'add-record';
+  payload: {
+    typeId?: string;
+    fields: Record<string, string>;
+    createTypeIfMissing?: boolean;
+    newType?: { name: string; description?: string; fields: unknown };
+    circleIds?: string[];
+  };
+  createdAt: number;
+};
+
+export function enqueueRecord(queue: RecordQueueAction[], action: RecordQueueAction): RecordQueueAction[] {
+  return [...queue, action];
+}
+
+export function applyRecordSync(
+  queue: RecordQueueAction[],
+  action: RecordQueueAction,
+  status: number,
+  message: string,
+): { queue: RecordQueueAction[]; warning: string | null } {
+  const without = queue.filter((item) => item.id !== action.id);
+  if (status === 403) {
+    return { queue: without, warning: message || 'Este registro não pode ser guardado agora.' };
+  }
+  if (status >= 200 && status < 300) {
+    return { queue: without, warning: null };
+  }
+  return { queue, warning: null };
 }
 
 export function forbiddenWarning(status: number, message: string): string | null {

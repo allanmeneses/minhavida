@@ -186,7 +186,8 @@ public sealed class CirclesController(
             ? await PendingJoinRequests(circle.Id, cancellationToken)
             : [];
         var shared = await SharedEntriesAsync(circle.Id, cancellationToken);
-        return Ok(ToDetail(circle, names, posts, log, joinRequests, shared, await CurrentOfferAsync(circle.Id, userId, cancellationToken)));
+        var sharedRecords = await SharedRecordsAsync(circle.Id, cancellationToken);
+        return Ok(ToDetail(circle, names, posts, log, joinRequests, shared, await CurrentOfferAsync(circle.Id, userId, cancellationToken), sharedRecords));
     }
 
     [HttpPost("{id:guid}/invites")]
@@ -481,7 +482,8 @@ public sealed class CirclesController(
             circle.Logs.OrderByDescending(x => x.CreatedAt).Select(ToLog).ToList(),
             await PendingJoinRequests(circle.Id, cancellationToken),
             await SharedEntriesAsync(circle.Id, cancellationToken),
-            null));
+            null,
+            await SharedRecordsAsync(circle.Id, cancellationToken)));
     }
 
     [HttpDelete("{id:guid}/membership")]
@@ -1128,7 +1130,8 @@ public sealed class CirclesController(
         IReadOnlyList<CircleLogResponse> log,
         IReadOnlyList<CircleJoinRequestDto> joinRequests,
         IReadOnlyList<SharedLifeEntryResponse> sharedEntries,
-        OwnershipOfferNoticeResponse? ownershipOffer) =>
+        OwnershipOfferNoticeResponse? ownershipOffer,
+        IReadOnlyList<SharedRecordResponse>? sharedRecords = null) =>
         new(
             circle.Id,
             circle.Name,
@@ -1147,7 +1150,8 @@ public sealed class CirclesController(
             joinRequests,
             sharedEntries,
             circle.EndsAt,
-            ownershipOffer);
+            ownershipOffer,
+            sharedRecords);
 
     private async Task<List<SharedLifeEntryResponse>> SharedEntriesAsync(Guid circleId, CancellationToken cancellationToken)
     {
@@ -1184,6 +1188,43 @@ public sealed class CirclesController(
                 profile?.DisplayName ?? "Pessoa",
                 entry.CreatedAt,
                 entry.UpdatedAt);
+        }).ToList();
+    }
+
+    private async Task<List<SharedRecordResponse>> SharedRecordsAsync(Guid circleId, CancellationToken cancellationToken)
+    {
+        var shares = await db.RecordShares
+            .AsNoTracking()
+            .Include(item => item.Record)
+            .ThenInclude(item => item.Type)
+            .Where(item => item.CircleId == circleId)
+            .OrderByDescending(item => item.Record.UpdatedAt)
+            .ToListAsync(cancellationToken);
+        if (shares.Count == 0)
+        {
+            return [];
+        }
+
+        var authorIds = shares.Select(item => item.Record.UserId).Distinct().ToList();
+        var names = await db.Profiles.AsNoTracking()
+            .Where(item => authorIds.Contains(item.UserId))
+            .ToDictionaryAsync(item => item.UserId, cancellationToken);
+        return shares.Select(share =>
+        {
+            var record = share.Record;
+            names.TryGetValue(record.UserId, out var profile);
+            return new SharedRecordResponse(
+                record.Id,
+                record.TypeId,
+                record.Type.Name,
+                record.Title,
+                record.Body,
+                record.OccurredOn,
+                record.NumberValue,
+                record.PhotoStorageKey is not null,
+                record.UserId,
+                profile?.DisplayName ?? "Pessoa",
+                record.CreatedAt);
         }).ToList();
     }
 

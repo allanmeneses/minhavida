@@ -1,14 +1,17 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api, ApiError, setReadCache, setWriteCache } from '@/lib/api';
 import {
+  applyRecordSync,
   applySyncResult,
   emptyCache,
   enqueue,
+  enqueueRecord as pushRecord,
   nextPending,
   readCache,
   writeCache,
   type ListQueueAction,
   type ReadCache,
+  type RecordQueueAction,
 } from '@/lib/offline';
 import { useAuth } from '@/context/AuthContext';
 
@@ -18,6 +21,7 @@ type OfflineContextValue = {
   pending: number;
   enqueueAdd: (listId: string, payload: { text: string; quantity?: string | null; note?: string | null }) => ListQueueAction;
   enqueueComplete: (listId: string, itemId: string) => ListQueueAction;
+  enqueueRecord: (payload: RecordQueueAction['payload']) => RecordQueueAction;
   syncQueue: () => Promise<void>;
   clearWarning: () => void;
 };
@@ -36,8 +40,10 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const [online, setOnline] = useState(currentOnline);
   const [warning, setWarning] = useState<string | null>(null);
   const [queue, setQueue] = useState<ListQueueAction[]>([]);
+  const [recordQueue, setRecordQueue] = useState<RecordQueueAction[]>([]);
   const cacheRef = useRef<ReadCache>(emptyCache());
   const queueRef = useRef<ListQueueAction[]>([]);
+  const recordQueueRef = useRef<RecordQueueAction[]>([]);
   const tokenRef = useRef(token);
   const flushing = useRef(false);
 
@@ -46,11 +52,17 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   }, [queue]);
 
   useEffect(() => {
+    recordQueueRef.current = recordQueue;
+  }, [recordQueue]);
+
+  useEffect(() => {
     tokenRef.current = token;
     if (!token) {
       cacheRef.current = emptyCache();
       setQueue([]);
       queueRef.current = [];
+      setRecordQueue([]);
+      recordQueueRef.current = [];
     }
   }, [token]);
 
@@ -71,6 +83,37 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     }
     flushing.current = true;
     try {
+      let records = recordQueueRef.current;
+      while (records.length > 0) {
+        const action = records[0];
+        if (!action) {
+          break;
+        }
+        try {
+          await api('/api/records', {
+            method: 'POST',
+            token: tokenRef.current,
+            body: JSON.stringify(action.payload),
+          });
+          const next = applyRecordSync(records, action, 201, '');
+          records = next.queue;
+          setRecordQueue(records);
+          recordQueueRef.current = records;
+        } catch (err) {
+          const status = err instanceof ApiError ? err.status : 0;
+          const message = err instanceof Error ? err.message : 'Este registro não pode ser guardado agora.';
+          if (status === 0) {
+            return;
+          }
+          const next = applyRecordSync(records, action, status, message);
+          records = next.queue;
+          setRecordQueue(records);
+          recordQueueRef.current = records;
+          if (next.warning) {
+            setWarning(next.warning);
+          }
+        }
+      }
       let current = queueRef.current;
       while (current.length > 0) {
         const action = nextPending(current);
@@ -159,6 +202,21 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const enqueueRecord = useCallback((payload: RecordQueueAction['payload']) => {
+    const action: RecordQueueAction = {
+      id: `local-record-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      type: 'add-record',
+      payload,
+      createdAt: Date.now(),
+    };
+    setRecordQueue((current) => {
+      const next = pushRecord(current, action);
+      recordQueueRef.current = next;
+      return next;
+    });
+    return action;
+  }, []);
+
   const enqueueComplete = useCallback((listId: string, itemId: string) => {
     const action: ListQueueAction = {
       id: `local-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -179,13 +237,14 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     () => ({
       online,
       warning,
-      pending: queue.length,
+      pending: queue.length + recordQueue.length,
       enqueueAdd,
       enqueueComplete,
+      enqueueRecord,
       syncQueue,
       clearWarning: () => setWarning(null),
     }),
-    [online, warning, queue.length, enqueueAdd, enqueueComplete, syncQueue],
+    [online, warning, queue.length, recordQueue.length, enqueueAdd, enqueueComplete, enqueueRecord, syncQueue],
   );
 
   return <OfflineContext.Provider value={value}>{children}</OfflineContext.Provider>;

@@ -1,6 +1,10 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Circulos.Api.Data;
+using Circulos.Api.Domain;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Circulos.Api.Tests;
 
@@ -35,6 +39,35 @@ internal static class AuthHelper
             ?? throw new InvalidOperationException("Resposta de cadastro inválida.");
 
         return new AuthResult(parsed.Token!, parsed.RefreshToken, parsed.User!.Id, parsed.User.Email, parsed.User.Name);
+    }
+
+    public static async Task SeedLegacyLifeAreasAsync(ApiFactory factory, Guid userId)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (await db.LifeAreas.AnyAsync(area => area.UserId == userId))
+        {
+            return;
+        }
+
+        foreach (var area in LifeAreaDefaults.ForLegacyAccount(userId, DateTime.UtcNow))
+        {
+            db.LifeAreas.Add(area);
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    public static async Task<AuthResult> RegisterWithLegacyAreasAsync(
+        HttpClient client,
+        ApiFactory factory,
+        string? email = null,
+        string password = "senha-segura-1",
+        string name = "Maria Silva")
+    {
+        var auth = await RegisterAsync(client, email, password, name);
+        await SeedLegacyLifeAreasAsync(factory, auth.UserId);
+        return auth;
     }
 
     public static HttpClient WithToken(this HttpClient client, string token)

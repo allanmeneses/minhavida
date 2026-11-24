@@ -15,7 +15,7 @@ public sealed class SearchAndShortcutOrderTests : IClassFixture<ApiFactory>
     public async Task Busca_UnificadaComHistoricoSincronizadoETermosFrequentes()
     {
         var client = _factory.CreateClient();
-        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        client.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory)).Token);
         var areas = await client.GetFromJsonAsync<List<JsonArea>>("/api/life-areas", Json);
         var diary = areas!.Single(x => x.Kind == "diary");
         await client.PostAsJsonAsync($"/api/life-areas/{diary.Id}/entries", new { title = "Texto livre da medicação", body = "nota" });
@@ -50,7 +50,7 @@ public sealed class SearchAndShortcutOrderTests : IClassFixture<ApiFactory>
     public async Task Atalho_ReordenaNaTela()
     {
         var client = _factory.CreateClient();
-        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        client.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory)).Token);
         var a = await (await client.PostAsJsonAsync("/api/shortcuts", new { label = "Primeiro", sortOrder = 0 })).Content.ReadFromJsonAsync<ShortcutDto>(Json);
         var b = await (await client.PostAsJsonAsync("/api/shortcuts", new { label = "Segundo", sortOrder = 1 })).Content.ReadFromJsonAsync<ShortcutDto>(Json);
         var reorder = await client.PutAsJsonAsync("/api/shortcuts/order", new { ids = new[] { b!.Id, a!.Id } });

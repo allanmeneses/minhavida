@@ -119,6 +119,19 @@ export type CircleDetail = {
   log: { id: string; action: string; detail: string; createdAt: string; actorUserId: string | null }[];
   joinRequests: CircleJoinRequest[];
   sharedEntries: SharedLifeEntry[];
+  sharedRecords?: {
+    id: string;
+    typeId: string;
+    typeName: string;
+    title: string;
+    body: string | null;
+    occurredOn: string | null;
+    numberValue: number | null;
+    hasPhoto: boolean;
+    authorUserId: string;
+    authorName: string;
+    createdAt: string;
+  }[];
   endsAt?: string | null;
   ownershipOffer?: OwnershipOfferNotice | null;
 };
@@ -409,6 +422,7 @@ export type DayPanel = {
   routineStreakDays: number;
   onboarding: OnboardingExample[];
   ownershipOffers?: OwnershipOfferNotice[];
+  recordTypes?: { id: string; name: string; lastUsedAt: string | null; recordCount: number }[];
 };
 export type DocumentItem = {
   id: string;

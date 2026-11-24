@@ -19,7 +19,7 @@ public sealed class Rodada9Tests : IClassFixture<ApiFactory>
     public async Task Entrada_TagsOpcionaisFiltramEBuscaAcha()
     {
         var client = _factory.CreateClient();
-        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        client.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory)).Token);
         var areas = await client.GetFromJsonAsync<List<JsonElement>>("/api/life-areas", Json);
         var diario = areas!.Single(x => x.GetProperty("kind").GetString() == "diary").GetProperty("id").GetGuid();
         var created = await client.PostAsJsonAsync($"/api/life-areas/{diario}/entries", new
@@ -60,7 +60,7 @@ public sealed class Rodada9Tests : IClassFixture<ApiFactory>
     public async Task Entrada_EdicaoDeTagsSobreposta_SubstituiDeVez()
     {
         var client = _factory.CreateClient();
-        var auth = await AuthHelper.RegisterAsync(client);
+        var auth = await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory);
         client.WithToken(auth.Token);
         var areas = await client.GetFromJsonAsync<List<JsonElement>>("/api/life-areas", Json);
         var diario = areas!.Single(x => x.GetProperty("kind").GetString() == "diary").GetProperty("id").GetGuid();
@@ -85,13 +85,13 @@ public sealed class Rodada9Tests : IClassFixture<ApiFactory>
     public async Task Entrada_MesmaNosCirculosSemDuplicar_VisitanteNaoVe()
     {
         var dono = _factory.CreateClient();
-        var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
+        var donoAuth = await AuthHelper.RegisterWithLegacyAreasAsync(dono, _factory, name: "Dono");
         dono.WithToken(donoAuth.Token);
         var membro = _factory.CreateClient();
-        var membroAuth = await AuthHelper.RegisterAsync(membro, name: "Membro");
+        var membroAuth = await AuthHelper.RegisterWithLegacyAreasAsync(membro, _factory, name: "Membro");
         membro.WithToken(membroAuth.Token);
         var visitante = _factory.CreateClient();
-        visitante.WithToken((await AuthHelper.RegisterAsync(visitante, name: "Visitante")).Token);
+        visitante.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(visitante, _factory, name: "Visitante")).Token);
 
         var mine = await dono.GetFromJsonAsync<List<JsonElement>>("/api/circles", Json);
         var pessoalId = mine!.Single(x => x.GetProperty("name").GetString() == "Eu").GetProperty("id").GetGuid();
@@ -151,7 +151,7 @@ public sealed class Rodada9Tests : IClassFixture<ApiFactory>
     public async Task Entrada_ShareSobrepostoNoMesmoCirculo_FicaUmaLigacao()
     {
         var client = _factory.CreateClient();
-        var auth = await AuthHelper.RegisterAsync(client);
+        var auth = await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory);
         client.WithToken(auth.Token);
         var circle = await (await client.PostAsJsonAsync("/api/circles", new { name = "Casa" }))
             .Content.ReadFromJsonAsync<JsonElement>(Json);
@@ -178,10 +178,10 @@ public sealed class Rodada9Tests : IClassFixture<ApiFactory>
     public async Task Atalho_CompartilhaNoCirculo_MembroVeDeQuemVeioERegistraNoMesmoLugar()
     {
         var dono = _factory.CreateClient();
-        var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Cuidador");
+        var donoAuth = await AuthHelper.RegisterWithLegacyAreasAsync(dono, _factory, name: "Cuidador");
         dono.WithToken(donoAuth.Token);
         var filha = _factory.CreateClient();
-        var filhaAuth = await AuthHelper.RegisterAsync(filha, name: "Filha");
+        var filhaAuth = await AuthHelper.RegisterWithLegacyAreasAsync(filha, _factory, name: "Filha");
         filha.WithToken(filhaAuth.Token);
 
         var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Idoso" }))
@@ -235,7 +235,7 @@ public sealed class Rodada9Tests : IClassFixture<ApiFactory>
     public async Task Atalho_ShareSobreposto_FicaUmaLigacao()
     {
         var client = _factory.CreateClient();
-        var auth = await AuthHelper.RegisterAsync(client);
+        var auth = await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory);
         client.WithToken(auth.Token);
         var circle = await (await client.PostAsJsonAsync("/api/circles", new { name = "Casa" }))
             .Content.ReadFromJsonAsync<JsonElement>(Json);
@@ -259,10 +259,10 @@ public sealed class Rodada9Tests : IClassFixture<ApiFactory>
     public async Task Atalho_DoisMembrosDisparamSobrepostos_DoisRegistrosNoDono()
     {
         var dono = _factory.CreateClient();
-        var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
+        var donoAuth = await AuthHelper.RegisterWithLegacyAreasAsync(dono, _factory, name: "Dono");
         dono.WithToken(donoAuth.Token);
         var membro = _factory.CreateClient();
-        var membroAuth = await AuthHelper.RegisterAsync(membro, name: "Membro");
+        var membroAuth = await AuthHelper.RegisterWithLegacyAreasAsync(membro, _factory, name: "Membro");
         membro.WithToken(membroAuth.Token);
         var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Cuidado" }))
             .Content.ReadFromJsonAsync<JsonElement>(Json);
@@ -293,9 +293,9 @@ public sealed class Rodada9Tests : IClassFixture<ApiFactory>
     public async Task Lembrete_EmailOpcional_PadraoOffESobrepostoMandaUm()
     {
         var client = _factory.CreateClient();
-        var auth = await AuthHelper.RegisterAsync(client);
+        var auth = await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory);
         client.WithToken(auth.Token);
-        var start = DateTime.UtcNow.AddHours(-2);
+        var start = TestClock.OverdueOnThisUtcDay(5);
         (await client.PostAsJsonAsync("/api/reminders", new
         {
             title = "Remédio das oito",
@@ -345,14 +345,14 @@ public sealed class Rodada9Tests : IClassFixture<ApiFactory>
     public async Task Lembrete_EmailEmFerias_NaoEnvia()
     {
         var client = _factory.CreateClient();
-        var auth = await AuthHelper.RegisterAsync(client);
+        var auth = await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory);
         client.WithToken(auth.Token);
         (await client.PutAsJsonAsync("/api/reminders/email-preference", new { enabled = true })).EnsureSuccessStatusCode();
         (await client.PutAsJsonAsync("/api/reminders/vacation", new { until = DateTime.UtcNow.AddDays(3) })).EnsureSuccessStatusCode();
         (await client.PostAsJsonAsync("/api/reminders", new
         {
             title = "Durante férias",
-            startAt = DateTime.UtcNow.AddHours(-1),
+            startAt = TestClock.OverdueOnThisUtcDay(5),
             recurrence = new { frequency = "none", interval = 1 },
         })).EnsureSuccessStatusCode();
         var home = await client.GetFromJsonAsync<JsonElement>("/api/home", Json);

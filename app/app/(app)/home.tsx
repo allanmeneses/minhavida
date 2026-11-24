@@ -4,10 +4,13 @@ import { useRouter, type Href } from 'expo-router';
 import { Button } from '@/components/ui/Button';
 import { Feedback } from '@/components/ui/Feedback';
 import { TextField } from '@/components/ui/TextField';
+import { CaptureBar } from '@/components/CaptureBar';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary, type DayPanel, type ReminderItem, type ShortcutItem } from '@/lib/api';
 import { t } from '@/lib/i18n';
+import { countNoun } from '@/lib/plural';
+import { type HomeRecordType } from '@/lib/records';
 import { playShortcutFeedback } from '@/lib/shortcutFeedback';
 import { SHORTCUT_FLASH_MS } from '@/lib/shortcutFlash';
 import { isTypingTarget, shortcutIndexFromKey } from '@/lib/shortcutHotkey';
@@ -32,6 +35,7 @@ export default function HomeScreen() {
   const [emailsSent, setEmailsSent] = useState<string[]>([]);
   const [showRest, setShowRest] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [recordTypes, setRecordTypes] = useState<HomeRecordType[]>([]);
 
   const load = useCallback(async () => {
     if (!token) {
@@ -40,6 +44,7 @@ export default function HomeScreen() {
     try {
       const next = await api<DayPanel>('/api/home', { token });
       setPanel(next);
+      setRecordTypes(next.recordTypes ?? []);
       if ((next.reminderEmailsSent ?? []).length > 0) {
         setEmailsSent(next.reminderEmailsSent);
       }
@@ -67,6 +72,17 @@ export default function HomeScreen() {
       setCircles(await api<CircleSummary[]>('/api/circles', { token }));
     } catch {
       setCircles([]);
+    }
+    try {
+      const types = await api<HomeRecordType[]>('/api/record-types', { token });
+      setRecordTypes(types.map((item) => ({
+        id: item.id,
+        name: item.name,
+        lastUsedAt: item.lastUsedAt ?? null,
+        recordCount: item.recordCount ?? 0,
+      })));
+    } catch {
+      // tipos entram depois da primeira leitura
     }
   }, [token]);
 
@@ -258,7 +274,8 @@ export default function HomeScreen() {
         <Text style={styles.lead}>Modo férias até {new Date(panel.vacationUntil).toLocaleDateString('pt-BR')}.</Text>
       ) : (
         <Text style={styles.lead}>
-          {panel?.activeCircleCount ?? 0} círculo(s) ativo(s). Atalhos disparam na hora, sem confirmação.
+          {countNoun(panel?.activeCircleCount ?? 0, 'círculo ativo', 'círculos ativos')}. Atalhos disparam na hora, sem
+          confirmação.
         </Text>
       )}
       <Feedback message={error} />
@@ -297,6 +314,18 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
+      {token ? (
+        <View style={styles.card}>
+          <Text style={styles.section}>Captura livre</Text>
+          <CaptureBar
+            token={token}
+            types={recordTypes}
+            onOpenType={(typeId) => router.push(`/(app)/type/${typeId}` as Href)}
+            onSaved={() => load()}
+          />
+        </View>
+      ) : null}
+
       <Section title="Atrasado" items={panel?.overdue ?? []} />
       <Section title="Vence hoje" items={panel?.dueToday ?? []} />
 
@@ -326,8 +355,8 @@ export default function HomeScreen() {
         <View style={styles.card} testID="monthly-surprise">
           <Text style={styles.section}>Retrospectiva de {panel.monthlySurprise.month}/{panel.monthlySurprise.year}</Text>
           <Text style={styles.lead}>
-            {panel.monthlySurprise.memoryCount} memória(s) e {panel.monthlySurprise.entryCount} entrada(s) no mês
-            passado.
+            {countNoun(panel.monthlySurprise.memoryCount, 'memória', 'memórias')} e{' '}
+            {countNoun(panel.monthlySurprise.entryCount, 'entrada', 'entradas')} no mês passado.
           </Text>
           {panel.monthlySurprise.titles.map((title) => (
             <Text key={title} style={styles.item}>

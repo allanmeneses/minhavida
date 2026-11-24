@@ -123,6 +123,10 @@ export default function AppLayout() {
         options={{ title: 'Área', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
       <Tabs.Screen
+        name="type/[id]"
+        options={{ title: 'Tipo', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
+      />
+      <Tabs.Screen
         name="circle/[id]"
         options={{ title: 'Círculo', tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }}
       />
