@@ -67,7 +67,7 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
     public async Task Lembrete_Circulo_SoMembrosRecebemNoAppEEmail_SemSms()
     {
         var dono = _factory.CreateClient();
-        var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
+        var donoAuth = await AuthHelper.RegisterWithLegacyAreasAsync(dono, _factory, name: "Dono");
         dono.WithToken(donoAuth.Token);
         var membro = _factory.CreateClient();
         var membroAuth = await AuthHelper.RegisterAsync(membro, name: "Membro");
@@ -81,7 +81,7 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
         (await dono.PostAsJsonAsync("/api/reminders", new
         {
             title = "Remédio da casa",
-            startAt = DateTime.UtcNow.AddHours(-2),
+            startAt = TestClock.OverdueOnThisUtcDay(5),
             circleId = familia,
             recurrence = new { frequency = "none", interval = 1 },
         })).EnsureSuccessStatusCode();
@@ -124,7 +124,7 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
         (await dono.PostAsJsonAsync("/api/reminders", new
         {
             title = "Dose compartilhada",
-            startAt = DateTime.UtcNow.AddHours(-1),
+            startAt = TestClock.OverdueOnThisUtcDay(5),
             circleId = familia,
             recurrence = new { frequency = "none", interval = 1 },
         })).EnsureSuccessStatusCode();
@@ -250,7 +250,7 @@ public sealed class Rodada12Tests : IClassFixture<ApiFactory>
     public async Task Diario_BuscaPorPalavraChave_RespeitaCirculo()
     {
         var dono = _factory.CreateClient();
-        var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
+        var donoAuth = await AuthHelper.RegisterWithLegacyAreasAsync(dono, _factory, name: "Dono");
         dono.WithToken(donoAuth.Token);
         var membro = _factory.CreateClient();
         var membroAuth = await AuthHelper.RegisterAsync(membro, name: "Membro");

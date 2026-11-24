@@ -9,6 +9,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary } from '@/lib/api';
 import { CIRCLE_KIND_LABEL, CIRCLE_KINDS, type CircleKind } from '@/lib/circleKinds';
 import { CIRCLE_STATUS_LABEL, VISIBILITY_LABEL, displayLabel } from '@/lib/labels';
+import { countNoun } from '@/lib/plural';
 import { nextOf } from '@/lib/listKinds';
 import { screenStyles } from '@/lib/screenStyles';
 
@@ -161,7 +162,7 @@ export default function CirclesScreen() {
           style={styles.card}>
           <Text style={styles.item}>{item.name ?? 'Círculo oculto'}</Text>
           <Text style={styles.lead}>
-            {displayLabel(item.visibility, VISIBILITY_LABEL)} · {CIRCLE_KIND_LABEL[item.kind as CircleKind] ?? item.kind} · {displayLabel(item.status, CIRCLE_STATUS_LABEL)} · {item.memberCount} pessoa(s)
+            {displayLabel(item.visibility, VISIBILITY_LABEL)} · {CIRCLE_KIND_LABEL[item.kind as CircleKind] ?? item.kind} · {displayLabel(item.status, CIRCLE_STATUS_LABEL)} · {countNoun(item.memberCount, 'pessoa', 'pessoas')}
           </Text>
         </Pressable>
       ))}

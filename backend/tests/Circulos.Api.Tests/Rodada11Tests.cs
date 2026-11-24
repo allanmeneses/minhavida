@@ -71,7 +71,8 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         var stored = await db.OnboardingExamples.SingleAsync(x => x.Id == id);
         Assert.True(stored.ConfirmedAt is not null ^ stored.DiscardedAt is not null);
         var entries = await db.LifeEntries.CountAsync(x => x.UserId == auth.UserId && x.Title == stored.Title);
-        Assert.Equal(stored.ConfirmedAt is null ? 0 : 1, entries);
+        var records = await db.LifeRecords.CountAsync(x => x.UserId == auth.UserId && x.Title == stored.Title);
+        Assert.Equal(stored.ConfirmedAt is null ? 0 : 1, entries + records);
     }
 
     [Fact]
@@ -94,7 +95,8 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var user = await db.Users.SingleAsync(x => x.Id == auth.UserId);
         Assert.NotNull(user.OnboardingCompletedAt);
-        Assert.Equal(1, await db.LifeEntries.CountAsync(x => x.UserId == auth.UserId && x.Title == "Como foi o meu dia"));
+        Assert.Equal(1, await db.LifeEntries.CountAsync(x => x.UserId == auth.UserId && x.Title == "Como foi o meu dia")
+            + await db.LifeRecords.CountAsync(x => x.UserId == auth.UserId && x.Title == "Como foi o meu dia"));
         Assert.Equal(1, await db.Memories.CountAsync(x => x.AuthorUserId == auth.UserId && x.Title == "Uma data que importa"));
         Assert.Equal(1, await db.CirclePosts.CountAsync(x => x.AuthorUserId == auth.UserId));
         var recap = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
@@ -295,7 +297,8 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
         client.WithToken(auth.Token);
         var privacy = await client.GetFromJsonAsync<JsonElement>("/api/privacy/me", Json);
         var items = privacy.GetProperty("items").EnumerateArray().Select(x => x.GetProperty("what").GetString()).ToList();
-        Assert.Contains(items, x => x!.Contains("Diário", StringComparison.Ordinal));
+        Assert.Contains(items, x => x!.Contains("Registros da sua vida", StringComparison.Ordinal));
+        Assert.Contains(items, x => x!.Contains("Áudio da captura", StringComparison.Ordinal));
         Assert.Contains(items, x => x!.Contains("Eu", StringComparison.Ordinal));
         Assert.Contains(items, x => x!.Contains("Família", StringComparison.Ordinal));
 
@@ -491,7 +494,7 @@ public sealed class Rodada11Tests : IClassFixture<ApiFactory>
     public async Task Diario_PaginasTipoNotionEntramNoTextoCorrido()
     {
         var client = _factory.CreateClient();
-        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        client.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory)).Token);
         var areas = await client.GetFromJsonAsync<List<JsonElement>>("/api/life-areas", Json);
         var diario = areas!.Single(x => x.GetProperty("kind").GetString() == "diary").GetProperty("id").GetGuid();
 

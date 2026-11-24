@@ -125,7 +125,7 @@ public sealed class PlanAndCompressionTests : IClassFixture<ApiFactory>
     public async Task Atalho_DesativarSomeDaPrincipalEExcluirMantemHistorico()
     {
         var client = _factory.CreateClient();
-        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        client.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory)).Token);
         var created = await client.PostAsJsonAsync("/api/shortcuts", new { label = "Tomei o remédio" });
         var shortcut = await created.Content.ReadFromJsonAsync<ShortcutDto>();
         (await client.PostAsync($"/api/shortcuts/{shortcut!.Id}/run", null)).EnsureSuccessStatusCode();

@@ -17,7 +17,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: 'O que fica no perfil solo?',
     answer:
-      'Vacinas, lembretes, documentos de acesso rápido, diário em texto e listas só suas. Documentos e fotos vão cifrados no servidor, com chave do app.',
+      'Registros do que importa para você, lembretes, listas só suas e exemplos na galeria. Documentos e fotos vão cifrados no servidor, com chave do app. Áudio da captura é apagado depois da transcrição.',
   },
   {
     question: 'Como funcionam os círculos?',

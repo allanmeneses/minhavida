@@ -20,10 +20,10 @@ export default function PrivacyScreen() {
       <Text style={styles.section}>1. Quais dados</Text>
       <Text style={styles.lead}>
         Conta: e-mail, senha com hash, nome. Perfil: nome de exibição, data de nascimento, telefone,
-        e-mail secundário, foto, se o perfil é público. Documentos e fotos enviados por você. Áreas de
-        vida e entradas (texto, número, foto, data, local). Círculos, membros, convites, pedidos de
-        entrada, publicações, log e listas (itens, quem adicionou e quem marcou). Lembretes, atalhos e histórico de busca. E-mails de recuperação de
-        senha, convite e exclusão de conta (hoje gravados num outbox local, sem SMTP de produção).
+        e-mail secundário, foto, se o perfil é público. Documentos, fotos e registros que você descreve.
+        Círculos, membros, convites, pedidos de entrada, publicações, log e listas (itens, quem adicionou e quem marcou). Lembretes, atalhos e histórico de busca. E-mails de recuperação de
+        senha, convite e exclusão de conta (hoje gravados num outbox local, sem SMTP de produção). O áudio da
+        captura sobe só para transcrever e é apagado em seguida. Nada é gravado em silêncio.
       </Text>
       <Text style={styles.section}>2. Para que</Text>
       <Text style={styles.lead}>

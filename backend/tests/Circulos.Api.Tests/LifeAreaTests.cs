@@ -24,18 +24,21 @@ public sealed class LifeAreaTests : IClassFixture<ApiFactory>
 
         var areas = await client.GetFromJsonAsync<List<AreaDto>>("/api/life-areas", Json);
         Assert.NotNull(areas);
-        Assert.Equal(4, areas!.Count);
-        Assert.Contains(areas, x => x.Kind == "vaccine" && x.Name == "Vacinas" && x.Suggested);
-        Assert.Contains(areas, x => x.Kind == "reminder");
-        Assert.Contains(areas, x => x.Kind == "document");
-        Assert.Contains(areas, x => x.Kind == "diary");
+        Assert.DoesNotContain(areas!, x => x.Kind == "vaccine");
+        Assert.DoesNotContain(areas, x => x.Kind == "reminder");
+        Assert.DoesNotContain(areas, x => x.Kind == "document");
+        Assert.DoesNotContain(areas, x => x.Kind == "diary");
+        var gallery = await client.GetFromJsonAsync<List<JsonElement>>("/api/record-types/gallery", Json);
+        Assert.Equal(8, gallery!.Count);
+        Assert.Contains(gallery, x => x.GetProperty("name").GetString() == "Vacinas" && x.GetProperty("gallery").GetBoolean());
+        Assert.Contains(gallery, x => x.GetProperty("name").GetString() == "Diário");
     }
 
     [Fact]
     public async Task Pessoa_CriaAreaNovaEVacinaComQuandoEOnde()
     {
         var client = _factory.CreateClient();
-        var auth = await AuthHelper.RegisterAsync(client);
+        var auth = await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory);
         client.WithToken(auth.Token);
 
         var created = await client.PostAsJsonAsync("/api/life-areas", new { name = "Corrida" });
@@ -63,7 +66,7 @@ public sealed class LifeAreaTests : IClassFixture<ApiFactory>
     public async Task Diario_ExportaTextoCorrido()
     {
         var client = _factory.CreateClient();
-        var auth = await AuthHelper.RegisterAsync(client);
+        var auth = await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory);
         client.WithToken(auth.Token);
         var areas = await client.GetFromJsonAsync<List<AreaDto>>("/api/life-areas", Json);
         var diario = areas!.Single(x => x.Kind == "diary");
@@ -84,7 +87,7 @@ public sealed class LifeAreaTests : IClassFixture<ApiFactory>
     public async Task Entrada_GuardaNumeroEFoto()
     {
         var client = _factory.CreateClient();
-        var auth = await AuthHelper.RegisterAsync(client);
+        var auth = await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory);
         client.WithToken(auth.Token);
         var areas = await client.GetFromJsonAsync<List<AreaDto>>("/api/life-areas", Json);
         var diario = areas!.Single(x => x.Kind == "diary");
@@ -115,7 +118,7 @@ public sealed class LifeAreaTests : IClassFixture<ApiFactory>
     public async Task Entrada_EdicaoSubstituiDeVez()
     {
         var client = _factory.CreateClient();
-        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        client.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory)).Token);
         var areas = await client.GetFromJsonAsync<List<AreaDto>>("/api/life-areas", Json);
         var diario = areas!.Single(x => x.Kind == "diary");
         var created = await client.PostAsJsonAsync($"/api/life-areas/{diario.Id}/entries", new

@@ -23,7 +23,8 @@ public sealed class PrivacyController(AppDbContext db) : ControllerBase
             .ToListAsync(cancellationToken);
         var items = new List<PrivacyItemResponse>
         {
-            new("Diário, documentos e vacinas", "Só você. Ninguém do círculo vê isso sozinho."),
+            new("Registros da sua vida", "Só você. Ninguém do círculo vê isso sozinho, até você escolher compartilhar um registro."),
+            new("Áudio da captura", "O arquivo de voz sobe só para transcrever. Depois da transcrição ele é apagado. Nada fica gravado em silêncio: você aceita, edita ou recusa a sugestão."),
             new(
                 "Perfil",
                 profile.IsPublic

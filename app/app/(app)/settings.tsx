@@ -11,6 +11,7 @@ import { api, ApiError, downloadNamedBlob, type PlanInfo, type PrivacyItem, type
 import { t } from '@/lib/i18n';
 import { API_URL } from '@/lib/config';
 import { SUBSCRIPTION_STATUS_LABEL, THEME_LABEL, displayLabel } from '@/lib/labels';
+import { daysPhrase } from '@/lib/plural';
 import { screenStyles } from '@/lib/screenStyles';
 
 export default function SettingsScreen() {
@@ -60,7 +61,7 @@ export default function SettingsScreen() {
     const days = Math.max(1, Number(vacationDays.replace(',', '.')) || 7);
     const until = new Date(Date.now() + days * 24 * 3600_000).toISOString();
     await api('/api/reminders/vacation', { method: 'PUT', token, body: JSON.stringify({ until }) });
-    setOk(`Modo férias ligado por ${days} dia(s). Lembretes ficam guardados.`);
+    setOk(`Modo férias ligado por ${daysPhrase(days)}. Lembretes ficam guardados.`);
   }
 
   async function requestDeletion() {

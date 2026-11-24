@@ -15,7 +15,7 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
     public async Task Recap_Perfil_SoMostraFluxosComUso()
     {
         var client = _factory.CreateClient();
-        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        client.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory)).Token);
         var empty = await client.GetFromJsonAsync<JsonElement>("/api/recap/me", Json);
         var initial = empty.GetProperty("flows").EnumerateArray().ToList();
         Assert.DoesNotContain(initial, x => x.GetProperty("key").GetString() == "circles");
@@ -41,10 +41,10 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
     public async Task Recap_Circulo_SoAHistoriaDaPessoa_NaoVazaPostDoOutro()
     {
         var dono = _factory.CreateClient();
-        var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
+        var donoAuth = await AuthHelper.RegisterWithLegacyAreasAsync(dono, _factory, name: "Dono");
         dono.WithToken(donoAuth.Token);
         var membro = _factory.CreateClient();
-        var membroAuth = await AuthHelper.RegisterAsync(membro, name: "Membro");
+        var membroAuth = await AuthHelper.RegisterWithLegacyAreasAsync(membro, _factory, name: "Membro");
         membro.WithToken(membroAuth.Token);
 
         var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Corrida", kind = "temporary" }))
@@ -69,7 +69,7 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
     public async Task Recap_CompartilhaHistoriaPropria_VisitanteNaoVeOsOutros()
     {
         var dono = _factory.CreateClient();
-        var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
+        var donoAuth = await AuthHelper.RegisterWithLegacyAreasAsync(dono, _factory, name: "Dono");
         dono.WithToken(donoAuth.Token);
         var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Curso", kind = "temporary" }))
             .Content.ReadFromJsonAsync<CircleDto>(Json);
@@ -97,7 +97,7 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
     public async Task Recap_ShareSobreposto_GeraDoisTokens()
     {
         var dono = _factory.CreateClient();
-        var donoAuth = await AuthHelper.RegisterAsync(dono, name: "Dono");
+        var donoAuth = await AuthHelper.RegisterWithLegacyAreasAsync(dono, _factory, name: "Dono");
         dono.WithToken(donoAuth.Token);
         var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Curso", kind = "temporary" }))
             .Content.ReadFromJsonAsync<CircleDto>(Json);
@@ -124,7 +124,7 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
     public async Task Arquivo_TemporarioGeraRecap_DuradouroFalha()
     {
         var client = _factory.CreateClient();
-        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        client.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(client, _factory)).Token);
         var mine = await client.GetFromJsonAsync<List<CircleDto>>("/api/circles", Json);
         var lasting = mine!.Single(x => x.Name == "Família");
         var denied = await client.PostAsync($"/api/circles/{lasting!.Id}/archive", null);
@@ -147,7 +147,7 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
     public async Task ArquivoSobreposto_FicaArquivadoUmaVez()
     {
         var dono = _factory.CreateClient();
-        var donoAuth = await AuthHelper.RegisterAsync(dono);
+        var donoAuth = await AuthHelper.RegisterWithLegacyAreasAsync(dono, _factory);
         dono.WithToken(donoAuth.Token);
         var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Diário", kind = "daily" }))
             .Content.ReadFromJsonAsync<CircleDto>(Json);
@@ -169,10 +169,10 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
     public async Task Arquivo_ViewerRecebe403()
     {
         var dono = _factory.CreateClient();
-        var donoAuth = await AuthHelper.RegisterAsync(dono);
+        var donoAuth = await AuthHelper.RegisterWithLegacyAreasAsync(dono, _factory);
         dono.WithToken(donoAuth.Token);
         var viewer = _factory.CreateClient();
-        var viewerAuth = await AuthHelper.RegisterAsync(viewer, name: "Visitante");
+        var viewerAuth = await AuthHelper.RegisterWithLegacyAreasAsync(viewer, _factory, name: "Visitante");
         viewer.WithToken(viewerAuth.Token);
         var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Curso", kind = "temporary" }))
             .Content.ReadFromJsonAsync<CircleDto>(Json);
@@ -186,11 +186,11 @@ public sealed class RecapTests : IClassFixture<ApiFactory>
     public async Task Recap_VisitanteDoCirculoNaoLe()
     {
         var dono = _factory.CreateClient();
-        dono.WithToken((await AuthHelper.RegisterAsync(dono)).Token);
+        dono.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(dono, _factory)).Token);
         var circle = await (await dono.PostAsJsonAsync("/api/circles", new { name = "Privado", visibility = "private" }))
             .Content.ReadFromJsonAsync<CircleDto>(Json);
         var visitante = _factory.CreateClient();
-        visitante.WithToken((await AuthHelper.RegisterAsync(visitante, name: "Visitante")).Token);
+        visitante.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(visitante, _factory, name: "Visitante")).Token);
         var recap = await visitante.GetAsync($"/api/circles/{circle!.Id}/recap");
         Assert.Equal(HttpStatusCode.NotFound, recap.StatusCode);
     }

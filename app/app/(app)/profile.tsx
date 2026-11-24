@@ -11,6 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, uploadNativeFile, type LifeArea, type Profile } from '@/lib/api';
 import { AREA_KIND_LABEL, displayLabel } from '@/lib/labels';
+import { type RecordTypeItem } from '@/lib/records';
 
 export default function ProfileScreen() {
   const { token, user, profile, setProfile, bumpPhoto, photoRevision } = useAuth();
@@ -22,12 +23,19 @@ export default function ProfileScreen() {
   const [photoBusy, setPhotoBusy] = useState(false);
   const [areas, setAreas] = useState<LifeArea[]>([]);
   const [newArea, setNewArea] = useState('');
+  const [types, setTypes] = useState<RecordTypeItem[]>([]);
+  const [gallery, setGallery] = useState<RecordTypeItem[]>([]);
+  const [sentence, setSentence] = useState('');
+  const [suggestedName, setSuggestedName] = useState<string | null>(null);
+  const [suggestedFields, setSuggestedFields] = useState<{ id: string; name: string; kind: string; required: boolean; order: number }[]>([]);
 
   const loadAreas = useCallback(async () => {
     if (!token) {
       return;
     }
     setAreas(await api<LifeArea[]>('/api/life-areas', { token }));
+    setTypes(await api<RecordTypeItem[]>('/api/record-types', { token }));
+    setGallery(await api<RecordTypeItem[]>('/api/record-types/gallery', { token }));
   }, [token]);
 
   useEffect(() => {
@@ -162,7 +170,8 @@ export default function ProfileScreen() {
         <Text style={[styles.kicker, { color: colors.primary }]}>Perfil solo</Text>
         <Text style={[styles.title, { color: colors.ink }]}>Sua vida, no seu ritmo</Text>
         <Text style={[styles.lead, { color: colors.muted }]}>
-          O perfil nasce privado. Vacinas, lembretes, documentos e o diário ficam aqui.
+          O perfil nasce privado. Você descreve o que quer guardar, copia um exemplo ou deixa o app sugerir. Nada
+          entra sozinho.
         </Text>
 
         <View style={styles.photoRow}>
@@ -190,8 +199,91 @@ export default function ProfileScreen() {
           onSave={(values) => void save(values)}
         />
 
-        <Text style={[styles.section, { color: colors.ink }]}>Áreas de vida</Text>
-        {areas.map((area) => (
+        <Text style={[styles.section, { color: colors.ink }]}>Seus tipos</Text>
+        <TextField
+          label="Descrever um tipo"
+          value={sentence}
+          onChangeText={setSentence}
+          placeholder="quero anotar as vacinas do meu filho, com data, posto e lote"
+        />
+        <Button
+          label="Sugerir tipo"
+          variant="ghost"
+          disabled={!sentence.trim()}
+          onPress={() => {
+            if (!token || !sentence.trim()) {
+              return;
+            }
+            void api<{ name: string; fields: { id: string; name: string; kind: string; required: boolean; order: number }[] }>(
+              '/api/record-types/suggest',
+              { method: 'POST', token, body: JSON.stringify({ sentence: sentence.trim() }) },
+            ).then((payload) => {
+              setSuggestedName(payload.name);
+              setSuggestedFields(payload.fields ?? []);
+            });
+          }}
+        />
+        {suggestedName ? (
+          <>
+            <Text style={[styles.lead, { color: colors.muted }]}>Sugestão: {suggestedName}</Text>
+            <Button
+              label="Usar esta sugestão"
+              onPress={() => {
+                if (!token || !suggestedName) {
+                  return;
+                }
+                void api<RecordTypeItem>('/api/record-types', {
+                  method: 'POST',
+                  token,
+                  body: JSON.stringify({ name: suggestedName, fields: suggestedFields }),
+                }).then((created) => {
+                  setSentence('');
+                  setSuggestedName(null);
+                  router.push(`/(app)/type/${created.id}` as Href);
+                });
+              }}
+            />
+          </>
+        ) : null}
+        {types.map((item) => (
+          <Pressable
+            key={item.id}
+            accessibilityRole="button"
+            accessibilityLabel={item.name}
+            onPress={() => router.push(`/(app)/type/${item.id}` as Href)}
+            style={[styles.area, { borderBottomColor: colors.line }]}>
+            <Text style={[styles.areaName, { color: colors.ink }]}>{item.name}</Text>
+          </Pressable>
+        ))}
+        <Text style={[styles.section, { color: colors.ink }]}>Exemplos</Text>
+        {gallery
+          .filter((item) => !types.some((owned) => owned.name === item.name || owned.originTemplateId === item.id))
+          .map((item) => (
+            <Pressable
+              key={item.id}
+              accessibilityRole="button"
+              accessibilityLabel={item.name}
+              onPress={() => {
+                if (!token) {
+                  return;
+                }
+                void api<RecordTypeItem>('/api/record-types/from-gallery', {
+                  method: 'POST',
+                  token,
+                  body: JSON.stringify({ templateId: item.id }),
+                }).then((copied) => router.push(`/(app)/type/${copied.id}` as Href));
+              }}
+              style={[styles.area, { borderBottomColor: colors.line }]}>
+              <Text style={[styles.areaName, { color: colors.ink }]}>{item.name}</Text>
+              <Text style={[styles.lead, { color: colors.muted }]}>{item.description}</Text>
+            </Pressable>
+          ))}
+        {areas.filter((area) => !types.some((item) => item.name === area.name)).length > 0 ? (
+          <Text style={[styles.section, { color: colors.ink }]}>Áreas antigas</Text>
+        ) : null}
+        {areas
+          .filter((area) => !types.some((item) => item.name === area.name))
+          .map((area) => (
           <Pressable
             key={area.id}
             accessibilityRole="button"

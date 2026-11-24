@@ -696,6 +696,112 @@ namespace Circulos.Api.Data.Migrations
                     b.ToTable("life_entry_shares", (string)null);
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.LifeRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FieldsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("FileContentType")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("FileName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FileStorageKey")
+                        .HasMaxLength(260)
+                        .HasColumnType("character varying(260)");
+
+                    b.Property<decimal?>("NumberValue")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateOnly?>("OccurredOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("OriginDiaryPageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("OriginDocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("OriginLifeEntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PhotoContentType")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<long>("PhotoSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("PhotoStorageKey")
+                        .HasMaxLength(260)
+                        .HasColumnType("character varying(260)");
+
+                    b.Property<Guid?>("ReminderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("TypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FieldsJson");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("FieldsJson"), "gin");
+
+                    b.HasIndex("OccurredOn");
+
+                    b.HasIndex("OriginDiaryPageId")
+                        .IsUnique()
+                        .HasFilter("\"OriginDiaryPageId\" IS NOT NULL");
+
+                    b.HasIndex("OriginDocumentId")
+                        .IsUnique()
+                        .HasFilter("\"OriginDocumentId\" IS NOT NULL");
+
+                    b.HasIndex("OriginLifeEntryId")
+                        .IsUnique()
+                        .HasFilter("\"OriginLifeEntryId\" IS NOT NULL");
+
+                    b.HasIndex("ReminderId");
+
+                    b.HasIndex("Title");
+
+                    b.HasIndex("TypeId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("records", (string)null);
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.LivingProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1075,6 +1181,82 @@ namespace Circulos.Api.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("recap_shares", (string)null);
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.RecordShare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CircleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RecordId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CircleId");
+
+                    b.HasIndex("RecordId", "CircleId")
+                        .IsUnique();
+
+                    b.ToTable("record_shares", (string)null);
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.RecordType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<Guid?>("OriginLifeAreaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("OriginTemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SchemaJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OriginLifeAreaId")
+                        .IsUnique()
+                        .HasFilter("\"OriginLifeAreaId\" IS NOT NULL");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("record_types", (string)null);
                 });
 
             modelBuilder.Entity("Circulos.Api.Domain.RefreshToken", b =>
@@ -1989,6 +2171,32 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("LifeEntry");
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.LifeRecord", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.Reminder", "Reminder")
+                        .WithMany()
+                        .HasForeignKey("ReminderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Circulos.Api.Domain.RecordType", "Type")
+                        .WithMany("Records")
+                        .HasForeignKey("TypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Circulos.Api.Domain.User", "User")
+                        .WithMany("Records")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reminder");
+
+                    b.Navigation("Type");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.LivingProfile", b =>
                 {
                     b.HasOne("Circulos.Api.Domain.Circle", "Circle")
@@ -2114,6 +2322,35 @@ namespace Circulos.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Circle");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.RecordShare", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.Circle", "Circle")
+                        .WithMany()
+                        .HasForeignKey("CircleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Circulos.Api.Domain.LifeRecord", "Record")
+                        .WithMany("Shares")
+                        .HasForeignKey("RecordId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Circle");
+
+                    b.Navigation("Record");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.RecordType", b =>
+                {
+                    b.HasOne("Circulos.Api.Domain.User", "User")
+                        .WithMany("RecordTypes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("User");
                 });
@@ -2313,9 +2550,19 @@ namespace Circulos.Api.Data.Migrations
                     b.Navigation("Shares");
                 });
 
+            modelBuilder.Entity("Circulos.Api.Domain.LifeRecord", b =>
+                {
+                    b.Navigation("Shares");
+                });
+
             modelBuilder.Entity("Circulos.Api.Domain.LivingProfile", b =>
                 {
                     b.Navigation("Grants");
+                });
+
+            modelBuilder.Entity("Circulos.Api.Domain.RecordType", b =>
+                {
+                    b.Navigation("Records");
                 });
 
             modelBuilder.Entity("Circulos.Api.Domain.SharedList", b =>
@@ -2345,6 +2592,10 @@ namespace Circulos.Api.Data.Migrations
 
                     b.Navigation("Profile")
                         .IsRequired();
+
+                    b.Navigation("RecordTypes");
+
+                    b.Navigation("Records");
 
                     b.Navigation("Reminders");
 

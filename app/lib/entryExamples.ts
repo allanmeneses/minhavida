@@ -46,7 +46,7 @@ export function entryExample(kind: string | undefined): EntryExample {
       };
     case 'document':
       return {
-        hint: 'Exemplo: nome do que você guardá para acesso rápido.',
+        hint: 'Exemplo: nome do que você guarda para acesso rápido.',
         titlePlaceholder: 'Carteira de vacinação',
         showWhen: false,
         showWhere: false,

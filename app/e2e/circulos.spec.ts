@@ -295,7 +295,7 @@ test('férias com prazo escolhido', async ({ page }) => {
   await page.getByRole('button', { name: 'Ajustes' }).first().click();
   await page.getByLabel('Dias de férias').fill('3');
   await page.getByRole('button', { name: 'Silenciar férias' }).click();
-  await expect(page.getByText('Modo férias ligado por 3 dia(s). Lembretes ficam guardados.')).toBeVisible();
+  await expect(page.getByText('Modo férias ligado por 3 dias. Lembretes ficam guardados.')).toBeVisible();
   await page.getByRole('button', { name: 'Hoje' }).click();
   await expect(page.getByText(/Modo férias até/)).toBeVisible();
 });
@@ -1391,7 +1391,8 @@ test('privacidade visível e exportar json', async ({ page }) => {
   await signUp(page, '-privacidade');
   await page.getByRole('button', { name: 'Ajustes' }).first().click();
   await expect(page.getByTestId('privacy-overview')).toBeVisible();
-  await expect(page.getByText(/Diário, documentos e vacinas/)).toBeVisible();
+  await expect(page.getByText(/Registros da sua vida/)).toBeVisible();
+  await expect(page.getByText(/áudio/i)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Exportar meus dados em JSON' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Enviar mensagem ao suporte' })).toBeVisible();
 });
@@ -1514,6 +1515,77 @@ test('ideias de presente: editor adiciona e viewer só ve', async ({ browser }) 
   await ownerContext.close();
   await editorContext.close();
   await viewerContext.close();
+});
+
+test('tipo por frase, galeria, captura livre, voz, calendario, lembrete, share e migracao', async ({ page }) => {
+  test.setTimeout(120_000);
+  await signUp(page, '-flex');
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByLabel('Descrever um tipo').fill('quero anotar as vacinas do meu filho, com data, posto e lote');
+  await page.getByRole('button', { name: 'Sugerir tipo' }).click();
+  await expect(page.getByText('Sugestão: Vacinas')).toBeVisible();
+  await page.getByRole('button', { name: 'Usar esta sugestão' }).click();
+  await expect(page.getByRole('button', { name: 'Guardar entrada' })).toBeVisible();
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByText('Pet', { exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Guardar entrada' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Hoje' }).click();
+  await page.getByLabel('Escrever').fill('Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro');
+  await page.getByRole('button', { name: 'Sugerir' }).click();
+  await expect(page.getByText(/Sugerimos/)).toBeVisible();
+  await page.getByRole('button', { name: 'Recusar' }).click();
+  await expect(page.getByText('Nada foi guardado. Você recusou a sugestão.')).toBeVisible();
+  await page.getByLabel('Escrever').fill('Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro');
+  await page.getByRole('button', { name: 'Sugerir' }).click();
+  await page.getByRole('button', { name: 'Aceitar' }).click();
+  await expect(page.getByText('Registro guardado.')).toBeVisible();
+
+  await page.getByTestId('voice-file').setInputFiles('e2e/fixtures/teste-voz.txt');
+  await expect(page.getByText(/Transcrição:/)).toBeVisible();
+  await page.getByRole('button', { name: 'Recusar' }).click();
+
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByText('Vacinas', { exact: true }).first().click();
+  await page.getByLabel('Título', { exact: true }).fill('Gripe');
+  await page.getByLabel('Quando').fill('2026-11-10');
+  await page.getByLabel('Onde').fill('UBS Centro');
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await expect(page.getByText('Gripe').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Calendário deste tipo' }).click();
+  await expect(page.getByText(/Gripe/)).toBeVisible();
+  await page.getByRole('button', { name: 'Lembrar desta data' }).first().click();
+  await page.getByRole('button', { name: 'Hoje' }).click();
+  await page.getByRole('button', { name: 'Lembretes' }).first().click();
+  await expect(page.getByText('Gripe').first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByText('Diário', { exact: true }).first().click();
+  await page.getByLabel('Título', { exact: true }).fill('Corrida 200m flex');
+  await page.getByRole('button', { name: 'Fora do círculo: Eu' }).click();
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await expect(page.getByText('Corrida 200m flex')).toBeVisible();
+  await page.getByRole('button', { name: 'Círculos' }).click();
+  await page.getByRole('button', { name: 'Abrir Eu' }).click();
+  await expect(page.getByText('Entradas compartilhadas', { exact: true })).toBeVisible();
+  await expect(page.getByText('Corrida 200m flex').first()).toBeVisible();
+
+  const token = await page.evaluate(() => localStorage.getItem('circulos.token'));
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const area = await page.request.post(`${apiUrl}/api/life-areas`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: { name: 'Vacina antiga' },
+  });
+  expect(area.ok()).toBeTruthy();
+  const areaBody = (await area.json()) as { id: string };
+  const entry = await page.request.post(`${apiUrl}/api/life-areas/${areaBody.id}/entries`, {
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    data: { title: 'Hepatite migrada', occurredOn: '2026-02-01', location: 'UBS Centro' },
+  });
+  expect(entry.ok()).toBeTruthy();
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByText('Vacina antiga', { exact: true }).click();
+  await expect(page.getByText('Hepatite migrada')).toBeVisible();
 });
 
 test('documentos pessoais tem rotulo de baixar e excluir', async ({ page }) => {

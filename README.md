@@ -16,7 +16,7 @@ O modelo gira em torno de `User`. Perfil, documentos, areas de vida, circulos, l
 ## O que esta versao faz
 
 - Cadastro e login com e-mail e senha, mais esqueci a senha por e-mail
-- Perfil solo privado (pode virar publico) com vacinas, lembretes, documentos e diario
+- Perfil solo privado (pode virar publico) com registros flexiveis, lembretes, documentos e exemplos na galeria
 - Documentos e fotos cifrados em AES-256-GCM no servidor; a chave fica fora do banco
 - Circulos com dono, convite, publico/privado, surpresa e log
 - Lembretes com recorrencia, aniversario e modo ferias
@@ -118,3 +118,19 @@ docker-compose.yml          Postgres local
 - Documentos e fotos entram cifrados em AES-256-GCM. A chave fica em `Encryption:Key` (configuracao), fora do banco.
 - Download e foto usam `Cache-Control: private, no-store`.
 - Sem bucket publico e sem URL assinada de longa duracao nesta versao.
+- Audio da captura livre sobe so para transcrever e e apagado depois. Nada e gravado em silencio.
+
+## Transcricao e sugestao
+
+Sem chave, a API usa o transcritor e o sugeridor locais (deterministas, para teste). Para o provedor real, so por variavel de ambiente. Nao coloque chave no repositorio.
+
+| Variavel | Uso |
+| --- | --- |
+| `OPENAI_API_KEY` | Chave do provedor de transcricao e sugestao |
+| `TRANSCRIBE_PROVIDER` | `openai` para Whisper; sem isso, fica o provedor local |
+| `OPENAI_TRANSCRIBE_MODEL` | Padrao `whisper-1` |
+| `OPENAI_TRANSCRIBE_URL` | Padrao `https://api.openai.com/v1/audio/transcriptions` |
+| `OPENAI_SUGGEST_MODEL` | Padrao `gpt-4o-mini` |
+| `OPENAI_SUGGEST_URL` | Padrao `https://api.openai.com/v1/chat/completions` |
+
+Se a transcricao nao estiver disponivel, a API responde 503 com mensagem clara e o app mostra o aviso.

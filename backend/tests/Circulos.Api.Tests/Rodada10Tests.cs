@@ -18,7 +18,7 @@ public sealed class Rodada10Tests : IClassFixture<ApiFactory>
     public async Task Estatisticas_ContaUsoAgregado_SemConteudo_SoAdminLe()
     {
         var pessoa = _factory.CreateClient();
-        pessoa.WithToken((await AuthHelper.RegisterAsync(pessoa)).Token);
+        pessoa.WithToken((await AuthHelper.RegisterWithLegacyAreasAsync(pessoa, _factory)).Token);
         var areas = await pessoa.GetFromJsonAsync<List<JsonElement>>("/api/life-areas", Json);
         var diario = areas!.Single(x => x.GetProperty("kind").GetString() == "diary").GetProperty("id").GetGuid();
         (await pessoa.PostAsJsonAsync($"/api/life-areas/{diario}/entries", new { title = "Segredo da vida" })).EnsureSuccessStatusCode();
