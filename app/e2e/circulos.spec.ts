@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Download, type Page } from '@playwright/test';
 import { createHmac } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
@@ -46,6 +46,11 @@ async function cycleMemberAccess(page: Page, from: string, to: string): Promise<
   await expect(button).toBeVisible();
   await button.click();
   await expect(page.getByRole('button', { name: `Permissão dos membros: ${to}` })).toBeVisible();
+}
+
+async function downloadFromButton(page: Page, name: string | RegExp): Promise<Download> {
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name }).click()]);
+  return download;
 }
 
 async function waitTotpWindow(): Promise<void> {
@@ -909,18 +914,19 @@ test('backup do perfil e gráfico de armazenamento', async ({ page }) => {
   await expect(page.getByText('Uso de armazenamento')).toBeVisible();
   await expect(page.getByLabel(/Uso de armazenamento/)).toBeVisible();
   await expect(page.getByText(/Sem separar por tipo/)).toBeVisible();
-  const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Exportar meu perfil' }).click();
-  const download = await downloadPromise;
+  const download = await downloadFromButton(page, 'Exportar meu perfil');
   expect(download.suggestedFilename()).toMatch(/circulos-perfil/);
+  await expect(page.getByText('Cópia do perfil baixada.')).toBeVisible();
   await page.getByRole('button', { name: 'Círculos' }).click();
   await page.getByLabel('Nome', { exact: true }).fill('Casa backup');
   await page.getByRole('button', { name: 'Criar círculo' }).click();
   await expect(page.getByText('Quem está aqui')).toBeVisible();
-  const circleDownload = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Exportar este círculo' }).click();
-  const circleFile = await circleDownload;
+  const exportCircle = page.getByRole('button', { name: 'Exportar este círculo' });
+  await exportCircle.scrollIntoViewIfNeeded();
+  await expect(exportCircle).toBeVisible();
+  const circleFile = await downloadFromButton(page, 'Exportar este círculo');
   expect(circleFile.suggestedFilename()).toMatch(/circulos-/);
+  await expect(page.getByText('Cópia do círculo baixada.')).toBeVisible();
 });
 
 test('assinatura simulada e webhook', async ({ page }) => {

@@ -23,6 +23,7 @@ import {
   type LifeEntry,
   type SearchHit,
 } from '@/lib/api';
+import { triggerBrowserDownload } from '@/lib/browserDownload';
 import { entryExample } from '@/lib/entryExamples';
 import { isoToDisplayDate, tagsPlaceholder } from '@/lib/dates';
 import { screenStyles } from '@/lib/screenStyles';
@@ -174,13 +175,7 @@ export default function LifeAreaScreen() {
     });
     const text = await response.text();
     if (typeof document !== 'undefined') {
-      const blob = new Blob([text], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `${area?.name ?? 'diário'}.txt`;
-      anchor.click();
-      URL.revokeObjectURL(url);
+      triggerBrowserDownload(new Blob([text], { type: 'text/plain' }), `${area?.name ?? 'diário'}.txt`);
     }
   }
 
