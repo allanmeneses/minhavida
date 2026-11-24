@@ -1,3 +1,5 @@
+import { examplePlaceholder } from './placeholders.ts';
+
 export type EntryExample = {
   hint: string;
   titlePlaceholder: string;
@@ -14,57 +16,57 @@ export function entryExample(kind: string | undefined): EntryExample {
     case 'vaccine':
       return {
         hint: 'Exemplo: vacina, quando e onde.',
-        titlePlaceholder: 'Hepatite B',
+        titlePlaceholder: examplePlaceholder('Hepatite B'),
         showWhen: true,
         showWhere: true,
-        whenPlaceholder: 'ex.: 24/11/2026',
-        wherePlaceholder: 'UBS Centro',
-        numberPlaceholder: '1',
-        bodyPlaceholder: 'Lote ou observação',
+        whenPlaceholder: examplePlaceholder('24/11/2026'),
+        wherePlaceholder: examplePlaceholder('UBS Centro'),
+        numberPlaceholder: examplePlaceholder('1'),
+        bodyPlaceholder: examplePlaceholder('Lote ou observação'),
       };
     case 'diary':
       return {
         hint: 'Exemplo: um parágrafo do dia. Busca por palavra-chave. Sem versão.',
-        titlePlaceholder: 'Corrida de manhã',
+        titlePlaceholder: examplePlaceholder('Corrida de manhã'),
         showWhen: false,
         showWhere: false,
-        whenPlaceholder: 'ex.: 24/11/2026',
+        whenPlaceholder: examplePlaceholder('24/11/2026'),
         wherePlaceholder: '',
-        numberPlaceholder: '5.2',
-        bodyPlaceholder: 'Como foi o treino',
+        numberPlaceholder: examplePlaceholder('5,2'),
+        bodyPlaceholder: examplePlaceholder('Como foi o treino'),
       };
     case 'reminder':
       return {
         hint: 'Exemplo: o que você não pode esquecer.',
-        titlePlaceholder: 'Renovar RG',
+        titlePlaceholder: examplePlaceholder('Renovar RG'),
         showWhen: true,
         showWhere: false,
-        whenPlaceholder: 'ex.: 24/11/2026',
+        whenPlaceholder: examplePlaceholder('24/11/2026'),
         wherePlaceholder: '',
-        numberPlaceholder: '1',
-        bodyPlaceholder: 'Detalhe da tarefa',
+        numberPlaceholder: examplePlaceholder('1'),
+        bodyPlaceholder: examplePlaceholder('Detalhe da tarefa'),
       };
     case 'document':
       return {
         hint: 'Exemplo: nome do que você guarda para acesso rápido.',
-        titlePlaceholder: 'Carteira de vacinação',
+        titlePlaceholder: examplePlaceholder('Carteira de vacinação'),
         showWhen: false,
         showWhere: false,
-        whenPlaceholder: 'ex.: 24/11/2026',
+        whenPlaceholder: examplePlaceholder('24/11/2026'),
         wherePlaceholder: '',
-        numberPlaceholder: '1',
-        bodyPlaceholder: 'Onde está o original',
+        numberPlaceholder: examplePlaceholder('1'),
+        bodyPlaceholder: examplePlaceholder('Onde está o original'),
       };
     default:
       return {
         hint: 'Texto, número ou foto. Sem vídeo.',
-        titlePlaceholder: 'Nova entrada',
+        titlePlaceholder: examplePlaceholder('Nova entrada'),
         showWhen: false,
         showWhere: false,
-        whenPlaceholder: 'ex.: 24/11/2026',
+        whenPlaceholder: examplePlaceholder('24/11/2026'),
         wherePlaceholder: '',
-        numberPlaceholder: '200',
-        bodyPlaceholder: 'Opcional',
+        numberPlaceholder: examplePlaceholder('11,8'),
+        bodyPlaceholder: examplePlaceholder('Opcional'),
       };
   }
 }

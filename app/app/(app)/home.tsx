@@ -297,6 +297,19 @@ export default function HomeScreen() {
         </View>
       ))}
 
+      {token ? (
+        <View style={styles.card}>
+          <Text style={styles.section}>Captura livre</Text>
+          <CaptureBar
+            token={token}
+            types={recordTypes}
+            onOpenType={(typeId) => router.push(`/(app)/type/${typeId}` as Href)}
+            onNewType={() => router.push('/(app)/types' as Href)}
+            onSaved={() => load()}
+          />
+        </View>
+      ) : null}
+
       {(panel?.onboarding ?? []).length > 0 ? (
         <View style={styles.card} testID="onboarding-examples">
           <Text style={styles.section}>Comece por aqui</Text>
@@ -311,19 +324,6 @@ export default function HomeScreen() {
               <Button label={t('onboarding.discard')} variant="ghost" onPress={() => void decideExample(item.id, false)} />
             </View>
           ))}
-        </View>
-      ) : null}
-
-      {token ? (
-        <View style={styles.card}>
-          <Text style={styles.section}>Captura livre</Text>
-          <CaptureBar
-            token={token}
-            types={recordTypes}
-            onOpenType={(typeId) => router.push(`/(app)/type/${typeId}` as Href)}
-            onNewType={() => router.push('/(app)/types' as Href)}
-            onSaved={() => load()}
-          />
         </View>
       ) : null}
 

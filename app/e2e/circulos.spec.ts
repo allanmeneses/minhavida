@@ -1,7 +1,7 @@
 import { expect, test, type Download, type Page } from '@playwright/test';
 import { createHmac } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir } from 'node:fs/promises';
+import { copyFile, mkdir } from 'node:fs/promises';
 import { totpCode } from '../lib/totp';
 
 const artifacts =
@@ -38,6 +38,49 @@ async function waitForAppChrome(page: Page): Promise<void> {
     return;
   }
   await expect(page.getByRole('button', { name: 'Tipos', exact: true })).toBeVisible();
+}
+
+async function settleLayout(page: Page): Promise<void> {
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
+}
+
+async function screenshotFull(page: Page, path: string): Promise<void> {
+  await settleLayout(page);
+  await page.screenshot({ path, fullPage: true });
+  await page.evaluate(() => {
+    const scrollable: HTMLElement[] = [];
+    for (const node of Array.from(document.querySelectorAll('div'))) {
+      const style = window.getComputedStyle(node);
+      if (
+        (style.overflowY === 'auto' || style.overflowY === 'scroll' || style.overflow === 'auto')
+        && node.scrollHeight > node.clientHeight + 24
+      ) {
+        scrollable.push(node);
+      }
+    }
+    scrollable.sort((a, b) => b.scrollHeight - a.scrollHeight);
+    const target = scrollable[0];
+    if (target) {
+      target.scrollTop = target.scrollHeight;
+    }
+    window.scrollTo(0, document.documentElement.scrollHeight);
+  });
+  await settleLayout(page);
+  const lower = path.replace(/\.png$/, '-baixo.png');
+  await page.screenshot({ path: lower, fullPage: true });
+  await page.evaluate(() => {
+    for (const node of Array.from(document.querySelectorAll('div'))) {
+      if (node instanceof HTMLElement && node.scrollTop) {
+        node.scrollTop = 0;
+      }
+    }
+    window.scrollTo(0, 0);
+  });
 }
 
 async function openTypes(page: Page): Promise<void> {
@@ -292,8 +335,13 @@ test('transferir dono do círculo em vida', async ({ page }) => {
   await page.getByLabel('Convidar por e-mail').fill(memberEmail);
   await page.getByRole('button', { name: 'Enviar convite' }).click();
   await expect(page.getByText(/Convite criado/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Copiar código do convite' })).toBeVisible();
+  await expect(page.getByTestId('invite-code')).toBeVisible();
   const inviteText = await page.getByText(/Convite criado/).innerText();
   const inviteToken = inviteText.replace('Convite criado. Código: ', '').trim();
+  expect(inviteToken).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
+  await expect(page.getByTestId('invite-code')).toHaveText(`Código do convite: ${inviteToken}`);
+  expect(inviteToken).not.toMatch(/[0-9a-f]{32}/i);
   const accepted = await page.request.post(`${apiUrl}/api/circles/invites/${inviteToken}/accept`, {
     headers: { Authorization: `Bearer ${member.token}`, 'Content-Type': 'application/json' },
     data: {},
@@ -737,8 +785,8 @@ test('perfil de pet no círculo', async ({ page }) => {
   await page.getByRole('button', { name: 'Perfil' }).first().click();
   await page.getByRole('button', { name: 'Pet e grupo' }).click();
   await expect(page.getByText('Pet e grupo', { exact: true })).toBeVisible();
-  await page.getByPlaceholder('Luna').fill('Luna');
-  await page.getByPlaceholder('Nossa cachorra').fill('Nossa cachorra');
+  await page.getByPlaceholder('ex.: Luna').fill('Luna');
+  await page.getByPlaceholder('ex.: Nossa cachorra').fill('Nossa cachorra');
   await page.getByRole('button', { name: 'Só no meu perfil' }).click();
   for (let i = 0; i < 6; i++) {
     if (await page.getByRole('button', { name: `Círculo: ${circleName}` }).isVisible()) {
@@ -915,7 +963,7 @@ test('diário mostra exemplo de preenchimento', async ({ page }) => {
   await openTypes(page);
   await page.getByText('Diário', { exact: true }).click();
   await expect(page.getByText('Exemplo: um parágrafo do dia. Busca por palavra-chave. Sem versão.')).toBeVisible();
-  await expect(page.getByPlaceholder('Corrida de manhã')).toBeVisible();
+  await expect(page.getByPlaceholder('ex.: Corrida de manhã')).toBeVisible();
 });
 
 test('backup do perfil e gráfico de armazenamento', async ({ page }) => {
@@ -1151,8 +1199,8 @@ test('permissão de pet e grupo', async ({ browser }) => {
   await owner.getByRole('button', { name: 'Perfil' }).first().click();
   await owner.getByRole('button', { name: 'Pet e grupo' }).click();
   await expect(owner.getByText('Pet e grupo', { exact: true })).toBeVisible();
-  await owner.getByPlaceholder('Luna').fill('Luna');
-  await owner.getByPlaceholder('Nossa cachorra').fill('Nossa cachorra');
+  await owner.getByPlaceholder('ex.: Luna').fill('Luna');
+  await owner.getByPlaceholder('ex.: Nossa cachorra').fill('Nossa cachorra');
   await owner.getByRole('button', { name: 'Só no meu perfil' }).click();
   for (let i = 0; i < 6; i++) {
     if (await owner.getByRole('button', { name: 'Círculo: Casa pet' }).isVisible()) {
@@ -1581,6 +1629,12 @@ test('tipo por frase, galeria, captura livre, voz, calendario, lembrete, share e
   await page.getByLabel('Escrever').fill('Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro');
   await page.getByRole('button', { name: 'Sugerir' }).click();
   await expect(page.getByText(/Sugerimos/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Aceitar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Editar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Recusar' })).toBeVisible();
+  const acceptBox = await page.getByRole('button', { name: 'Aceitar' }).boundingBox();
+  expect(acceptBox).toBeTruthy();
+  expect(acceptBox!.y + acceptBox!.height).toBeLessThanOrEqual((page.viewportSize()?.height ?? 800) + 1);
   await page.getByRole('button', { name: 'Recusar' }).click();
   await expect(page.getByText('Nada foi guardado. Você recusou a sugestão.')).toBeVisible();
   await page.getByLabel('Escrever').fill('Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro');
@@ -1590,6 +1644,10 @@ test('tipo por frase, galeria, captura livre, voz, calendario, lembrete, share e
 
   await page.getByTestId('voice-file').setInputFiles('e2e/fixtures/teste-voz.txt');
   await expect(page.getByText(/Transcrição:/)).toBeVisible();
+  await expect(page.getByText('teste-voz.txt')).toHaveCount(0);
+  await expect(page.getByText(/\.wav/i)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Aceitar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Editar' })).toBeVisible();
   await page.getByRole('button', { name: 'Recusar' }).click();
 
   await openTypes(page);
@@ -1649,6 +1707,22 @@ test('documentos pessoais tem rotulo de baixar e excluir', async ({ page }) => {
   await page.getByRole('button', { name: 'Documentos' }).click();
   await expect(page.getByRole('button', { name: 'Baixar nota.txt' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Excluir nota.txt' })).toBeVisible();
+  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await expect(page.getByText(/Encountered two children/)).toHaveCount(0);
+  await expect(page.getByText(/Inadimplente/)).toHaveCount(0);
+  await expect(page.getByText(/Plano gratuito/)).toBeVisible();
+  await expect(page.getByText(/0 KB de/)).toHaveCount(0);
+  await expect(page.getByText(/B de /)).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForAppChrome(page);
+  await expect(page.getByRole('button', { name: 'Hoje', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Círculos', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Perfil', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mais', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Mais', exact: true }).click();
+  await page.getByRole('button', { name: 'Documentos', exact: true }).click();
+  await expect(page.getByText('TAMANHOENVIADOAÇÕES')).toHaveCount(0);
+  await expect(page.getByText('nota.txt')).toBeVisible();
 });
 
 test('arquivo em pt-BR, captura rápida, corrida, calendário e gráfico', async ({ page }) => {
@@ -1701,10 +1775,14 @@ test('arquivo em pt-BR, captura rápida, corrida, calendário e gráfico', async
   await page.getByRole('button', { name: 'Calendário deste tipo' }).click();
   await expect(page.getByTestId('month-grid')).toBeVisible();
   await expect(page.getByText('Gripe gráfico').first()).toBeVisible();
+  await page.getByTestId('day-2026-11-28').scrollIntoViewIfNeeded();
+  await expect(page.getByTestId('day-2026-11-28')).toBeVisible();
+  await expect(page.getByTestId('day-2026-11-01')).toBeVisible();
 
   await openTypes(page);
   await page.getByText('Pet', { exact: true }).first().click();
   await expect(page.getByRole('button', { name: 'Compartilhar com Eu' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Compartilhar com Família' })).toHaveCount(1);
   await expect(page.getByText('Fora do círculo:')).toHaveCount(0);
   await page.getByLabel('Título', { exact: true }).fill('Consulta Luna');
   await page.getByLabel('Quando').fill('2026-11-10');
@@ -1717,6 +1795,15 @@ test('arquivo em pt-BR, captura rápida, corrida, calendário e gráfico', async
   await expect(page.getByText('registre mais para ver a evolução')).toBeVisible();
   await expect(page.getByTestId('chart-single-value')).toContainText('12');
   await expect(page.getByTestId('chart-single-value')).toContainText('10/11/2026');
+  await page.getByLabel('Título', { exact: true }).fill('Retorno Luna');
+  await page.getByLabel('Quando').fill('2026-10-10');
+  await page.getByLabel('Peso').fill('11,8');
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await expect(page.getByLabel('Título', { exact: true })).toHaveValue('');
+  await expect(page.getByTestId('number-chart').getByText('118')).toHaveCount(0);
+  await expect(page.getByTestId('number-chart').getByText(/11,8/)).toBeVisible();
+  await expect(page.getByTestId('chart-axis')).toBeVisible();
+  await expect(page.getByTestId('chart-axis')).not.toHaveText(/118/);
 });
 
 test('falar mostra gravação, transcreve com falso e cancela', async ({ page }) => {
@@ -1738,6 +1825,25 @@ test('falar mostra gravação, transcreve com falso e cancela', async ({ page })
   await expect(page.getByText(/Sugerimos|Transcrevendo/)).toBeVisible();
   await expect(page.getByText(/Sugerimos/)).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText(/Transcrição:/)).toBeVisible();
+});
+
+test('sugestão deixa Aceitar visível no telefone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signUp(page, '-aceitar-mob');
+  await page.getByLabel('Escrever').fill('Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro');
+  await page.getByRole('button', { name: 'Sugerir' }).click();
+  await expect(page.getByText(/Sugerimos/)).toBeVisible();
+  const limit = (page.viewportSize()?.height ?? 844) - 72;
+  for (const name of ['Aceitar', 'Editar', 'Recusar']) {
+    const box = await page.getByRole('button', { name }).boundingBox();
+    expect(box, name).toBeTruthy();
+    expect(box!.y, name).toBeGreaterThanOrEqual(0);
+    expect(box!.y + box!.height, name).toBeLessThanOrEqual(limit + 8);
+  }
+  await expect(page.getByRole('button', { name: 'Hoje', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Círculos', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Perfil', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mais', exact: true })).toBeVisible();
 });
 
 test('404 não sobrepõe o conteúdo e a barra lateral não corta Preços', async ({ page }) => {
@@ -1799,16 +1905,19 @@ test('telas da rodada 18 em desktop e mobile', async ({ page }) => {
     if (inApp) {
       await waitForAppChrome(page);
     }
+    await settleLayout(page);
     await page.screenshot({ path: `${dir}/${name}-desktop.png`, fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });
     if (inApp) {
       await waitForAppChrome(page);
     }
+    await settleLayout(page);
     await page.screenshot({ path: `${dir}/${name}-mobile.png`, fullPage: true });
     await page.setViewportSize({ width: 1280, height: 800 });
     if (inApp) {
       await waitForAppChrome(page);
     }
+    await settleLayout(page);
   }
 
   await expect(page.getByRole('button', { name: 'Novo tipo' })).toBeVisible();
@@ -1883,6 +1992,161 @@ test('telas da rodada 18 em desktop e mobile', async ({ page }) => {
   await page.goto('/xyz-nao-existe');
   await expect(page.getByText('Página não encontrada')).toBeVisible();
   await shoot('404', false);
+});
+
+test('prints da rodada 19', async ({ page }) => {
+  test.skip(!process.env.E2E_PRINTS, 'gera artefatos só com E2E_PRINTS=1');
+  test.setTimeout(240_000);
+  const dir = '/opt/cursor/artifacts/rodada19';
+  const v4 = '/opt/cursor/artifacts/circulos-telas-v4';
+  await mkdir(dir, { recursive: true });
+  const befores: Array<[string, string]> = [
+    ['35-ajustes-backup-desktop.png', 'antes-01-ajustes-toast-desktop.png'],
+    ['35-ajustes-backup-mobile.png', 'antes-01-ajustes-toast-mobile.png'],
+    ['15-tipo-vacinas-timeline-desktop.png', 'antes-02-familia-chip-desktop.png'],
+    ['04-hoje-desktop.png', 'antes-03-email-sidebar-desktop.png'],
+    ['31-documentos-mobile.png', 'antes-04-documentos-mobile.png'],
+    ['32-memorias-desktop.png', 'antes-05-memorias-acento-desktop.png'],
+    ['17-tipo-pet-grafico-desktop.png', 'antes-06-grafico-peso-desktop.png'],
+    ['16-tipo-vacinas-calendario-desktop.png', 'antes-07-calendario-tipo-desktop.png'],
+    ['01-login-desktop.png', 'antes-08-login-hub-desktop.png'],
+    ['34-faq-desktop.png', 'antes-08-faq-hub-desktop.png'],
+    ['24-resumo-desktop.png', 'antes-10-resumo-documentos-desktop.png'],
+    ['05-captura-texto-sugestao-mobile.png', 'antes-14-aceitar-mobile.png'],
+    ['10-voz-sugestao-desktop.png', 'antes-15-wav-desktop.png'],
+    ['21-circulo-familia-desktop.png', 'antes-16-convite-desktop.png'],
+    ['04-hoje-mobile.png', 'antes-17-abas-mobile.png'],
+  ];
+  for (const [from, to] of befores) {
+    const source = `${v4}/${from}`;
+    if (existsSync(source)) {
+      await copyFile(source, `${dir}/${to}`);
+    }
+  }
+
+  await page.addInitScript(() => {
+    Object.assign(window, { circulosTestRecorder: true });
+  });
+
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto('/(auth)/login');
+  await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
+  await screenshotFull(page, `${dir}/depois-08-login-desktop.png`);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await screenshotFull(page, `${dir}/depois-08-login-mobile.png`);
+  await page.setViewportSize({ width: 1280, height: 800 });
+
+  const email = `e2e-${Date.now()}-r19@exemplo.com`;
+  await page.goto('/(auth)/register');
+  await page.getByLabel('Nome', { exact: true }).fill('Pessoa E2E');
+  await page.getByLabel('E-mail').fill(email);
+  await page.getByLabel('Senha').fill('senha-segura-1');
+  await page.getByRole('button', { name: 'Criar conta' }).click();
+  await expect(page.getByRole('button', { name: 'Pular tour' })).toBeVisible({ timeout: 20_000 });
+  for (let step = 1; step <= 8; step += 1) {
+    await expect(page.getByText(`${step} de 8`)).toBeVisible();
+    await screenshotFull(page, `${dir}/depois-tour-${step}-desktop.png`);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await screenshotFull(page, `${dir}/depois-tour-${step}-mobile.png`);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    if (step < 8) {
+      await page.getByRole('button', { name: 'Avançar' }).click();
+    }
+  }
+  await page.getByRole('button', { name: 'Concluir tour' }).click();
+  await expect(page.getByText('O que pede atenção hoje')).toBeVisible({ timeout: 20_000 });
+
+  await screenshotFull(page, `${dir}/depois-03-email-sidebar-desktop.png`);
+  await page.getByLabel('Escrever').fill('Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro');
+  await page.getByRole('button', { name: 'Sugerir' }).click();
+  await expect(page.getByRole('button', { name: 'Aceitar' })).toBeVisible();
+  await screenshotFull(page, `${dir}/depois-14-aceitar-desktop.png`);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForAppChrome(page);
+  await screenshotFull(page, `${dir}/depois-14-aceitar-mobile.png`);
+  await screenshotFull(page, `${dir}/depois-17-abas-mobile.png`);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await waitForAppChrome(page);
+  await page.getByRole('button', { name: 'Recusar' }).click();
+
+  await page.getByRole('button', { name: 'Falar' }).click();
+  await page.getByRole('button', { name: 'Parar' }).click();
+  await expect(page.getByText(/Sugerimos/)).toBeVisible({ timeout: 20_000 });
+  await screenshotFull(page, `${dir}/depois-15-voz-desktop.png`);
+  await page.getByRole('button', { name: 'Recusar' }).click();
+
+  await openTypes(page);
+  await page.getByText('Vacinas', { exact: true }).first().click();
+  await expect(page.getByRole('button', { name: 'Compartilhar com Família' })).toHaveCount(1);
+  await screenshotFull(page, `${dir}/depois-02-familia-chip-desktop.png`);
+  await page.getByLabel('Título', { exact: true }).fill('Gripe');
+  await page.getByLabel('Quando').fill('2026-03-10');
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await page.getByRole('button', { name: 'Calendário deste tipo' }).click();
+  await expect(page.getByTestId('month-grid')).toBeVisible();
+  await screenshotFull(page, `${dir}/depois-07-calendario-tipo-desktop.png`);
+
+  await openTypes(page);
+  await page.getByText('Pet', { exact: true }).first().click();
+  await page.getByLabel('Título', { exact: true }).fill('Consulta');
+  await page.getByLabel('Quando').fill('2026-01-10');
+  await page.getByLabel('Peso').fill('11,8');
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await page.getByLabel('Título', { exact: true }).fill('Retorno');
+  await page.getByLabel('Quando').fill('2026-02-10');
+  await page.getByLabel('Peso').fill('12');
+  await page.getByRole('button', { name: 'Guardar entrada' }).click();
+  await expect(page.getByTestId('chart-axis')).toBeVisible();
+  await page.getByTestId('number-chart').scrollIntoViewIfNeeded();
+  await screenshotFull(page, `${dir}/depois-06-grafico-peso-desktop.png`);
+  await screenshotFull(page, `${dir}/depois-12-placeholder-desktop.png`);
+
+  const token = await page.evaluate(() => localStorage.getItem('circulos.token'));
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:5288';
+  const uploaded = await page.request.post(`${apiUrl}/api/documents`, {
+    headers: { Authorization: `Bearer ${token}` },
+    multipart: {
+      file: { name: 'carteira-vacina.txt', mimeType: 'text/plain', buffer: Buffer.from('nota da carteira') },
+    },
+  });
+  expect(uploaded.ok()).toBeTruthy();
+
+  await page.getByRole('button', { name: 'Documentos' }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForAppChrome(page);
+  await screenshotFull(page, `${dir}/depois-04-documentos-mobile.png`);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await waitForAppChrome(page);
+
+  await page.getByRole('button', { name: 'Ajustes' }).first().click();
+  await expect(page.getByText(/Inadimplente/)).toHaveCount(0);
+  await screenshotFull(page, `${dir}/depois-01-ajustes-desktop.png`);
+  await screenshotFull(page, `${dir}/depois-09-armazenamento-desktop.png`);
+  await screenshotFull(page, `${dir}/depois-11-plano-desktop.png`);
+  await page.getByRole('button', { name: 'Exportar meu perfil' }).scrollIntoViewIfNeeded();
+  await screenshotFull(page, `${dir}/depois-backup-desktop.png`);
+
+  await page.getByRole('button', { name: 'FAQ' }).first().click();
+  await screenshotFull(page, `${dir}/depois-08-faq-desktop.png`);
+
+  await page.getByRole('button', { name: 'Memórias' }).first().click();
+  await screenshotFull(page, `${dir}/depois-05-memorias-desktop.png`);
+
+  await page.getByRole('button', { name: 'Perfil' }).click();
+  await page.getByRole('button', { name: 'Resumo de uso' }).click();
+  await screenshotFull(page, `${dir}/depois-10-resumo-desktop.png`);
+
+  await page.getByRole('button', { name: 'Círculos' }).click();
+  await page.getByRole('button', { name: 'Abrir Família' }).click();
+  await page.getByLabel('Convidar por e-mail').fill(`convite-${Date.now()}@exemplo.com`);
+  await page.getByRole('button', { name: 'Enviar convite' }).click();
+  await expect(page.getByTestId('invite-code')).toBeVisible();
+  await screenshotFull(page, `${dir}/depois-16-convite-desktop.png`);
+
+  await page.getByRole('button', { name: 'Lembretes' }).first().click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await waitForAppChrome(page);
+  await screenshotFull(page, `${dir}/depois-13-lembretes-mobile.png`);
 });
 
 

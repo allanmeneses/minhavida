@@ -7,7 +7,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: 'O que é o Círculos?',
     answer:
-      'Um hub da vida pessoal. Você começa pelo perfil solo, registra o dia a dia e, se quiser, compartilha em círculos de família, amizade, cuidado ou evento. Não há feed geral nem anúncios.',
+      'Um lugar para a vida pessoal. Você começa pelo perfil solo, registra o dia a dia e, se quiser, compartilha em círculos de família, amizade, cuidado ou evento. Não há mural geral nem anúncios.',
   },
   {
     question: 'Por onde eu começo?',

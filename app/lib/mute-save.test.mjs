@@ -12,6 +12,7 @@ describe('salvar e mudo', () => {
     const life = readFileSync(join(root, '../app/(app)/life/[id].tsx'), 'utf8');
     assert.doesNotMatch(memories, /playShortcutFeedback/);
     assert.doesNotMatch(life, /playShortcutFeedback/);
-    assert.match(memories, /Edicao e silenciosa/);
+    assert.match(memories, /Edição é silenciosa/);
+    assert.doesNotMatch(memories, /Edicao e silenciosa/);
   });
 });

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/ui/Button';
 import { useTheme } from '@/context/ThemeContext';
@@ -16,7 +16,17 @@ export function FilePicker({ label, accept, testID, accessibilityLabel, valueNam
   const { colors } = useTheme();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [picked, setPicked] = useState<string | null>(valueName ?? null);
-  const shown = valueName ?? picked;
+  const shown = valueName === undefined ? picked : valueName;
+
+  useEffect(() => {
+    if (valueName !== null) {
+      return;
+    }
+    setPicked(null);
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+  }, [valueName]);
 
   if (Platform.OS !== 'web') {
     return null;

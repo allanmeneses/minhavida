@@ -212,6 +212,18 @@ public sealed class BillingTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task PlanoGratuito_NaoMarcaInadimplente()
+    {
+        var client = _factory.CreateClient();
+        client.WithToken((await AuthHelper.RegisterAsync(client)).Token);
+        var plan = await client.GetFromJsonAsync<JsonElement>("/api/plan", Json);
+        Assert.Equal("free", plan.GetProperty("plan").GetString());
+        Assert.Equal("none", plan.GetProperty("subscriptionStatus").GetString());
+        Assert.True(plan.GetProperty("inGoodStanding").GetBoolean());
+        Assert.DoesNotContain("Assinatura ativa", plan.GetProperty("checkout").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AssinaturaHmac_ManifestoDoMercadoPago()
     {
         const string secret = "test-secret";

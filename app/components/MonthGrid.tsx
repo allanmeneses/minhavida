@@ -101,19 +101,23 @@ const styles = StyleSheet.create({
   },
   cellWrap: {
     width: '14.285%',
+    minWidth: 0,
+    flexGrow: 0,
+    flexShrink: 0,
   },
   cell: {
-    minHeight: 64,
+    minHeight: 36,
+    maxHeight: 52,
     borderWidth: 1,
-    padding: 4,
-    gap: 2,
+    padding: 2,
+    gap: 1,
   },
   number: {
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: 11,
   },
   event: {
-    fontSize: 10,
+    fontSize: 9,
   },
   more: {
     fontSize: 10,

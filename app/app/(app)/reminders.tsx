@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { api, ApiError, type CircleSummary, type ReminderItem } from '@/lib/api';
 import { FREQUENCY_LABEL, displayLabel } from '@/lib/labels';
+import { examplePlaceholder } from '@/lib/placeholders';
 import { screenStyles } from '@/lib/screenStyles';
 
 const FREQUENCIES = ['none', 'daily', 'weekly', 'monthly', 'yearly'] as const;
@@ -159,7 +160,7 @@ export default function RemindersScreen() {
       {kind === 'birthday' ? (
         <>
           <TextField label="Quem" value={personName} onChangeText={setPersonName} />
-          <TextField label="Ideias de presente" value={ideas} onChangeText={setIdeas} placeholder="Livro, planta" />
+          <TextField label="Ideias de presente" value={ideas} onChangeText={setIdeas} placeholder={examplePlaceholder('Livro, planta')} />
         </>
       ) : null}
       <Text style={styles.lead}>Círculo ciclico (opcional). O atalho marca que foi feito.</Text>

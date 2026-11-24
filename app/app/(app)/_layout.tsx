@@ -32,7 +32,14 @@ export default function AppLayout() {
         headerTitleStyle: { fontWeight: '700' },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.line },
+        tabBarShowLabel: true,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.line,
+          paddingBottom: Platform.OS === 'web' ? 16 : 12,
+          minHeight: 56,
+        },
         headerLeft: () => (
           <Text
             accessibilityRole="text"

@@ -54,7 +54,7 @@ export function FieldChips({ fields, extraName, onChange, onExtraName }: Props) 
               autoFocus
               accessibilityLabel="Novo nome"
               placeholder="Novo nome"
-              placeholderTextColor={colors.muted}
+              placeholderTextColor={colors.placeholder}
               style={[
                 styles.rename,
                 {

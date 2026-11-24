@@ -239,7 +239,7 @@ export default function RecordTypeScreen() {
           }
           void api<CalendarItem[]>(`/api/record-types/${id}/calendar`, { token }).then((items) => {
             setCalendar(items);
-            const first = items[0]?.occurredOn;
+            const first = items[0]?.occurredOn?.slice(0, 10);
             if (first && /^\d{4}-\d{2}-\d{2}$/.test(first)) {
               setCalYear(Number(first.slice(0, 4)));
               setCalMonth(Number(first.slice(5, 7)));

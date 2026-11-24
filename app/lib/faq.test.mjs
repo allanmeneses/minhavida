@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { FAQ_ITEMS } from './faq.ts';
+
+const root = dirname(fileURLToPath(import.meta.url));
 
 describe('faq', () => {
   it('cobre perfil, círculo, offline, sessão e backup em português', () => {
@@ -22,5 +27,8 @@ describe('faq', () => {
       FAQ_ITEMS.some((item) => item.question.toLowerCase().includes('busca')),
       false,
     );
+    assert.doesNotMatch(blob, /\bhub\b/i);
+    assert.doesNotMatch(readFileSync(join(root, '../app/(auth)/login.tsx'), 'utf8'), /\bhub\b/i);
+    assert.doesNotMatch(readFileSync(join(root, '../app/termos.tsx'), 'utf8'), /\bhub\b/i);
   });
 });

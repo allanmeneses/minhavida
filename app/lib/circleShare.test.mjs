@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { shareChipLabel, toggleCircleShare } from './circleShare.ts';
+import { shareChipLabel, toggleCircleShare, uniqueShareCircles } from './circleShare.ts';
 
 describe('compartilhar com círculos', () => {
   it('liga e desliga o chip sem apagar os outros', () => {
@@ -15,5 +15,19 @@ describe('compartilhar com círculos', () => {
     assert.match(shareChipLabel('Eu', false), /Compartilhar com Eu/);
     assert.match(shareChipLabel('Família', true), /selecionado/);
     assert.doesNotMatch(shareChipLabel('Eu', false), /Fora do círculo/);
+  });
+
+  it('mostra um chip por nome, mesmo com dois círculos Família', () => {
+    const chips = uniqueShareCircles([
+      { id: 'eu', name: 'Eu' },
+      { id: 'fam-1', name: 'Família' },
+      { id: 'fam-1', name: 'Família' },
+      { id: 'fam-2', name: 'Família' },
+    ]);
+    assert.deepEqual(
+      chips.map((item) => item.name),
+      ['Eu', 'Família'],
+    );
+    assert.equal(chips.length, 2);
   });
 });

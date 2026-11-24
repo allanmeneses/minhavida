@@ -16,7 +16,9 @@ describe('decisões de produto e contribuicao', () => {
     ].join('\n');
     assert.doesNotMatch(files, /\/api\/feed\b/);
     assert.doesNotMatch(files, /AdMob|adsense|anúncio pago/i);
-    assert.match(files, /Não há feed geral nem anúncios/);
+    assert.match(files, /Não há mural geral nem anúncios/);
+    assert.doesNotMatch(files, /\bhub\b/i);
+    assert.doesNotMatch(files, /Não há feed geral/);
   });
 
   it('commits continuam curtos em pt-BR', () => {

@@ -6,16 +6,16 @@ describe('exemplos de entrada', () => {
   it('cada tipo tem padrão simples com exemplo', () => {
     const vacina = entryExample('vaccine');
     assert.match(vacina.hint, /quando e onde/);
-    assert.equal(vacina.titlePlaceholder, 'Hepatite B');
+    assert.equal(vacina.titlePlaceholder, 'ex.: Hepatite B');
     assert.equal(vacina.showWhen, true);
     assert.equal(vacina.showWhere, true);
-    assert.equal(vacina.wherePlaceholder, 'UBS Centro');
+    assert.equal(vacina.wherePlaceholder, 'ex.: UBS Centro');
     assert.doesNotMatch(vacina.whenPlaceholder, /AAAA-MM-DD/);
     assert.match(vacina.whenPlaceholder, /24\/11\/2026/);
 
     const diario = entryExample('diary');
     assert.match(diario.hint, /parágrafo do dia/);
-    assert.equal(diario.titlePlaceholder, 'Corrida de manhã');
+    assert.equal(diario.titlePlaceholder, 'ex.: Corrida de manhã');
     assert.equal(diario.showWhen, false);
 
     const documento = entryExample('document');
@@ -24,5 +24,7 @@ describe('exemplos de entrada', () => {
     assert.equal(lembrete.showWhen, true);
     const livre = entryExample('custom');
     assert.match(livre.hint, /Sem vídeo/);
+    assert.equal(livre.numberPlaceholder, 'ex.: 11,8');
+    assert.doesNotMatch(livre.numberPlaceholder, /^200$/);
   });
 });

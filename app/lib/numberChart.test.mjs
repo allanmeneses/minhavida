@@ -17,6 +17,8 @@ describe('componente de gráfico', () => {
     assert.match(source, /MAX_BAR_WIDTH/);
     assert.match(source, /chart-single-hint/);
     assert.match(source, /chart-single-value/);
+    assert.match(source, /formatChartNumber/);
+    assert.match(source, /chart-axis/);
     assert.match(source, /singleDate/);
     assert.match(source, /points\.length === 1 \? 72 : 140/);
   });

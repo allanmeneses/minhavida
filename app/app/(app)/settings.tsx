@@ -10,7 +10,10 @@ import { useTour } from '@/context/TourContext';
 import { api, ApiError, downloadNamedBlob, type PlanInfo, type PrivacyItem, type TwoFactorSetup } from '@/lib/api';
 import { t } from '@/lib/i18n';
 import { API_URL } from '@/lib/config';
-import { SUBSCRIPTION_STATUS_LABEL, THEME_LABEL, displayLabel } from '@/lib/labels';
+import { THEME_LABEL, displayLabel } from '@/lib/labels';
+import { planStandingText } from '@/lib/planStatus';
+import { uniquePrivacyItems, privacyItemKey } from '@/lib/privacyItems';
+import { storageUsageLine } from '@/lib/storageDisplay';
 import { daysPhrase } from '@/lib/plural';
 import { screenStyles } from '@/lib/screenStyles';
 
@@ -191,8 +194,8 @@ export default function SettingsScreen() {
         Uso {used}%.
       </Text>
       <Text style={styles.lead}>
-        Status: {displayLabel(plan?.subscriptionStatus ?? 'none', SUBSCRIPTION_STATUS_LABEL)}. {plan?.inGoodStanding ? 'Em dia.' : 'Inadimplente.'}{' '}
-        {plan?.checkout}
+        {planStandingText(plan?.plan, plan?.subscriptionStatus, plan?.inGoodStanding)}
+        {plan?.plan === 'paid' && plan.checkout ? ` ${plan.checkout}` : ''}
       </Text>
       {plan?.sandbox ? (
         <Text style={[styles.lead, { fontSize: 12 }]}>Cobrança em ambiente de desenvolvimento.</Text>
@@ -222,14 +225,13 @@ export default function SettingsScreen() {
         <View style={{ width: `${bar}%`, height: 12, backgroundColor: colors.primary }} />
       </View>
       <Text style={styles.lead}>
-        {plan ? Math.round(plan.storageUsedBytes / 1024) : 0} KB de{' '}
-        {plan ? Math.round(plan.storageLimitBytes / (1024 * 1024)) : 0} MB. Sem separar por tipo.
+        {plan ? storageUsageLine(plan.storageUsedBytes, plan.storageLimitBytes) : storageUsageLine(0, 0)}
       </Text>
 
       <Text style={styles.section}>{t('privacy.title')}</Text>
       <View testID="privacy-overview">
-        {privacy.map((item) => (
-          <Text key={item.what} style={styles.lead}>
+        {uniquePrivacyItems(privacy).map((item, index) => (
+          <Text key={privacyItemKey(item, index)} style={styles.lead}>
             {item.what}: {item.who}
           </Text>
         ))}

@@ -33,6 +33,9 @@ public sealed class CircleTests : IClassFixture<ApiFactory>
         var invite = await dono.PostAsJsonAsync($"/api/circles/{circle!.Id}/invites", new { email = membroAuth.Email, role = "editor" });
         Assert.Equal(HttpStatusCode.OK, invite.StatusCode);
         var token = (await invite.Content.ReadFromJsonAsync<InviteDto>(Json))!.Token;
+        Assert.Equal(8, token.Length);
+        Assert.DoesNotContain('-', token);
+        Assert.DoesNotMatch(@"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-", token);
 
         var accept = await membro.PostAsJsonAsync($"/api/circles/invites/{token}/accept", new { });
         Assert.Equal(HttpStatusCode.OK, accept.StatusCode);

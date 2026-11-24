@@ -19,7 +19,7 @@ export default function TermsScreen() {
       </Text>
       <Text style={styles.section}>1. O serviço</Text>
       <Text style={styles.lead}>
-        O Círculos é um hub da vida pessoal. Você cria uma conta com e-mail e senha, guarda um perfil solo,
+        O Círculos é a casa da vida pessoal. Você cria uma conta com e-mail e senha, guarda um perfil solo,
         documentos, fotos, áreas de vida, círculos, lembretes e atalhos. O produto funciona no aplicativo
         (aplicativo) e no navegador. Não há loja de pagamentos ligada nesta versão: o plano gratuito tem limites
         (3 círculos, 5 atalhos e 100 MB). O plano pago usa Mercado Pago em ambiente de teste, com preços em reais

@@ -182,7 +182,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   page: {
-    paddingBottom: 48,
+    paddingBottom: 120,
     maxWidth: 720,
     width: '100%',
     alignSelf: 'center',

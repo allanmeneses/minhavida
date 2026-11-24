@@ -63,9 +63,9 @@ public sealed class BillingService(
         var now = clock.GetUtcNow().UtcDateTime;
         var paid = PlanLimits.BenefitsActive(user, now);
         var limit = PlanLimits.StorageLimit(paid);
-        var standing = paid;
+        var standing = user.Plan != PlanKind.Paid || paid;
         var checkout = Enabled
-            ? (standing ? "Assinatura ativa." : "Assine com cartão recorrente no Mercado Pago (ambiente de teste por padrão).")
+            ? (paid ? "Assinatura ativa." : "Assine com cartão recorrente no Mercado Pago (ambiente de teste por padrão).")
             : "Cobrança recorrente ainda não está ligada a um gateway.";
         return new PlanResponse(
             paid ? "paid" : "free",
