@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams } from 'expo-router';
 import { LazyPhoto } from '@/components/LazyPhoto';
 import { Button } from '@/components/ui/Button';
+import { CircleShareChips } from '@/components/ui/CircleShareChips';
 import { Feedback } from '@/components/ui/Feedback';
 import { DateField } from '@/components/ui/DateField';
 import { FilePicker } from '@/components/ui/FilePicker';
@@ -22,6 +23,7 @@ import {
   type LifeEntry,
   type SearchHit,
 } from '@/lib/api';
+import { triggerBrowserDownload } from '@/lib/browserDownload';
 import { entryExample } from '@/lib/entryExamples';
 import { isoToDisplayDate, tagsPlaceholder } from '@/lib/dates';
 import { screenStyles } from '@/lib/screenStyles';
@@ -173,13 +175,7 @@ export default function LifeAreaScreen() {
     });
     const text = await response.text();
     if (typeof document !== 'undefined') {
-      const blob = new Blob([text], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `${area?.name ?? 'diário'}.txt`;
-      anchor.click();
-      URL.revokeObjectURL(url);
+      triggerBrowserDownload(new Blob([text], { type: 'text/plain' }), `${area?.name ?? 'diário'}.txt`);
     }
   }
 
@@ -209,29 +205,7 @@ export default function LifeAreaScreen() {
         onChangeText={setTags}
         placeholder={tagsPlaceholder()}
       />
-      {circles.length > 0 ? (
-        <View>
-          <Text style={styles.lead}>Mostrar a mesma entrada em círculos, sem duplicar.</Text>
-          {circles.map((circle) => (
-            <Button
-              key={circle.id}
-              label={
-                selectedCircleIds.includes(circle.id)
-                  ? `No círculo: ${circle.name ?? 'círculo'}`
-                  : `Fora do círculo: ${circle.name ?? 'círculo'}`
-              }
-              variant="ghost"
-              onPress={() =>
-                setSelectedCircleIds((current) =>
-                  current.includes(circle.id)
-                    ? current.filter((item) => item !== circle.id)
-                    : [...current, circle.id],
-                )
-              }
-            />
-          ))}
-        </View>
-      ) : null}
+      <CircleShareChips circles={circles} selectedIds={selectedCircleIds} onChange={setSelectedCircleIds} />
       {Platform.OS === 'web' ? (
         <FilePicker
           label="Foto da entrada"

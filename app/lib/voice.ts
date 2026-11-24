@@ -17,10 +17,10 @@ export function canUseMediaRecorder(): boolean {
   return typeof MediaRecorder !== 'undefined' && typeof navigator !== 'undefined' && Boolean(navigator.mediaDevices?.getUserMedia);
 }
 
-export function startTestRecording(): LiveRecording {
-  const started = Date.now();
+export function startTestRecording(now: () => number = () => Date.now()): LiveRecording {
+  const started = now();
   return {
-    elapsedSeconds: () => Math.floor((Date.now() - started) / 1000),
+    elapsedSeconds: () => Math.max(0, Math.floor((now() - started) / 1000)),
     stop: async () => {
       const text = 'Tomei a vacina da hepatite B no dia 10 de março de 2024 na UBS Centro';
       const blob = new Blob([text], { type: 'text/plain' });

@@ -20,4 +20,16 @@ describe('estados da voz', () => {
     const text = await clip.blob.text();
     assert.match(text, /hepatite/);
   });
+
+  it('timer avança com relógio falso e o rótulo aparece uma vez', () => {
+    let now = 1_000_000;
+    const session = startTestRecording(() => now);
+    assert.equal(session.elapsedSeconds(), 0);
+    assert.equal(recordingLabel(session.elapsedSeconds()), 'Gravando 00:00');
+    now += 2500;
+    assert.equal(session.elapsedSeconds(), 2);
+    assert.equal(recordingLabel(session.elapsedSeconds()), 'Gravando 00:02');
+    now += 60_000;
+    assert.equal(recordingLabel(session.elapsedSeconds()), 'Gravando 01:02');
+  });
 });

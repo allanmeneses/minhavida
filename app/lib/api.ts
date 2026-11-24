@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { triggerBrowserDownload } from '@/lib/browserDownload';
 import { API_URL } from '@/lib/config';
 import { ensureUploadFileName } from '@/lib/ensureUploadFileName';
 
@@ -559,15 +560,7 @@ export async function downloadDocument(id: string, fileName: string, token: stri
   }
 
   if (Platform.OS === 'web') {
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    triggerBrowserDownload(await response.blob(), fileName);
     return;
   }
 
@@ -628,15 +621,7 @@ export async function downloadNamedBlob(path: string, fileName: string, token: s
   }
 
   if (Platform.OS === 'web') {
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    triggerBrowserDownload(await response.blob(), fileName);
     return;
   }
 

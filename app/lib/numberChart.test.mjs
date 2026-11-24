@@ -13,5 +13,11 @@ describe('componente de gráfico', () => {
     assert.match(source, /testID="chart-bar"/);
     assert.match(source, /polyline/);
     assert.match(source, /Ainda não há números neste tipo/);
+    assert.match(source, /SINGLE_POINT_HINT/);
+    assert.match(source, /MAX_BAR_WIDTH/);
+    assert.match(source, /chart-single-hint/);
+    assert.match(source, /chart-single-value/);
+    assert.match(source, /singleDate/);
+    assert.match(source, /points\.length === 1 \? 72 : 140/);
   });
 });
